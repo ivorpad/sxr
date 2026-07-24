@@ -14,7 +14,8 @@ plain text.
 ## Install
 
 ```bash
-uv tool install sxr    # or: pipx install sxr, or one-off: uvx sxr
+brew install ivorpad/tap/sxr
+# or, from PyPI: uv tool install sxr / pipx install sxr / uvx sxr
 ```
 
 ## Use
