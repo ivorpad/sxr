@@ -1,0 +1,43 @@
+[project]
+name = "sxr"
+version = "0.1.0"
+description = "Read and digest Codex and Claude Code sessions from the terminal"
+readme = "README.md"
+authors = [
+    { name = "Ivor Padilla", email = "ivorjpc@gmail.com" }
+]
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["claude-code", "codex", "sessions", "jsonl", "agents"]
+dependencies = [
+    "typer>=0.27.0",
+]
+
+[project.urls]
+Repository = "https://github.com/ivorpad/sxr"
+
+[project.scripts]
+sxr = "sxr:main"
+
+[build-system]
+requires = ["uv_build>=0.9.21,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "konpy>=0.4.0",
+    "pytest>=8",
+    "ruff>=0.9",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "PLR0915"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

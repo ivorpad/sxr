@@ -1,0 +1,19 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Local tooling caches
+.pytest_cache/
+.ruff_cache/
+
+# Not published: evals and Claude Code artifacts
+eval/
+.claude/
+/CLAUDE.md

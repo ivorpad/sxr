@@ -1,0 +1,25 @@
+{
+  "version": "v1",
+  "conventions": [
+    {
+      "name": "max-module-length",
+      "description": "Source modules stay at or under 300 lines so agents can read them whole.",
+      "hint": "Split the module; providers/, model, render each own one concern.",
+      "paths": "src/**/*.py",
+      "mustNot": { "matchContent": ["\\A(?:[^\\n]*\\n){300}[\\s\\S]"] }
+    },
+    {
+      "name": "max-test-module-length",
+      "description": "Test modules stay at or under 400 lines.",
+      "hint": "Split by command or provider under test.",
+      "paths": "tests/**/*.py",
+      "mustNot": { "matchContent": ["\\A(?:[^\\n]*\\n){400}[\\s\\S]"] }
+    },
+    {
+      "name": "source-is-documented",
+      "description": "Every source module, public class, and public function has a docstring.",
+      "paths": "src/sxr/**/*.py",
+      "must": { "haveDocstrings": true }
+    }
+  ]
+}
