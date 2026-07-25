@@ -1,6 +1,6 @@
 [project]
 name = "sxr"
-version = "0.2.2"
+version = "0.2.3"
 description = "Read and digest Codex and Claude Code sessions from the terminal"
 readme = "README.md"
 authors = [
