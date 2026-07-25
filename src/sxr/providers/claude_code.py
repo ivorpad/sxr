@@ -7,6 +7,7 @@ here classifies or interprets content.
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -22,8 +23,12 @@ def projects_dir() -> Path:
 
 
 def flatten_cwd(cwd: str) -> str:
-    """Mirror Claude Code's lossy path flattening: `/` and `.` become `-`."""
-    return "".join("-" if ch in "/." else ch for ch in cwd)
+    """Mirror Claude Code's lossy path flattening.
+
+    Every non-alphanumeric character becomes `-` (underscores and dots
+    included), not just path separators; ASCII-strict to match the CLI.
+    """
+    return re.sub(r"[^a-zA-Z0-9]", "-", cwd)
 
 
 def _iter_records(path: Path):

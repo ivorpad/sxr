@@ -57,6 +57,8 @@ def _write_claude(tmp_path: Path, monkeypatch) -> Path:
 
 def test_claude_flatten() -> None:
     assert claude_code.flatten_cwd("/Users/ivor/.claude") == "-Users-ivor--claude"
+    # every non-alphanumeric flattens, underscores included (the fieldbrief bug)
+    assert claude_code.flatten_cwd("/w/2026-07-22-01_fieldbrief") == "-w-2026-07-22-01-fieldbrief"
 
 
 def test_claude_list_and_parse(tmp_path: Path, monkeypatch) -> None:
