@@ -17,3 +17,6 @@ wheels/
 eval/
 .claude/
 /CLAUDE.md
+
+# Session-local, never tracked
+HANDOFF.md
