@@ -141,7 +141,28 @@ def show(ref: SessionRef, events: list[Event], opts: ShowOpts) -> int:
             f"{human_num(budget)} budget); whole text: --around <seq>, "
             f"--range A:B, --budget 0, or --json"
         )
+    if not zoom:
+        _hidden_note(events, selected)
     return 0
+
+
+def _hidden_note(events: list[Event], selected: list[Event]) -> None:
+    """Say what the skeleton hid and which flag reveals each kind."""
+    shown = {id(e) for e in selected}
+    hidden: dict[str, int] = {}
+    for event in events:
+        if id(event) not in shown:
+            hidden[event.kind] = hidden.get(event.kind, 0) + 1
+    if not hidden:
+        return
+    parts = []
+    if hidden.get("thinking"):
+        parts.append(f"{hidden.pop('thinking')} thinking (--thinking)")
+    if hidden.get("result"):
+        parts.append(f"{hidden.pop('result')} tool results (--tools)")
+    if hidden:
+        parts.append(f"{sum(hidden.values())} meta/attachments (--full)")
+    print(f"# hidden: {', '.join(parts)}; zoom: --around <seq>; by kind: --type <kind>")
 
 
 def prompts(

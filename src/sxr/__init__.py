@@ -1,6 +1,6 @@
 """sxr: x-ray Codex and Claude Code sessions from the terminal."""
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 
 def main() -> None:
