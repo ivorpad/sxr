@@ -19,6 +19,11 @@ stderr; exit 0 = content, 1 = empty result, 2 = usage or bad id. --json
 emits the original JSONL records, never truncated. ...[+N chars] marks a
 display trim; zooms (--around, --range, --type) and --full print whole text.
 \b
+budgets: scan views (show, prompts) print whole text whenever they fit
+--budget chars (default 40k; env SXR_BUDGET); over budget they trim lines
+to --line-limit chars (default 200; env SXR_LINE_LIMIT) and say so.
+--budget 0 disables trimming entirely.
+\b
 examples:
   sxr                          sessions for this directory (--codex for Codex)
   sxr show @2 --tools          transcript skeleton with tool results
@@ -43,6 +48,14 @@ ClaudeF = Annotated[bool, typer.Option("--claude", help="Read Claude Code sessio
 PathF = Annotated[Path | None, typer.Option("--path", help="Inspect DIR instead of cwd")]
 JsonF = Annotated[bool, typer.Option("--json", help="Raw JSONL records, never truncated")]
 LimitF = Annotated[int | None, typer.Option("--limit", "-n", help="Cap printed rows")]
+BudgetF = Annotated[
+    int | None,
+    typer.Option("--budget", help="Chars before scan views trim (0 = never; env SXR_BUDGET)"),
+]
+LineLimitF = Annotated[
+    int | None,
+    typer.Option("--line-limit", help="Per-line char cap when trimming (env SXR_LINE_LIMIT)"),
+]
 
 
 def _merge(
@@ -131,6 +144,8 @@ def show(
     tools: Annotated[bool, typer.Option("--tools")] = False,
     errors: Annotated[bool, typer.Option("--errors")] = False,
     full: Annotated[bool, typer.Option("--full")] = False,
+    budget: BudgetF = None,
+    line_cap: LineLimitF = None,
     use_codex: CodexF = False,
     use_claude: ClaudeF = False,
     path: PathF = None,
@@ -151,6 +166,8 @@ def show(
         type_=type_,
         limit=limit,
         json_out=json_out,
+        budget=budget,
+        line_limit=line_cap,
     )
     raise typer.Exit(views_read.show(ref, provider.parse(ref.path), opts))
 
@@ -160,6 +177,8 @@ def prompts(
     ctx: typer.Context,
     arg: Arg = None,
     include_all: Annotated[bool, typer.Option("--all")] = False,
+    budget: BudgetF = None,
+    line_cap: LineLimitF = None,
     use_codex: CodexF = False,
     use_claude: ClaudeF = False,
     path: PathF = None,
@@ -170,7 +189,9 @@ def prompts(
     provider, cwd, json_out, limit = _merge(ctx, use_codex, use_claude, path, json_out, limit)
     ref = resolve(arg, provider.list_sessions(cwd))[0]
     events = provider.parse(ref.path)
-    raise typer.Exit(views_read.prompts(ref, events, include_all, json_out, limit))
+    raise typer.Exit(
+        views_read.prompts(ref, events, include_all, json_out, limit, budget, line_cap)
+    )
 
 
 @app.command()

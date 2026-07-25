@@ -1,14 +1,39 @@
-"""Formatting helpers: truncation, timestamps, human numbers, tab rows."""
+"""Formatting helpers: truncation, timestamps, human numbers, tab rows.
 
-ONE_LINE_LIMIT = 100
+Trim sizes are defaults, not policy: flags override env vars override these
+(SXR_LINE_LIMIT, SXR_BUDGET; 0 disables trimming entirely).
+"""
+
+import os
+
+ONE_LINE_LIMIT = 200
 MIDDLE_HEAD = 200
 MIDDLE_TAIL = 120
+SCAN_BUDGET_CHARS = 40_000
+
+
+def _env_int(name: str, default: int) -> int:
+    """Integer env override, falling back to the default on absence/garbage."""
+    try:
+        return int(os.environ[name])
+    except (KeyError, ValueError):
+        return default
+
+
+def line_limit(flag: int | None = None) -> int:
+    """Effective per-line char cap: flag, else SXR_LINE_LIMIT, else default."""
+    return flag if flag is not None else _env_int("SXR_LINE_LIMIT", ONE_LINE_LIMIT)
+
+
+def scan_budget(flag: int | None = None) -> int:
+    """Effective whole-view char budget: flag, else SXR_BUDGET, else default."""
+    return flag if flag is not None else _env_int("SXR_BUDGET", SCAN_BUDGET_CHARS)
 
 
 def one_line(text: str, limit: int = ONE_LINE_LIMIT) -> str:
     """Flatten to one line; trim the tail with an explicit recovery marker."""
     flat = " ".join(text.split())
-    if len(flat) <= limit:
+    if limit <= 0 or len(flat) <= limit:
         return flat
     return f"{flat[:limit]}... [+{len(flat) - limit} chars]"
 
