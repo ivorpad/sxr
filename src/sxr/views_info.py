@@ -61,10 +61,13 @@ def list_view(refs: list[SessionRef], json_out: bool, limit: int | None, cwd: st
     if limit is not None and len(refs) > limit:
         print(f"# +{len(refs) - limit} more (raise -n)")
     print(
-        "# read: show @N (transcript, zoom --around) | prompts (user msgs) | "
+        "# read: show @N (transcript, zoom --around, end --tail) | prompts (user msgs) | "
         "cmds (commands+ok/err) | errors (failures)"
     )
-    print('# find: grep "<kw>" [-c|-C 3] | counts: tools, stats | raw: path, --json')
+    print(
+        '# find: grep "<kw>" [-c|-C 3] | cmds --grep "<re>" (commands that did X) | '
+        "counts: tools, stats | raw: path, --json"
+    )
     print("# every command takes --help; full contract: sxr --help; teach agents: sxr init")
     return 0
 
@@ -151,14 +154,26 @@ def path_view(paths: list) -> int:
     return 0
 
 
-def cmds_view(refs: list[SessionRef], parse, json_out: bool, limit: int | None) -> int:
-    """Tool commands of the scope, one per line, with paired result state."""
+def cmds_view(
+    refs: list[SessionRef], parse, json_out: bool, limit: int | None, pattern: str | None = None
+) -> int:
+    """Tool commands of the scope, one per line, with paired result state.
+
+    pattern (smart-case regex) matches the untruncated command text, so it
+    finds what a piped `| grep` over the display lines would miss.
+    """
     from sxr.util import clock, line_limit, one_line
 
+    needle = None
+    if pattern:
+        flags = re.IGNORECASE if pattern == pattern.lower() else 0
+        needle = re.compile(pattern, flags)
     cap = line_limit(None)
     total = 0
     for ref in refs:
         calls = [e for e in parse(ref.path) if e.kind == "tool"]
+        if needle is not None:
+            calls = [e for e in calls if needle.search(e.text)]
         total += len(calls)
         if json_out:
             for event in calls:
@@ -173,7 +188,9 @@ def cmds_view(refs: list[SessionRef], parse, json_out: bool, limit: int | None) 
         if limit is not None and len(calls) > limit:
             print(f"# +{len(calls) - limit} more (raise -n)")
     if total == 0:
-        print(f"no tool calls in {', '.join(r.short_id for r in refs)}", file=sys.stderr)
+        scope = ", ".join(r.short_id for r in refs)
+        what = f"no commands matching '{pattern}'" if pattern else "no tool calls"
+        print(f"{what} in {scope}", file=sys.stderr)
         return 1
     if not json_out:
         print("# attempts, not outcomes: err/? means verify; zoom: sxr show <id> --around <seq>")

@@ -20,6 +20,7 @@ class ShowOpts:
     context: int = 10
     range_: str | None = None
     type_: str | None = None
+    tail: int | None = None
     limit: int | None = None
     json_out: bool = False
     budget: int | None = None
@@ -27,7 +28,19 @@ class ShowOpts:
 
 
 def _selected(events: list[Event], opts: ShowOpts) -> tuple[list[Event], bool]:
-    """(events to print, whether the selection is an explicit zoom)."""
+    """(events to print, whether the selection is an explicit zoom).
+
+    --tail keeps the last N of whatever the other flags selected, and is
+    itself a zoom: how a session ended prints whole, never trimmed.
+    """
+    picked, zoom = _base_selection(events, opts)
+    if opts.tail is not None:
+        return picked[-opts.tail :], True
+    return picked, zoom
+
+
+def _base_selection(events: list[Event], opts: ShowOpts) -> tuple[list[Event], bool]:
+    """Selection before --tail applies: zooms, type filter, or skeleton."""
     if opts.type_:
         prefix = opts.type_ + "."
         return [e for e in events if e.kind == opts.type_ or e.kind.startswith(prefix)], True

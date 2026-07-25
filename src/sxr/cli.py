@@ -122,6 +122,9 @@ def show(
     context: Annotated[int, typer.Option(help="Zoom window half-width")] = 10,
     range_: Annotated[str | None, typer.Option("--range", help="Event span A:B")] = None,
     type_: Annotated[str | None, typer.Option("--type", help="Record type filter")] = None,
+    tail: Annotated[
+        int | None, typer.Option("--tail", help="Last N selected events, whole text")
+    ] = None,
     thinking: Annotated[bool, typer.Option("--thinking")] = False,
     tools: Annotated[bool, typer.Option("--tools")] = False,
     errors: Annotated[bool, typer.Option("--errors")] = False,
@@ -146,6 +149,7 @@ def show(
         context=context,
         range_=range_,
         type_=type_,
+        tail=tail,
         limit=limit,
         json_out=json_out,
         budget=budget,
@@ -268,16 +272,24 @@ def grep(
 def cmds(
     ctx: typer.Context,
     arg: Arg = None,
+    grep_: Annotated[
+        str | None, typer.Option("--grep", help="Only commands matching regex (smart-case)")
+    ] = None,
     use_codex: CodexF = False,
     use_claude: ClaudeF = False,
     path: PathF = None,
     json_out: JsonF = False,
     limit: LimitF = None,
 ) -> None:
-    """Every tool command a session ran, one line each, with ok/err state."""
+    """Every tool command a session ran, one line each, with ok/err state.
+
+    --grep filters by command text; with no session arg it searches ALL
+    sessions for the directory, one call to find the commands that did X.
+    """
     provider, cwd, json_out, limit = _merge(ctx, use_codex, use_claude, path, json_out, limit)
-    refs = resolve(arg, provider.list_sessions(cwd))
-    raise typer.Exit(views_info.cmds_view(refs, provider.parse, json_out, limit))
+    sessions = provider.list_sessions(cwd)
+    refs = sessions if arg is None and grep_ else resolve(arg, sessions)
+    raise typer.Exit(views_info.cmds_view(refs, provider.parse, json_out, limit, grep_))
 
 
 @app.command()

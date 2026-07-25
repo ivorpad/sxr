@@ -19,7 +19,9 @@ examples:
   sxr grep -c timeout          which sessions mention it, before reading any
   sxr grep "release" @2 -C 3   matches with 3 surrounding events inline
   sxr cmds @2                  every command a session ran, with ok/err
+  sxr cmds --grep "git push"   commands that did X, across all sessions
   sxr show @2 --around 1247    untruncated window around event #1247
+  sxr show @2 --tail 5         how a session ended, whole text
   sxr prompts                  user messages of the newest session, as stored
   sxr errors @2                is_error records with event indexes
   sxr init >> AGENTS.md        teach agents sxr before their first call
@@ -35,7 +37,9 @@ search the history FIRST; it is usually one call:
     sxr grep -c "<keyword>"      # which sessions mention it (counts only)
     sxr grep "<keyword>" @N -C 3 # matches with surrounding events inline
     sxr cmds @N                  # every command a session ran, with ok/err
+    sxr cmds --grep "<re>"       # commands that did X, across all sessions
     sxr show @N --around <seq>   # untruncated window at one event
+    sxr show @N --tail 5         # how a session ended: its final report
     sxr prompts @N               # what the human actually typed
     sxr errors @N                # what failed, structurally flagged
     sxr stats @N                 # counts by record property

@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from sxr.model import Event, SessionRef
+from sxr.views_info import cmds_view
 from sxr.views_read import ShowOpts, prompts, show
 
 
@@ -55,3 +56,46 @@ def test_show_hidden_note_names_flags(capsys) -> None:
     out = capsys.readouterr().out
     assert "1 thinking (--thinking)" in out
     assert "1 tool results (--tools)" in out
+
+
+def test_show_tail_keeps_last_selected_events(capsys) -> None:
+    events = [Event(i, "", "asst", "text", f"msg {i}") for i in range(1, 6)]
+    assert show(_ref(), events, ShowOpts(tail=2)) == 0
+    out = capsys.readouterr().out
+    assert "msg 4" in out and "msg 5" in out
+    assert "msg 3" not in out
+
+
+def test_show_tail_is_zoom_never_trims(capsys) -> None:
+    events = [
+        Event(1, "", "asst", "text", "padding " * 100),
+        Event(2, "", "asst", "text", "final report " * 30),
+    ]
+    assert show(_ref(), events, ShowOpts(tail=1, budget=100)) == 0
+    out = capsys.readouterr().out
+    assert out.count("final report") == 30
+    assert "[+" not in out
+
+
+def _tool(seq: int, text: str, tag: str = "ok") -> Event:
+    return Event(seq, "", "asst", "tool", text, tool="Bash", tag=tag)
+
+
+def test_cmds_grep_matches_untruncated_command_text(capsys) -> None:
+    events = [_tool(1, "git push origin main && echo done"), _tool(2, "ls -la")]
+    assert cmds_view([_ref()], lambda _: events, False, None, "git push") == 0
+    out = capsys.readouterr().out
+    assert "git push" in out
+    assert "ls -la" not in out
+
+
+def test_cmds_grep_smart_case(capsys) -> None:
+    events = [_tool(1, "GIT PUSH origin main")]
+    assert cmds_view([_ref()], lambda _: events, False, None, "git push") == 0
+    assert cmds_view([_ref()], lambda _: events, False, None, "Git Push") == 1
+
+
+def test_cmds_grep_no_match_exits_1(capsys) -> None:
+    events = [_tool(1, "ls -la")]
+    assert cmds_view([_ref()], lambda _: events, False, None, "git push") == 1
+    assert "no commands matching" in capsys.readouterr().err
