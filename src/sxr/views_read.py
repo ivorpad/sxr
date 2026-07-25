@@ -174,4 +174,6 @@ def errors(refs: list[SessionRef], parse, json_out: bool, limit: int | None) -> 
     if not json_out:
         parts = ", ".join(f"{tool} {n}" for tool, n in sorted(by_tool.items(), key=lambda i: -i[1]))
         print(f"# {total} error records ({parts})")
+        if len(refs) == 1:
+            print(f"# zoom: sxr show {refs[0].short_id} --around <seq>")
     return 0

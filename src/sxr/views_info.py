@@ -30,7 +30,7 @@ def _session_json(ref: SessionRef) -> dict:
     }
 
 
-def list_view(refs: list[SessionRef], json_out: bool, limit: int | None) -> int:
+def list_view(refs: list[SessionRef], json_out: bool, limit: int | None, cwd: str = "") -> int:
     """Sessions newest first with @N handles; exit 0 even when empty."""
     shown = refs if limit is None else refs[:limit]
     if json_out:
@@ -38,6 +38,8 @@ def list_view(refs: list[SessionRef], json_out: bool, limit: int | None) -> int:
             print(json.dumps(_session_json(ref), ensure_ascii=False))
         return 0
     codex = bool(refs and refs[0].provider == "codex")
+    provider = "codex" if codex else "claude code"
+    print(f"# sxr: {provider} sessions recorded for {cwd or 'this directory'}, newest first")
     header = (
         ["# @", "id", "started"]
         + (["kind", "model/effort"] if codex else [])
@@ -53,11 +55,12 @@ def list_view(refs: list[SessionRef], json_out: bool, limit: int | None) -> int:
             ref.errors,
             human_num(ref.tokens),
             human_size(ref.size_bytes),
-            ref.label,
+            " ".join(ref.label.split())[:80],
         ]
         print(tab_row(*row))
     if limit is not None and len(refs) > limit:
         print(f"# +{len(refs) - limit} more (raise -n)")
+    print("# next: sxr show @N | sxr errors @N | sxr --help for the full contract")
     return 0
 
 

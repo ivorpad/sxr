@@ -10,7 +10,32 @@ from sxr.handles import fail, resolve
 from sxr.providers import claude_code, codex
 from sxr.views_read import ShowOpts
 
-app = typer.Typer(add_completion=False, pretty_exceptions_enable=False, rich_markup_mode=None)
+EPILOG = """\b
+ids: @N from the list; @A:@B names a range; any unique id prefix; a session
+name (set via /rename); no id at all means the newest session.
+\b
+output: tab-separated rows with a # header line; data on stdout, notices on
+stderr; exit 0 = content, 1 = empty result, 2 = usage or bad id. --json
+emits the original JSONL records, never truncated. ...[+N chars] marks a
+display trim; zooms (--around, --range, --type) and --full print whole text.
+\b
+examples:
+  sxr                          sessions for this directory (--codex for Codex)
+  sxr show @2 --tools          transcript skeleton with tool results
+  sxr show @2 --around 1247    untruncated window around event #1247
+  sxr show @2 --type ai-title  select events by record type
+  sxr prompts                  user messages of the newest session, as stored
+  sxr errors @2                is_error records with event indexes
+  sxr grep -c timeout @1:@5    match counts per session, before reading any
+  sxr errors @2 --json | jq .  raw records for everything else
+"""
+
+app = typer.Typer(
+    add_completion=False,
+    pretty_exceptions_enable=False,
+    rich_markup_mode=None,
+    epilog=EPILOG,
+)
 
 Arg = Annotated[str | None, typer.Argument(help="Session: @N, @A:@B, id prefix, or name")]
 CodexF = Annotated[bool, typer.Option("--codex", help="Read Codex sessions")]
@@ -51,7 +76,7 @@ def _list(provider, cwd: str, json_out: bool, limit: int | None) -> None:
         where = "~/.codex/sessions" if provider is codex else "~/.claude/projects"
         print(f"no sessions found for {cwd} (checked {where})", flush=True)
         raise typer.Exit(0)
-    raise typer.Exit(views_info.list_view(refs, json_out, limit))
+    raise typer.Exit(views_info.list_view(refs, json_out, limit, cwd))
 
 
 @app.callback(invoke_without_command=True)

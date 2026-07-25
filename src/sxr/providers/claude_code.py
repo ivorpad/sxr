@@ -188,7 +188,24 @@ def _summarize(path: Path) -> SessionRef:
             ref.name = rec.get("customTitle", ref.name)
         if rec.get("isApiErrorMessage"):
             ref.errors += 1
+        if rtype == "user" and not rec.get("isMeta") and "first_user" not in ref.extra:
+            text = _user_text(rec)
+            if text:
+                ref.extra["first_user"] = text
+    if not ref.title:
+        ref.title = ref.extra.get("first_user", "")
     return ref
+
+
+def _user_text(rec: dict[str, Any]) -> str:
+    """The typed text of a user record: string content or first text block."""
+    content = rec.get("message", {}).get("content", "")
+    if isinstance(content, str):
+        return content
+    for block in content:
+        if isinstance(block, dict) and block.get("type") == "text":
+            return block.get("text", "")
+    return ""
 
 
 def _error_blocks(rec: dict[str, Any]) -> int:

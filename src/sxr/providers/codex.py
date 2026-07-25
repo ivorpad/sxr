@@ -210,12 +210,14 @@ def _summarize(path: Path, meta: dict[str, Any], titles: dict[str, str]) -> Sess
             total = (pay.get("info") or {}).get("total_token_usage") or {}
             ref.tokens = int(total.get("total_tokens") or ref.tokens)
         event = _record_event(seq, rec)
+        if event.kind == "user_message" and not ref.extra.get("first_user"):
+            ref.extra["first_user"] = event.text
         if event.is_error:
             call_id = str(event.raw.get("tool_use_id") or seq)
             if call_id not in seen_errors:
                 seen_errors.add(call_id)
                 ref.errors += 1
-    ref.title = titles.get(sid, "")
+    ref.title = titles.get(sid) or ref.extra.get("first_user", "")
     return ref
 
 
