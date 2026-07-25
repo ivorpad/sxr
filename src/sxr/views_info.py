@@ -60,7 +60,12 @@ def list_view(refs: list[SessionRef], json_out: bool, limit: int | None, cwd: st
         print(tab_row(*row))
     if limit is not None and len(refs) > limit:
         print(f"# +{len(refs) - limit} more (raise -n)")
-    print("# next: sxr show @N | sxr errors @N | sxr --help for the full contract")
+    print(
+        "# read: show @N (transcript, zoom --around) | prompts (user msgs) | "
+        "cmds (commands+ok/err) | errors (failures)"
+    )
+    print('# find: grep "<kw>" [-c|-C 3] | counts: tools, stats | raw: path, --json')
+    print("# every command takes --help; full contract: sxr --help; teach agents: sxr init")
     return 0
 
 

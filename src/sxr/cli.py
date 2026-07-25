@@ -76,12 +76,18 @@ def main(
     path: PathF = None,
     json_out: JsonF = False,
     limit: LimitF = None,
+    version: Annotated[bool, typer.Option("--version", help="Print version and exit")] = False,
 ) -> None:
     """sxr - session x-ray: read Claude Code and Codex sessions for a directory.
 
     Bare invocation lists sessions for the cwd, newest first, with @N handles.
     Commands accept @N, @A:@B ranges, id prefixes, or names; no id = newest.
     """
+    if version:
+        from sxr import __version__
+
+        print(f"sxr {__version__}")
+        raise typer.Exit(0)
     ctx.obj = {
         "codex": use_codex,
         "claude": use_claude,
