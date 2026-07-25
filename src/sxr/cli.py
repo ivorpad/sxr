@@ -7,33 +7,9 @@ import typer
 
 from sxr import views_info, views_read
 from sxr.handles import fail, resolve
+from sxr.onboard import EPILOG, INIT_BLOCK
 from sxr.providers import claude_code, codex
 from sxr.views_read import ShowOpts
-
-EPILOG = """\b
-ids: @N from the list; @A:@B names a range; any unique id prefix; a session
-name (set via /rename); no id at all means the newest session.
-\b
-output: tab-separated rows with a # header line; data on stdout, notices on
-stderr; exit 0 = content, 1 = empty result, 2 = usage or bad id. --json
-emits the original JSONL records, never truncated. ...[+N chars] marks a
-display trim; zooms (--around, --range, --type) and --full print whole text.
-\b
-budgets: scan views (show, prompts) print whole text whenever they fit
---budget chars (default 40k; env SXR_BUDGET); over budget they trim lines
-to --line-limit chars (default 200; env SXR_LINE_LIMIT) and say so.
---budget 0 disables trimming entirely.
-\b
-examples:
-  sxr                          sessions for this directory (--codex for Codex)
-  sxr show @2 --tools          transcript skeleton with tool results
-  sxr show @2 --around 1247    untruncated window around event #1247
-  sxr show @2 --type ai-title  select events by record type
-  sxr prompts                  user messages of the newest session, as stored
-  sxr errors @2                is_error records with event indexes
-  sxr grep -c timeout @1:@5    match counts per session, before reading any
-  sxr errors @2 --json | jq .  raw records for everything else
-"""
 
 app = typer.Typer(
     add_completion=False,
@@ -266,6 +242,7 @@ def grep(
     arg: Arg = None,
     count: Annotated[bool, typer.Option("--count", "-c", help="Matches per session")] = False,
     fixed: Annotated[bool, typer.Option("--fixed", "-F", help="Fixed string")] = False,
+    context: Annotated[int, typer.Option("--context", "-C", help="Events around each match")] = 0,
     use_codex: CodexF = False,
     use_claude: ClaudeF = False,
     path: PathF = None,
@@ -276,4 +253,29 @@ def grep(
     provider, cwd, json_out, _limit = _merge(ctx, use_codex, use_claude, path, json_out, limit)
     sessions = provider.list_sessions(cwd)
     refs = sessions if arg is None else resolve(arg, sessions)
-    raise typer.Exit(views_info.grep_view(pattern, refs, provider.parse, fixed, count, json_out))
+    raise typer.Exit(
+        views_info.grep_view(pattern, refs, provider.parse, fixed, count, json_out, context)
+    )
+
+
+@app.command()
+def cmds(
+    ctx: typer.Context,
+    arg: Arg = None,
+    use_codex: CodexF = False,
+    use_claude: ClaudeF = False,
+    path: PathF = None,
+    json_out: JsonF = False,
+    limit: LimitF = None,
+) -> None:
+    """Every tool command a session ran, one line each, with ok/err state."""
+    provider, cwd, json_out, limit = _merge(ctx, use_codex, use_claude, path, json_out, limit)
+    refs = resolve(arg, provider.list_sessions(cwd))
+    raise typer.Exit(views_info.cmds_view(refs, provider.parse, json_out, limit))
+
+
+@app.command()
+def init() -> None:
+    """Print an AGENTS.md block that teaches agents sxr (sxr init >> AGENTS.md)."""
+    print(INIT_BLOCK, end="")
+    raise typer.Exit(0)

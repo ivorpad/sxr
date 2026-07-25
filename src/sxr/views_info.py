@@ -146,27 +146,84 @@ def path_view(paths: list) -> int:
     return 0
 
 
+def cmds_view(refs: list[SessionRef], parse, json_out: bool, limit: int | None) -> int:
+    """Tool commands of the scope, one per line, with paired result state."""
+    from sxr.util import clock, line_limit, one_line
+
+    cap = line_limit(None)
+    total = 0
+    for ref in refs:
+        calls = [e for e in parse(ref.path) if e.kind == "tool"]
+        total += len(calls)
+        if json_out:
+            for event in calls:
+                print(json.dumps(event.raw.get("line", {}), ensure_ascii=False))
+            continue
+        prefix = f"{ref.short_id}\t" if len(refs) > 1 else ""
+        for event in calls if limit is None else calls[:limit]:
+            print(
+                f"{prefix}#{event.seq:04d}  {clock(event.ts)}  {event.tool}  "
+                f'"{one_line(event.text, cap)}" -> {event.tag or "?"}'
+            )
+        if limit is not None and len(calls) > limit:
+            print(f"# +{len(calls) - limit} more (raise -n)")
+    if total == 0:
+        print(f"no tool calls in {', '.join(r.short_id for r in refs)}", file=sys.stderr)
+        return 1
+    if not json_out:
+        print("# attempts, not outcomes: err/? means verify; zoom: sxr show <id> --around <seq>")
+    return 0
+
+
+def _grep_context(ref: SessionRef, events: list, hits: list, context: int) -> None:
+    """Print each hit with its surrounding events, grep -C style."""
+    from sxr.util import clock, line_limit
+    from sxr.views_read import event_line
+
+    cap = line_limit(None)
+    index = {id(e): i for i, e in enumerate(events)}
+    for hit in hits:
+        pos = index[id(hit)]
+        for event in events[max(0, pos - context) : pos + context + 1]:
+            mark = ">" if event is hit else " "
+            print(
+                f"{mark} {ref.short_id} #{event.seq:04d} {clock(event.ts)} "
+                f"{event.role:<5} {event_line(event, True, cap)}"
+            )
+        print("--")
+
+
 def grep_view(
-    pattern: str, refs: list[SessionRef], parse, fixed: bool, count: bool, json_out: bool
+    pattern: str,
+    refs: list[SessionRef],
+    parse,
+    fixed: bool,
+    count: bool,
+    json_out: bool,
+    context: int = 0,
 ) -> int:
     """Search event text across the scope; -c counts per session."""
+    from sxr.util import one_line
+
     flags = re.IGNORECASE if pattern == pattern.lower() else 0
     needle = re.compile(re.escape(pattern) if fixed else pattern, flags)
     total = 0
     if count:
         print(tab_row("# session", "matches"))
     for ref in refs:
-        hits = [e for e in parse(ref.path) if e.text and needle.search(e.text)]
+        events = parse(ref.path)
+        hits = [e for e in events if e.text and needle.search(e.text)]
         total += len(hits)
         if count:
             print(tab_row(ref.short_id, len(hits)))
             continue
-        for event in hits:
-            if json_out:
+        if json_out:
+            for event in hits:
                 print(json.dumps(event.raw.get("line", {}), ensure_ascii=False))
-            else:
-                from sxr.util import one_line
-
+        elif context > 0:
+            _grep_context(ref, events, hits, context)
+        else:
+            for event in hits:
                 print(
                     tab_row(
                         ref.short_id, f"#{event.seq:04d}", event.role, f'"{one_line(event.text)}"'
@@ -175,4 +232,6 @@ def grep_view(
     if total == 0 and not count:
         print(f"no matches for '{pattern}'", file=sys.stderr)
         return 1
+    if total > 0 and not count and not json_out and context == 0:
+        print("# context inline: -C 3; zoom: sxr show <id> --around <seq>")
     return 0
