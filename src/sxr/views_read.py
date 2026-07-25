@@ -177,7 +177,8 @@ def prompts(
     """User-authored-side records as stored; exit 1 when none exist."""
     from sxr.util import human_num, line_limit
 
-    kinds = ("text", "user_message")
+    has_user_message = any(e.kind == "user_message" for e in events)
+    kinds = ("user_message",) if has_user_message else ("text",)
     picked = [e for e in events if e.role == "user" and (include_all or e.kind in kinds)]
     rest = sum(1 for e in events if e.role == "user") - len(picked)
     if json_out:
@@ -191,7 +192,9 @@ def prompts(
     cap = line_limit(cap_flag)
     _print_events(picked, trim=trim, limit=limit, cap=cap)
     note = (
-        f" ({rest} more user records are tool_result blocks; --all includes them)" if rest else ""
+        f" ({rest} more user-role records: tool results or injected texts; --all includes them)"
+        if rest
+        else ""
     )
     print(f"# {len(picked)} user records shown{note}")
     if trim:
