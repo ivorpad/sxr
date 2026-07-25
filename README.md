@@ -15,8 +15,9 @@ plain text.
 
 ```bash
 brew install ivorpad/tap/sxr
-# or, from PyPI: uv tool install sxr / pipx install sxr / uvx sxr
 ```
+
+Homebrew is the only channel today; a PyPI publish is pending.
 
 ## Use
 
@@ -34,14 +35,19 @@ or not at all: no id means the newest session. `--codex` switches provider.
 ```bash
 sxr show @2                    # transcript skeleton, one line per event
 sxr show @2 --around 1247      # zoom to event #1247, text untruncated
+sxr show @2 --tail 5           # how a session ended, whole text
 sxr show @2 --type ai-title    # select events by record type
 sxr prompts                    # user messages of the newest session, as stored
+sxr cmds @6                    # every command a session ran, with ok/err
+sxr cmds --grep "git push"     # commands that did X, across all sessions
 sxr errors @6                  # records flagged is_error, with denial kinds
 sxr tools @6                   # per-tool call and failure counts
 sxr stats @6                   # counts by record property, tokens, attribution
 sxr path @6                    # file paths, pipe straight to jq
 sxr grep -c "timeout" @1:@5    # which sessions mention it, before reading any
+sxr grep "release" @2 -C 3     # matches with surrounding events inline
 sxr errors @6 --json | jq .    # the original records, untouched
+sxr init >> AGENTS.md          # teach agents sxr before their first call
 ```
 
 ## Rules the output follows
@@ -59,7 +65,7 @@ sxr errors @6 --json | jq .    # the original records, untouched
 
 ## Status
 
-0.1.0 covers both providers and all views above. Not built yet: `--since`,
+0.2.2 covers both providers and all views above. Not built yet: `--since`,
 `--all-paths`, the Codex archive and subagent flags, an index cache for the
 first-line cwd scan. Session formats drift with CLI releases; the parser is
 lenient by design, so unknown record types pass through as their own kind
