@@ -6,7 +6,7 @@ from collections import Counter
 
 from sxr.model import Event, SessionRef
 from sxr.providers.claude_code import INTERRUPT_MARKER
-from sxr.util import day, human_num, human_size, tab_row
+from sxr.util import LIVE_NOTE, day, human_num, human_size, is_live, live_mark, tab_row
 
 
 def _session_json(ref: SessionRef) -> dict:
@@ -17,6 +17,7 @@ def _session_json(ref: SessionRef) -> dict:
         "provider": ref.provider,
         "cwd": ref.cwd,
         "started": day(ref.started),
+        "live": is_live(ref.ended),
         "title": ref.title,
         "name": ref.name,
         "kind": ref.kind,
@@ -54,11 +55,13 @@ def list_view(refs: list[SessionRef], json_out: bool, limit: int | None, cwd: st
             ref.errors,
             human_num(ref.tokens),
             human_size(ref.size_bytes),
-            " ".join(ref.label.split())[:80],
+            live_mark(ref.ended) + " ".join(ref.label.split())[:80],
         ]
         print(tab_row(*row))
     if limit and len(refs) > limit:
         print(f"# +{len(refs) - limit} more (raise -n, -n 0 for all)")
+    if any(is_live(ref.ended) for ref in shown):
+        print(LIVE_NOTE)
     print(
         "# read: show @N (transcript, zoom --around, end --tail) | prompts (user msgs) | "
         "cmds (commands+ok/err) | errors (failures)"

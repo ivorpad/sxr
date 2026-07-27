@@ -14,6 +14,7 @@ class SessionRef:
     path: Path
     cwd: str = ""
     started: str = ""
+    ended: str = ""
     title: str = ""
     name: str = ""
     kind: str = ""

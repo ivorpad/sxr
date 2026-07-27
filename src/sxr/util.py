@@ -5,11 +5,18 @@ Trim sizes are defaults, not policy: flags override env vars override these
 """
 
 import os
+from datetime import UTC, datetime
 
 ONE_LINE_LIMIT = 200
 MIDDLE_HEAD = 200
 MIDDLE_TAIL = 120
 SCAN_BUDGET_CHARS = 40_000
+LIVE_WINDOW_SECONDS = 600
+LIVE_MARK = "(live) "
+LIVE_NOTE = (
+    "# (live) = written in the last 10 min, your own session included; "
+    "scope it out with --before today"
+)
 
 
 def _env_int(name: str, default: int) -> int:
@@ -54,6 +61,31 @@ def clock(ts: str) -> str:
 def day(ts: str) -> str:
     """YYYY-MM-DDTHH:MM:SSZ from an ISO timestamp, or empty string."""
     return f"{ts[:19]}Z" if len(ts) >= 19 else ""
+
+
+def now_utc() -> datetime:
+    """Current UTC time; the seam that lets live-label tests freeze the clock."""
+    return datetime.now(UTC)
+
+
+def is_live(ts: str) -> bool:
+    """Is an event timestamp within LIVE_WINDOW_SECONDS of now, either way?
+
+    Timestamps without a zone are read as UTC, the way both providers record
+    them; unparseable or missing ones are simply not live.
+    """
+    try:
+        stamp = datetime.fromisoformat(ts)
+    except ValueError:
+        return False
+    if stamp.tzinfo is None:
+        stamp = stamp.replace(tzinfo=UTC)
+    return abs((now_utc() - stamp).total_seconds()) < LIVE_WINDOW_SECONDS
+
+
+def live_mark(ts: str) -> str:
+    """The '(live) ' title prefix for a session still being written, else ''."""
+    return LIVE_MARK if is_live(ts) else ""
 
 
 def human_num(n: int) -> str:

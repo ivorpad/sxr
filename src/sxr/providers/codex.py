@@ -202,6 +202,7 @@ def _summarize(path: Path, meta: dict[str, Any], titles: dict[str, str]) -> Sess
     for seq, rec in _iter_records(path):
         pay = rec.get("payload") or {}
         ptype = pay.get("type", "")
+        ref.ended = rec.get("timestamp") or ref.ended
         if rec.get("type") == "response_item" and ptype in ("message", "agent_message"):
             ref.messages += 1
         elif rec.get("type") == "turn_context":
