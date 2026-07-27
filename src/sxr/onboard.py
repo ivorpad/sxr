@@ -29,6 +29,7 @@ examples:
   sxr grep "release" @2 -C 3   matches with 3 surrounding events inline
   sxr cmds @2                  every command a session ran, with ok/err
   sxr cmds --grep "git push"   commands that did X, across all sessions
+  sxr grep -c x --before today history only: not your own (live) session
   sxr show @2 --around 1247    untruncated window around event #1247
   sxr show @2 --tail 5         how a session ended, whole text
   sxr prompts                  user messages of the newest session, as stored
@@ -67,6 +68,8 @@ Sharp edges:
 - ids: @N from bare `sxr` (newest first), @A:@B range, unique id prefix, or
   name; no id = newest session. For the ORIGIN of X, `grep -c "x" --sort
   started`: oldest recorded mention first (history may predate the corpus).
+- your own running session is in the corpus and matches your own commands:
+  rows marked `(live)` are being written now; `--before today` scopes them out.
 - --codex switches provider. --json emits raw untruncated JSONL; get file
   paths for jq via `sxr path @N`.
 - Transcripts record ATTEMPTS, not outcomes: trust the -> ok/err/? markers

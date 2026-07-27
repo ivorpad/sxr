@@ -1,14 +1,27 @@
-"""Resolve session arguments: @N handles, @A:@B ranges, id prefixes, names."""
+"""Resolve session arguments: @N handles, @A:@B ranges, id prefixes, names.
 
+Time also selects sessions: --since/--before narrow a scope to the sessions
+started inside a half-open window, so an agent can read history that predates
+its own running session.
+"""
+
+import re
 import sys
+from datetime import UTC, datetime
 from typing import NoReturn
 
 from sxr.model import SessionRef
-from sxr.util import one_line
+from sxr.util import now_utc, one_line
 
 _HEX = set("0123456789abcdef-")
 CANDIDATES = 5
 CANDIDATE_TITLE = 60
+WHEN_RE = re.compile(
+    r"\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-][\d:]+)?)?$"
+)
+WHEN_FORMS = (
+    "YYYY-MM-DD, today, an ISO datetime (2026-07-26T14:30:00Z), or @N for that session's start"
+)
 
 
 def fail(message: str, hint: str = "") -> NoReturn:
@@ -77,3 +90,46 @@ def resolve(
     if hits:
         fail(f"ambiguous name '{arg}': {_candidates(hits)}", hint)
     fail(missing or f"no session matching '{arg}'; run sxr to list")
+
+
+def _stamp(value: str, flag: str, sessions: list[SessionRef]) -> str:
+    """A --since/--before value as a timestamp comparable with ref.started.
+
+    A leading @ means a session handle, so the bound is that session's own
+    start; anything else is a date or ISO datetime, normalized to UTC. Only
+    @ selects a session: a bare id prefix like 2026 is also a valid date.
+    `today` is midnight UTC today, since the docs teach --before today.
+    """
+    if value.startswith("@"):
+        return resolve(value, sessions)[0].started
+    text = value.strip()
+    if text == "today":
+        text = now_utc().date().isoformat()
+    if not WHEN_RE.fullmatch(text):
+        fail(f"bad {flag} value '{value}': want {WHEN_FORMS}")
+    try:
+        when = datetime.fromisoformat(text.replace(" ", "T"))
+    except ValueError as exc:
+        fail(f"bad {flag} value '{value}': {exc}. Want {WHEN_FORMS}")
+    if when.tzinfo is not None:
+        when = when.astimezone(UTC).replace(tzinfo=None)
+    return when.isoformat()
+
+
+def window(
+    sessions: list[SessionRef], since: str | None = None, before: str | None = None
+) -> list[SessionRef]:
+    """Sessions whose start falls in [since, before): inclusive, then exclusive.
+
+    A bare date is midnight UTC, so --before today drops today's sessions --
+    the caller's own included -- and --since today keeps only them.
+    """
+    if not since and not before:
+        return sessions
+    low = _stamp(since, "--since", sessions) if since else ""
+    high = _stamp(before, "--before", sessions) if before else ""
+    kept = [s for s in sessions if (not low or s.started >= low) and (not high or s.started < high)]
+    if sessions and not kept:
+        bounds = " ".join(f"{f} {v}" for f, v in (("--since", since), ("--before", before)) if v)
+        print(f"# {bounds} kept none of {len(sessions)} sessions in scope", file=sys.stderr)
+    return kept

@@ -67,6 +67,8 @@ def test_claude_list_and_parse(tmp_path: Path, monkeypatch) -> None:
     assert len(refs) == 1
     ref = refs[0]
     assert (ref.messages, ref.errors, ref.tokens) == (3, 1, 7)
+    # ended is the last stamped record; the (live) label reads it
+    assert (ref.started, ref.ended) == ("2026-07-02T12:11:03.000Z", "2026-07-02T12:11:15.000Z")
     assert ref.title == "Fixture session"
     assert ref.name == "fixed-name"
     events = claude_code.parse(ref.path)
@@ -144,6 +146,7 @@ def test_codex_list_and_parse(tmp_path: Path, monkeypatch) -> None:
     ref = refs[0]
     assert ref.kind == "exec"
     assert (ref.messages, ref.errors, ref.tokens) == (1, 1, 4200)
+    assert (ref.started, ref.ended) == ("2026-07-24T16:58:24.000Z", "2026-07-24T16:58:29.000Z")
     assert ref.model == "gpt-5.6-sol/high"
     events = codex.parse(ref.path)
     result = next(e for e in events if e.kind == "result")

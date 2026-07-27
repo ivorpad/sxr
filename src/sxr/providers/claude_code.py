@@ -168,8 +168,9 @@ def _summarize(path: Path) -> SessionRef:
     for _seq, rec in _iter_records(path):
         rtype = rec.get("type", "")
         ts = rec.get("timestamp", "")
-        if ts and not ref.started:
-            ref.started = ts
+        if ts:
+            ref.started = ref.started or ts
+            ref.ended = ts
         if rec.get("isSidechain"):
             ref.extra["sidechain_records"] = ref.extra.get("sidechain_records", 0) + 1
         skill = rec.get("attributionSkill")

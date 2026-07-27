@@ -19,9 +19,8 @@ app = typer.Typer(
 )
 
 
-def _list(provider, cwd: str, json_out: bool, limit: int | None) -> None:
+def _list(refs, provider, cwd: str, json_out: bool, limit: int | None) -> None:
     """Shared body for bare invocation and the list command."""
-    refs = provider.list_sessions(cwd)
     if not refs:
         where = "~/.codex/sessions" if provider is codex else "~/.claude/projects"
         print(f"no sessions found for {cwd} (checked {where})", flush=True)
@@ -37,12 +36,15 @@ def main(
     path: flags.PathF = None,
     json_out: flags.JsonF = False,
     limit: flags.LimitF = None,
+    since: flags.SinceF = None,
+    before: flags.BeforeF = None,
     version: Annotated[bool, typer.Option("--version", help="Print version and exit")] = False,
 ) -> None:
     """sxr - session x-ray: read Claude Code and Codex sessions for a directory.
 
     Bare invocation lists sessions for the cwd, newest first, with @N handles.
     Commands accept @N, @A:@B ranges, id prefixes, or names; no id = newest.
+    (live) marks sessions written in the last 10 min; --since/--before scope by date.
     """
     if version:
         from sxr import __version__
@@ -55,10 +57,12 @@ def main(
         "path": path,
         "json": json_out,
         "limit": limit,
+        "since": since,
+        "before": before,
     }
     if ctx.invoked_subcommand is None:
         provider, cwd, json_out, limit = flags.merge(ctx, False, False, None, False, None)
-        _list(provider, cwd, json_out, limit)
+        _list(flags.sessions(ctx, provider, cwd), provider, cwd, json_out, limit)
 
 
 @app.command("list")
@@ -69,10 +73,12 @@ def list_cmd(
     path: flags.PathF = None,
     json_out: flags.JsonF = False,
     limit: flags.LimitF = None,
+    since: flags.SinceF = None,
+    before: flags.BeforeF = None,
 ) -> None:
-    """List sessions for the directory, newest first."""
+    """List sessions for the directory, newest first; (live) = written just now."""
     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    _list(provider, cwd, json_out, limit)
+    _list(flags.sessions(ctx, provider, cwd, since, before), provider, cwd, json_out, limit)
 
 
 @app.command()
@@ -100,7 +106,7 @@ def show(
 ) -> None:
     """Transcript skeleton; zooms (--around/--range/--type) print whole text."""
     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    ref = resolve(arg, provider.list_sessions(cwd))[0]
+    ref = resolve(arg, flags.sessions(ctx, provider, cwd))[0]
     opts = ShowOpts(
         thinking=thinking,
         tools=tools,
@@ -134,7 +140,7 @@ def prompts(
 ) -> None:
     """User records in order, exactly as stored."""
     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    ref = resolve(arg, provider.list_sessions(cwd))[0]
+    ref = resolve(arg, flags.sessions(ctx, provider, cwd))[0]
     events = provider.parse(ref.path)
     raise typer.Exit(
         views_read.prompts(ref, events, include_all, json_out, limit, budget, line_cap)
@@ -153,7 +159,7 @@ def errors(
 ) -> None:
     """Records with error properties (is_error, nonzero exit_code)."""
     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    refs = resolve(arg, provider.list_sessions(cwd))
+    refs = resolve(arg, flags.sessions(ctx, provider, cwd))
     raise typer.Exit(views_read.errors(refs, provider.parse, json_out, limit))
 
 
@@ -169,7 +175,7 @@ def tools(
 ) -> None:
     """Per-tool call and error counts."""
     provider, cwd, json_out, _limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    ref = resolve(arg, provider.list_sessions(cwd))[0]
+    ref = resolve(arg, flags.sessions(ctx, provider, cwd))[0]
     raise typer.Exit(views_info.tools_view(provider.parse(ref.path), json_out))
 
 
@@ -185,7 +191,7 @@ def stats(
 ) -> None:
     """Counts by record property: the elevation view."""
     provider, cwd, json_out, _limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    for ref in resolve(arg, provider.list_sessions(cwd)):
+    for ref in resolve(arg, flags.sessions(ctx, provider, cwd)):
         views_info.stats_view(ref, provider.parse(ref.path), json_out)
     raise typer.Exit(0)
 
@@ -202,7 +208,7 @@ def path_cmd(
 ) -> None:
     """Print session file paths; feed them straight to jq."""
     provider, cwd, _json, _limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    ref = resolve(arg, provider.list_sessions(cwd))[0]
+    ref = resolve(arg, flags.sessions(ctx, provider, cwd))[0]
     raise typer.Exit(views_info.path_view(provider.session_paths(ref)))
 
 
@@ -219,7 +225,9 @@ def grep(
     expr: flags.ExprF = None,
     include_all: flags.AllRowsF = False,
     sort: flags.SortF = "matches",
-    after: flags.AfterF = None,
+    after_ctx: flags.AfterCtxF = None,
+    before_ctx: flags.BeforeCtxF = None,
+    since: flags.SinceF = None,
     before: flags.BeforeF = None,
     budget: flags.GrepBudgetF = None,
     use_codex: flags.CodexF = False,
@@ -232,13 +240,14 @@ def grep(
 
     -c is the decision table: which sessions match, how densely, and the
     first matching event index to zoom into. Rows are capped by -n and by
-    the char budget; -n 0 prints everything.
+    the char budget; -n 0 prints everything. --since/--before scope the
+    sessions searched; your own (live) session is in scope until you do.
     """
-    if after is not None or before is not None:
+    if after_ctx is not None or before_ctx is not None:
         fail("no -A/-B; context is symmetric: -C 3 prints 3 events each side.")
     pattern, arg = views_grep.pick_pattern(pattern, arg, expr)
     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    sessions = provider.list_sessions(cwd)
+    sessions = flags.sessions(ctx, provider, cwd, since, before)
     refs = sessions if arg is None else views_grep.scope(arg, pattern, sessions)
     opts = GrepOpts(
         fixed=fixed,
@@ -262,6 +271,8 @@ def cmds(
     grep_: Annotated[
         str | None, typer.Option("--grep", help="Only commands matching regex (smart-case)")
     ] = None,
+    since: flags.SinceF = None,
+    before: flags.BeforeF = None,
     use_codex: flags.CodexF = False,
     use_claude: flags.ClaudeF = False,
     path: flags.PathF = None,
@@ -272,9 +283,10 @@ def cmds(
 
     --grep filters by command text; with no session arg it searches ALL
     sessions for the directory, one call to find the commands that did X.
+    --since/--before narrow that scope by session start date.
     """
     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    sessions = provider.list_sessions(cwd)
+    sessions = flags.sessions(ctx, provider, cwd, since, before)
     refs = sessions if arg is None and grep_ else resolve(arg, sessions)
     raise typer.Exit(views_info.cmds_view(refs, provider.parse, json_out, limit, grep_))
 

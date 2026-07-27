@@ -11,7 +11,16 @@ from dataclasses import dataclass
 
 from sxr.handles import fail, resolve
 from sxr.model import Event, SessionRef
-from sxr.util import clock, line_limit, one_line, scan_budget, tab_row
+from sxr.util import (
+    LIVE_NOTE,
+    clock,
+    is_live,
+    line_limit,
+    live_mark,
+    one_line,
+    scan_budget,
+    tab_row,
+)
 from sxr.views_read import event_line
 
 METACHARS = "\\.^$*+?[]{}()|"
@@ -146,9 +155,14 @@ def _row(ref: SessionRef, event: Event) -> str:
     return tab_row(ref.short_id, f"#{event.seq:04d}", event.role, f'"{one_line(event.text)}"')
 
 
-def _title(ref: SessionRef) -> str:
-    """Session title as the bare list shows it, trimmed for a table cell."""
-    return " ".join(ref.label.split())[:TITLE_CAP]
+def _title(ref: SessionRef, mark: bool = False) -> str:
+    """Session title as the bare list shows it, trimmed for a table cell.
+
+    mark prefixes the (live) label, which belongs in the title cell: a sixth
+    column would break every TSV parser again, and a suffix hides behind the
+    50-char trim exactly when the title is long.
+    """
+    return (live_mark(ref.ended) if mark else "") + " ".join(ref.label.split())[:TITLE_CAP]
 
 
 def _order(rows: list[tuple], opts: GrepOpts) -> list[tuple]:
@@ -176,6 +190,7 @@ def _count_view(pattern: str, rows: list[tuple], opts: GrepOpts, warn: list[str]
                         "matches": count,
                         "first": first,
                         "started": ref.started[:10],
+                        "live": is_live(ref.ended),
                         "title": _title(ref),
                     },
                     ensure_ascii=False,
@@ -184,7 +199,7 @@ def _count_view(pattern: str, rows: list[tuple], opts: GrepOpts, warn: list[str]
         return 0
     print(tab_row("# session", "matches", "first", "started", "title"))
     for ref, count, first in shown:
-        print(tab_row(ref.short_id, count, first or "", ref.started[:10], _title(ref)))
+        print(tab_row(ref.short_id, count, first or "", ref.started[:10], _title(ref, True)))
     top = shown[0]
     print(
         f"# {matched} of {len(rows)} sessions match; "
@@ -192,6 +207,8 @@ def _count_view(pattern: str, rows: list[tuple], opts: GrepOpts, warn: list[str]
     )
     if len(kept) > len(shown):
         print(f"# +{len(kept) - len(shown)} matching sessions hidden (raise -n)")
+    if any(is_live(ref.ended) for ref, _count, _first in shown):
+        print(LIVE_NOTE)
     print("# oldest first: --sort started; keep zero-match rows: --all")
     for line in warn:
         print(line)

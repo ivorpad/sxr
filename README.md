@@ -46,6 +46,7 @@ sxr stats @6                   # counts by record property, tokens, attribution
 sxr path @6                    # file paths, pipe straight to jq
 sxr grep -c "timeout" @1:@5    # which sessions mention it, before reading any
 sxr grep "release" @2 -C 3     # matches with surrounding events inline
+sxr grep -c "x" --before today # history only, not your own (live) session
 sxr errors @6 --json | jq .    # the original records, untouched
 sxr init --write               # teach agents sxr before their first call
 ```
@@ -81,6 +82,26 @@ the ids that match, `-e` spells the pattern for one that starts with a dash.
 Match rows are capped at 40k chars (`--budget`, env `SXR_BUDGET`) or at `-n`
 rows, whichever comes first; the footer reports the true match count and
 `-n 0` prints all of them.
+
+An agent searching history matches its own transcript: the search it just ran
+is a record in the session it is running in, so counts drift between two
+identical calls and the top-ranked "source" is itself. Sessions written in the
+last 10 minutes are marked `(live)` in the title cell of the bare list and the
+`-c` table, and `--since DATE` / `--before DATE` filter the scope by session
+start (`YYYY-MM-DD`, an ISO datetime, `today`, or `@N` for that session's
+start; dates are UTC, the interval is `[since, before)`, so `--before today`
+drops everything recorded today). The label is not a filter because it cannot
+be: a teammate's concurrent session looks exactly like your own, and dropping
+it silently would be worse than showing it.
+
+```
+$ sxr grep -c "live session" --path ~/src/sxr
+# session	matches	first	started	title
+d2e9fcb0	2	39	2026-07-27	(live) implement the (live) label and --since/--bef
+31e98111	1	9	2026-07-27	implement the bounded grep output
+# 3 of 24 sessions match; zoom: sxr show d2e9fcb0 --around 39
+# (live) = written in the last 10 min, your own session included; scope it out with --before today
+```
 
 ## Teaching an agent to use it
 
@@ -126,9 +147,9 @@ binary, exit 1 prints which version is stale.
 
 ## Status
 
-0.2.3 covers both providers and all views above. Not built yet: `--since`,
-`--all-paths`, the Codex archive and subagent flags, an index cache for the
-first-line cwd scan. Session formats drift with CLI releases; the parser is
+0.2.3 covers both providers and all views above. Not built yet: `--all-paths`,
+the Codex archive and subagent flags, an index cache for the first-line cwd
+scan. Session formats drift with CLI releases; the parser is
 lenient by design, so unknown record types pass through as their own kind
 and never crash a run.
 
