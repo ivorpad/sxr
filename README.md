@@ -47,8 +47,30 @@ sxr path @6                    # file paths, pipe straight to jq
 sxr grep -c "timeout" @1:@5    # which sessions mention it, before reading any
 sxr grep "release" @2 -C 3     # matches with surrounding events inline
 sxr errors @6 --json | jq .    # the original records, untouched
-sxr init >> AGENTS.md          # teach agents sxr before their first call
+sxr init --write               # teach agents sxr before their first call
 ```
+
+## Teaching an agent to use it
+
+An agent that has never heard of sxr will not run it, so the primer belongs
+in a file the agent already reads. `sxr init` prints that primer; `sxr init
+--write` installs it:
+
+```bash
+sxr init --write               # nearest AGENTS.md walking up from cwd
+sxr init --write --global      # ~/.agents/AGENTS.md, ~/.claude/CLAUDE.md, or ~/AGENTS.md
+sxr init --write CLAUDE.md     # any file you name
+sxr init --check               # exit 1 if the block is missing or a version behind
+```
+
+The block sits between `<!-- sxr:primer v0.2.3 -->` and `<!-- /sxr:primer -->`
+markers stamped with the version that wrote it. `--write` replaces what is
+between them and touches nothing else, so re-running after an upgrade is safe
+and running it twice leaves the file byte-identical. If the markers are
+unbalanced -- one without its pair, or two blocks -- both flags exit 2 and
+leave the file alone rather than guess where the block ends. `--check` is the
+one to put in a setup script: exit 0 means the installed primer matches the
+binary, exit 1 prints which version is stale.
 
 ## Rules the output follows
 

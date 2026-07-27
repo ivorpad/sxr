@@ -5,9 +5,9 @@ from typing import Annotated
 
 import typer
 
-from sxr import views_info, views_read
+from sxr import onboard, views_info, views_read
 from sxr.handles import fail, resolve
-from sxr.onboard import EPILOG, INIT_BLOCK
+from sxr.onboard import EPILOG
 from sxr.providers import claude_code, codex
 from sxr.views_read import ShowOpts
 
@@ -292,8 +292,5 @@ def cmds(
     raise typer.Exit(views_info.cmds_view(refs, provider.parse, json_out, limit, grep_))
 
 
-@app.command()
-def init() -> None:
-    """Print an AGENTS.md block that teaches agents sxr (sxr init >> AGENTS.md)."""
-    print(INIT_BLOCK, end="")
-    raise typer.Exit(0)
+# init carries its own flags and file handling; onboard.py owns both.
+app.command("init")(onboard.init_cmd)
