@@ -50,3 +50,30 @@ def test_unknown_exits_2() -> None:
     with pytest.raises(SystemExit) as exc:
         resolve("zzz", _refs())
     assert exc.value.code == 2
+
+
+def test_ambiguous_candidates_are_capped_not_inlined_whole(capsys) -> None:
+    bomb = "first message " * 600
+    refs = [
+        SessionRef("claude", f"cafe{n}111-2222", Path(f"{n}.jsonl"), title=f"probe {bomb}")
+        for n in range(8)
+    ]
+    with pytest.raises(SystemExit) as exc:
+        resolve("probe", refs)
+    assert exc.value.code == 2
+    err = capsys.readouterr().err
+    assert len(err) < 700  # the old error inlined ~8KB of first-message text
+    assert err.count('"') == 10  # 5 candidates, no more
+    assert "+3 more" in err
+
+
+def test_missing_and_hint_texts_are_used(capsys) -> None:
+    with pytest.raises(SystemExit):
+        resolve("nope", _refs(), missing="'nope' is not a session", hint="one pattern per call")
+    err = capsys.readouterr().err
+    assert err.startswith("error: 'nope' is not a session")
+    assert "one pattern per call" not in err  # missing already teaches; no double hint
+
+    with pytest.raises(SystemExit):
+        resolve("a0", _refs(), hint="one pattern per call")
+    assert "# one pattern per call" in capsys.readouterr().err

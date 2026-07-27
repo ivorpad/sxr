@@ -89,8 +89,8 @@ def event_line(event: Event, trim: bool, cap: int = 0) -> str:
 
 
 def _print_events(events: list[Event], trim: bool, limit: int | None, cap: int = 0) -> None:
-    """Print event lines with the shared #seq/time/role/kind prefix."""
-    shown = events if limit is None else events[:limit]
+    """Print event lines with the shared #seq/time/role/kind prefix; -n 0 = all."""
+    shown = events if not limit else events[:limit]
     for event in shown:
         kind = {"text": "text", "thinking": "think", "tool": "tool", "result": "result"}.get(
             event.kind, event.kind
@@ -99,15 +99,15 @@ def _print_events(events: list[Event], trim: bool, limit: int | None, cap: int =
             f"#{event.seq:04d}  {clock(event.ts)}  {event.role:<6} {kind:<7} "
             f"{event_line(event, trim, cap)}"
         )
-    if limit is not None and len(events) > limit:
-        print(f"# +{len(events) - limit} more events (raise -n, or --range/--around)")
+    if limit and len(events) > limit:
+        print(f"# +{len(events) - limit} more events (raise -n, -n 0 for all)")
 
 
 def _trim_decision(events: list[Event], limit: int | None, budget_flag: int | None) -> tuple:
     """(trim?, total chars, effective budget) for a scan view."""
     from sxr.util import scan_budget
 
-    shown = events if limit is None else events[:limit]
+    shown = events if not limit else events[:limit]
     total = sum(len(e.text) for e in shown)
     budget = scan_budget(budget_flag)
     return budget > 0 and total > budget, total, budget
@@ -240,7 +240,7 @@ def errors(refs: list[SessionRef], parse, json_out: bool, limit: int | None) -> 
             for event in picked:
                 print(json.dumps(event.raw.get("line", {}), ensure_ascii=False))
             continue
-        for event in picked if limit is None else picked[:limit]:
+        for event in picked if not limit else picked[:limit]:
             body = middle_trim(" ".join(event.text.split()))
             denial = f"  [{event.tag}]" if event.tag else ""
             print(

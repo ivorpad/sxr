@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from sxr.model import Event, SessionRef
 from sxr.views_info import cmds_view
 from sxr.views_read import ShowOpts, prompts, show
@@ -99,3 +101,37 @@ def test_cmds_grep_no_match_exits_1(capsys) -> None:
     events = [_tool(1, "ls -la")]
     assert cmds_view([_ref()], lambda _: events, False, None, "git push") == 1
     assert "no commands matching" in capsys.readouterr().err
+
+
+def test_cmds_limit_caps_the_whole_scope_not_each_session(capsys) -> None:
+    refs = [SessionRef("claude", f"sess{n}111-2222", Path(f"{n}.jsonl")) for n in range(3)]
+    events = [_tool(1, "git status"), _tool(2, "git log")]
+    assert cmds_view(refs, lambda _: events, False, 2, "git") == 0
+    out = capsys.readouterr().out
+    assert len([line for line in out.splitlines() if not line.startswith("#")]) == 2
+    assert "# 6 commands, showing first 2 (raise -n, or -n 0 for all)" in out
+
+
+def test_cmds_limit_zero_prints_everything(capsys) -> None:
+    events = [_tool(n, f"git log {n}") for n in range(5)]
+    assert cmds_view([_ref()], lambda _: events, False, 0, "git") == 0
+    out = capsys.readouterr().out
+    assert out.count("git log") == 5
+    assert "showing first" not in out
+
+
+def test_cmds_bad_grep_regex_exits_2_naming_its_own_flag(capsys) -> None:
+    with pytest.raises(SystemExit) as exc:
+        cmds_view([_ref()], lambda _: [_tool(1, "ls")], False, None, "foo(")
+    assert exc.value.code == 2
+    err = capsys.readouterr().err
+    assert "bad regex 'foo('" in err
+    assert "--grep 'foo\\('" in err
+
+
+def test_limit_zero_means_every_row(capsys) -> None:
+    events = [Event(i, "", "asst", "text", f"msg {i}") for i in range(1, 6)]
+    assert show(_ref(), events, ShowOpts(limit=0)) == 0
+    out = capsys.readouterr().out
+    assert out.count("msg ") == 5
+    assert "more events" not in out
