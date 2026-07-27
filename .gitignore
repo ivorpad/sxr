@@ -20,3 +20,7 @@ eval/
 
 # Session-local, never tracked
 HANDOFF.md
+
+# Not published: internal planning and consult notes
+/PLAN.md
+/docs/

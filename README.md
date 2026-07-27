@@ -57,11 +57,11 @@ sxr init --write               # teach agents sxr before their first call
 argument for the next call:
 
 ```
-$ sxr grep -c openclaw
+$ sxr grep -c webhook
 # session	matches	first	started	title
-8118457e	234	4	2026-07-20	Openclaw down again
-eec026f8	206	16	2026-07-10	Fix opwnclaw crash after self-update
-6ba59ad2	54	7	2026-06-26	Debug openclaw and hermes gateway outage
+8118457e	234	4	2026-07-20	Webhook retries dropping events
+eec026f8	206	16	2026-07-10	Fix webhok typo in route table
+6ba59ad2	54	7	2026-06-26	Debug webhook and queue outage
 # 22 of 47 sessions match; zoom: sxr show 8118457e --around 4
 # oldest first: --sort started; keep zero-match rows: --all
 ```
@@ -75,7 +75,7 @@ loudest.
 Patterns are smart-case regexes: an all-lowercase pattern matches any case, a
 pattern with capitals matches exactly, and the footer says so, because a
 capitalised or metacharacter-laden pattern otherwise misses matches silently
-(`grep -c "OpenClaw"` finds 12 sessions where `openclaw` finds 22). `-i`
+(`grep -c "Webhook"` can find 12 sessions where `webhook` finds 22). `-i`
 forces case-insensitive, `-F` matches the pattern literally, `-l` prints only
 the ids that match, `-e` spells the pattern for one that starts with a dash.
 
@@ -116,7 +116,7 @@ sxr init --write CLAUDE.md     # any file you name
 sxr init --check               # exit 1 if the block is missing or a version behind
 ```
 
-The block sits between `<!-- sxr:primer v0.2.3 -->` and `<!-- /sxr:primer -->`
+The block sits between `<!-- sxr:primer v0.3.0 -->` and `<!-- /sxr:primer -->`
 markers stamped with the version that wrote it. `--write` replaces what is
 between them and touches nothing else, so re-running after an upgrade is safe
 and running it twice leaves the file byte-identical. If the markers are
@@ -143,11 +143,11 @@ binary, exit 1 prints which version is stale.
   many rows it held back.
 - Errors name the flag that fixes them: the candidate list for an ambiguous
   id is capped at 5 short titles, and a wrong flag is answered with the
-  right one (`-A 3` → `-C 3`, `sxr grep OVH hostname` → `"OVH.*hostname"`).
+  right one (`-A 3` → `-C 3`, `sxr grep webhook retries` → `"webhook.*retries"`).
 
 ## Status
 
-0.2.3 covers both providers and all views above. Not built yet: `--all-paths`,
+0.3.0 covers both providers and all views above. Not built yet: `--all-paths`,
 the Codex archive and subagent flags, an index cache for the first-line cwd
 scan. Session formats drift with CLI releases; the parser is
 lenient by design, so unknown record types pass through as their own kind
