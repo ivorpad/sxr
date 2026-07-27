@@ -1,6 +1,7 @@
 """Transcript views: show, prompts, errors. Selection only, no judgment."""
 
 import json
+import re
 import sys
 from dataclasses import dataclass
 
@@ -48,11 +49,17 @@ def _base_selection(events: list[Event], opts: ShowOpts) -> tuple[list[Event], b
         lo, hi = opts.around - opts.context, opts.around + opts.context
         return [e for e in events if lo <= e.seq <= hi], True
     if opts.range_:
-        lo, hi = (opts.range_.split(":", 1) + ["0"])[:2]
+        text = opts.range_
+        if re.fullmatch(r"\d+-\d+", text):
+            text = text.replace("-", ":")  # the grep habit: 10-50 means 10:50
+        lo, hi = (text.split(":", 1) + ["0"])[:2]
         try:
             a, b = int(lo), int(hi)
         except ValueError:
-            print(f"error: bad range '{opts.range_}'", file=sys.stderr)
+            print(
+                f"error: bad range '{opts.range_}'; format is A:B, e.g. --range 10:50",
+                file=sys.stderr,
+            )
             raise SystemExit(2) from None
         return [e for e in events if a <= e.seq <= b], True
     return [e for e in events if _default_pick(e, opts)], False

@@ -135,3 +135,19 @@ def test_limit_zero_means_every_row(capsys) -> None:
     out = capsys.readouterr().out
     assert out.count("msg ") == 5
     assert "more events" not in out
+
+
+def test_show_range_accepts_the_grep_dash_habit(capsys) -> None:
+    events = [Event(i, "", "asst", "text", f"msg {i}") for i in range(1, 6)]
+    assert show(_ref(), events, ShowOpts(range_="2-4")) == 0
+    out = capsys.readouterr().out
+    assert "msg 2" in out and "msg 4" in out
+    assert "msg 1" not in out and "msg 5" not in out
+
+
+def test_show_bad_range_teaches_the_colon_form(capsys) -> None:
+    events = [Event(1, "", "asst", "text", "msg 1")]
+    with pytest.raises(SystemExit) as exc:
+        show(_ref(), events, ShowOpts(range_="junk"))
+    assert exc.value.code == 2
+    assert "format is A:B, e.g. --range 10:50" in capsys.readouterr().err
