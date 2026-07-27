@@ -46,7 +46,8 @@ it is usually 1-3 calls. Every command takes --help. Exit codes: 0 content,
 
 Recipes — the funnel is count -> locate -> zoom:
 ```
-how/where did X happen?    sxr grep -c "x"             # which sessions, no noise
+how/where did X happen?    sxr grep -c "x"             # ranked table; `first` column
+                                                       #   feeds show --around directly
                            sxr grep "x" @N -C 3        # matches + surrounding events
 what command did X?        sxr cmds --grep "git push"  # ALL sessions, one call
 how did a session end?     sxr show @N --tail 5        # its final report, whole text
@@ -58,13 +59,14 @@ another project's history: add --path <dir> to any of the above
 ```
 
 Sharp edges:
-- grep patterns are smart-case regex: all-lowercase matches case-insensitively;
-  there is NO -i. Use -F for literal strings (error text, paths, URLs).
+- grep patterns are smart-case regex: all-lowercase matches case-insensitively,
+  capitals match exact case (-i forces any-case). Use -F for literal strings
+  (error text, paths, URLs); -l prints just the matching session ids.
 - `...[+N chars]` marks a display trim, never lost data: zoom (--around,
   --range, --type) or --full prints whole text; --budget 0 disables trimming.
 - ids: @N from bare `sxr` (newest first), @A:@B range, unique id prefix, or
-  name; no id = newest session. For the ORIGIN of X, grep -c and take the
-  oldest matching session (earliest RECORDED mention; history may predate it).
+  name; no id = newest session. For the ORIGIN of X, `grep -c "x" --sort
+  started`: oldest recorded mention first (history may predate the corpus).
 - --codex switches provider. --json emits raw untruncated JSONL; get file
   paths for jq via `sxr path @N`.
 - Transcripts record ATTEMPTS, not outcomes: trust the -> ok/err/? markers
