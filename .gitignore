@@ -12,6 +12,7 @@ wheels/
 # Local tooling caches
 .pytest_cache/
 .ruff_cache/
+.konpy/
 
 # Not published: evals and Claude Code artifacts
 eval/

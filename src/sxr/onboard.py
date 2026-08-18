@@ -23,6 +23,14 @@ budgets: scan views (show, prompts) print whole text whenever they fit
 to --line-limit chars (default 200; env SXR_LINE_LIMIT) and say so.
 --budget 0 disables trimming entirely.
 \b
+secrets: sxr secrets audits the scope for leaked keys and passwords
+(vendored gitleaks rules + structural checks). Rows are kind, severity,
+and salted fingerprint; the value itself is never printed, --json included,
+because sxr's own output lands in the corpus it audits. sxr clean previews
+replacing those values with [sxr:redacted:<kind>:<fp>] markers; only
+--apply writes, atomically, skipping (live) sessions and entropy-tier
+candidates. Rotation is the fix; cleaning only stops re-propagation.
+\b
 examples:
   sxr                          sessions for this directory (--codex for Codex)
   sxr grep -c timeout          which sessions mention it, before reading any

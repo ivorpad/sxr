@@ -10,8 +10,9 @@ import sys
 from datetime import UTC, datetime
 from typing import NoReturn
 
+from sxr import util
 from sxr.model import SessionRef
-from sxr.util import now_utc, one_line
+from sxr.util import one_line
 
 _HEX = set("0123456789abcdef-")
 CANDIDATES = 5
@@ -61,8 +62,8 @@ def resolve(
     """Sessions named by arg: None = newest, @N, @A:@B, id prefix, or name.
 
     Ambiguous or unknown references exit 2 with capped candidates on stderr.
-    missing replaces the not-found text and hint trails every failure, so a
-    caller that knows what the argument probably was can teach it.
+    missing replaces the not-found text; hint trails the ambiguous-match
+    failures, so a caller that knows what the argument probably was can teach it.
     """
     if not sessions:
         fail("no sessions in scope")
@@ -104,7 +105,8 @@ def _stamp(value: str, flag: str, sessions: list[SessionRef]) -> str:
         return resolve(value, sessions)[0].started
     text = value.strip()
     if text == "today":
-        text = now_utc().date().isoformat()
+        # attribute lookup, not a bound import: the frozen-clock seam must reach here
+        text = util.now_utc().date().isoformat()
     if not WHEN_RE.fullmatch(text):
         fail(f"bad {flag} value '{value}': want {WHEN_FORMS}")
     try:

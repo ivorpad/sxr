@@ -47,6 +47,8 @@ sxr path @6                    # file paths, pipe straight to jq
 sxr grep -c "timeout" @1:@5    # which sessions mention it, before reading any
 sxr grep "release" @2 -C 3     # matches with surrounding events inline
 sxr grep -c "x" --before today # history only, not your own (live) session
+sxr secrets                    # leaked keys/passwords as kind+fingerprint, values never shown
+sxr clean                      # preview replacing those with masked markers; --apply writes
 sxr errors @6 --json | jq .    # the original records, untouched
 sxr init --write               # teach agents sxr before their first call
 ```

@@ -4,10 +4,11 @@ from typing import Annotated
 
 import typer
 
-from sxr import flags, onboard, views_grep, views_info, views_read
+from sxr import flags, onboard, views_grep, views_info, views_read, views_secrets
 from sxr.handles import fail, resolve
 from sxr.onboard import EPILOG
 from sxr.providers import codex
+from sxr.secrets import clean
 from sxr.views_grep import GrepOpts
 from sxr.views_read import ShowOpts
 
@@ -291,5 +292,7 @@ def cmds(
     raise typer.Exit(views_info.cmds_view(refs, provider.parse, json_out, limit, grep_))
 
 
-# init carries its own flags and file handling; onboard.py owns both.
+# init, secrets, and clean carry their own flags; their modules own them.
 app.command("init")(onboard.init_cmd)
+app.command("secrets")(views_secrets.secrets_cmd)
+app.command("clean")(clean.clean_cmd)
