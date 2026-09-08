@@ -53,6 +53,36 @@ sxr errors @6 --json | jq .    # the original records, untouched
 sxr init --write               # teach agents sxr before their first call
 ```
 
+`--path` accepts absolute paths, relative paths and `~`. Both the requested
+path and the recorded cwd resolve symlinks to their physical path. The default
+scope is one exact directory. Broader searches are explicit:
+
+```bash
+sxr --path ~/src/tries --recursive grep -c "release"
+sxr --path ~/src/project --worktrees list
+sxr --claude-root ~/.claude --claude-root ~/.claude-work --coverage list
+sxr --include-agents grep -c "child-only evidence"
+sxr --codex --archives --coverage grep -c "old failure"
+```
+
+These flags work before or after the command. `--recursive` includes descendant
+directories, with path boundaries respected. `--worktrees` adds the selected
+repository's registered Git worktrees. Without explicit `--claude-root` flags,
+`CLAUDE_CONFIG_DIR` selects one profile, defaulting to `~/.claude`; explicit roots
+replace that selection. Codex uses `CODEX_HOME`, defaulting to `~/.codex`.
+`--coverage` reports searched and unavailable roots on stderr, including when
+using `--json`. Empty discovery and searches across multiple roots also report
+the roots checked.
+
+Nested Claude sessions have IDs such as `parent-uuid/agent-a1` so reused agent
+names stay distinct. Byte-identical copies of one ID are counted once and retain
+all source paths in list JSON and coverage diagnostics. Conflicting copies keep
+their separate paths and an exact-ID lookup fails with candidates. Codex IDs
+identify the actual thread; the parent remains lineage metadata.
+
+Copy generated zoom commands to carry provider, absolute path, profile roots
+and discovery flags into the next call, even from another working directory.
+
 ### grep
 
 `grep -c` ranks the scope instead of listing it, and every row carries the
@@ -64,7 +94,7 @@ $ sxr grep -c webhook
 8118457e	234	4	2026-07-20	Webhook retries dropping events
 eec026f8	206	16	2026-07-10	Fix webhok typo in route table
 6ba59ad2	54	7	2026-06-26	Debug webhook and queue outage
-# 22 of 47 sessions match; zoom: sxr show 8118457e --around 4
+# 22 of 47 sessions match; zoom: sxr --claude --path /repo --claude-root /home/me/.claude show 8118457e-1111-2222-3333-444444444444 --around 4
 # oldest first: --sort started; keep zero-match rows: --all
 ```
 
@@ -101,7 +131,7 @@ $ sxr grep -c "live session" --path ~/src/sxr
 # session	matches	first	started	title
 d2e9fcb0	2	39	2026-07-27	(live) implement the (live) label and --since/--bef
 31e98111	1	9	2026-07-27	implement the bounded grep output
-# 3 of 24 sessions match; zoom: sxr show d2e9fcb0 --around 39
+# 3 of 24 sessions match; zoom: sxr --claude --path /home/me/src/sxr --claude-root /home/me/.claude show d2e9fcb0-1111-2222-3333-444444444444 --around 39
 # (live) = written in the last 10 min, your own session included; scope it out with --before today
 ```
 
@@ -149,11 +179,14 @@ binary, exit 1 prints which version is stale.
 
 ## Status
 
-0.3.0 covers both providers and all views above. Not built yet: `--all-paths`,
-the Codex archive and subagent flags, an index cache for the first-line cwd
-scan. Session formats drift with CLI releases; the parser is
-lenient by design, so unknown record types pass through as their own kind
-and never crash a run.
+Both providers support the views above. Codex completed command items retain
+command text, output, status, exit code and original JSONL line numbers. `cmds`
+shows the command; `grep` and `errors` also search or display its output. Stable
+item IDs remove repeated representations without merging separate executions.
+A nonzero exit is a recorded outcome, including expected empty grep results.
+
+A SQLite backend and a discovery index cache remain separate work. Unknown
+record types pass through as their own kind.
 
 Breaking since 0.2.3: `grep -c` prints five columns (session, matches, first,
 started, title), prunes zero-match rows, and exits 1 when nothing matches.

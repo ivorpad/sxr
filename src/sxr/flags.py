@@ -1,10 +1,12 @@
 """Shared option types, the root/command flag merge, and scope enumeration."""
 
+from collections import Counter
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
+from sxr.discovery_scope import discover
 from sxr.handles import fail, window
 from sxr.model import SessionRef
 from sxr.providers import claude_code, codex
@@ -76,7 +78,7 @@ def merge(
     if use_codex and use_claude:
         fail("--claude and --codex are mutually exclusive")
     provider = codex if use_codex else claude_code
-    cwd = str(path or root.get("path") or Path.cwd())
+    cwd = str(Path(path or root.get("path") or Path.cwd()).expanduser().resolve())
     return (
         provider,
         cwd,
@@ -99,8 +101,17 @@ def sessions(
     number the narrowed scope.
     """
     root = ctx.obj or {}
-    return window(
-        provider.list_sessions(cwd),
-        since or root.get("since"),
-        before or root.get("before"),
-    )
+    refs = discover(ctx, provider, cwd)
+    since = since or root.get("since")
+    before = before or root.get("before")
+    for ref in refs:
+        for flag, value in (("--since", since), ("--before", before)):
+            if value:
+                ref.extra["navigation"].extend([flag, value])
+    refs = window(refs, since, before)
+    identities = Counter((ref.provider, ref.id.lower()) for ref in refs)
+    for index, ref in enumerate(refs, start=1):
+        if identities[ref.provider, ref.id.lower()] > 1:
+            handle = f"@{index}"
+            ref.extra.update(display_id=handle, navigation_arg=handle)
+    return refs

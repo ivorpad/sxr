@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from sxr.handles import fail, resolve
 from sxr.model import Event, SessionRef
+from sxr.navigation import command
 from sxr.util import (
     LIVE_NOTE,
     clock,
@@ -203,7 +204,7 @@ def _count_view(pattern: str, rows: list[tuple], opts: GrepOpts, warn: list[str]
     top = shown[0]
     print(
         f"# {matched} of {len(rows)} sessions match; "
-        f"zoom: sxr show {top[0].short_id} --around {top[2]}"
+        f"zoom: {command(top[0], 'show', '--around', str(top[2]))}"
     )
     if len(kept) > len(shown):
         print(f"# +{len(kept) - len(shown)} matching sessions hidden (raise -n)")
@@ -259,11 +260,14 @@ def _hits_view(
     )
     total = 0
     sessions = 0
+    first_hit = None
     for ref in refs:
         events = parse(ref.path)
         hits = [e for e in events if e.text and needle.search(e.text)]
         total += len(hits)
         if hits:
+            if first_hit is None:
+                first_hit = (ref, hits[0].seq)
             sessions += 1
             _emit(ref, events, hits, opts, sink)
     if total == 0:
@@ -276,8 +280,9 @@ def _hits_view(
             f"# {found}, showing first {sink.shown}; narrow the pattern, "
             f"scope to <id>, or -n 0 for all"
         )
-    if not opts.ids_only and opts.context == 0:
-        print("# context inline: -C 3; zoom: sxr show <id> --around <seq>")
+    if not opts.ids_only and opts.context == 0 and first_hit:
+        ref, seq = first_hit
+        print(f"# context inline: -C 3; zoom: {command(ref, 'show', '--around', str(seq))}")
     for line in warn:
         print(line)
     return 0

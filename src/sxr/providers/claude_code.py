@@ -222,14 +222,11 @@ def _error_blocks(rec: dict[str, Any]) -> int:
     return sum(1 for b in content if isinstance(b, dict) and b.get("is_error"))
 
 
-def list_sessions(cwd: str) -> list[SessionRef]:
-    """Sessions recorded for cwd, newest first."""
-    project = projects_dir() / flatten_cwd(cwd)
-    if not project.is_dir():
-        return []
-    refs = [_summarize(f) for f in project.glob("*.jsonl")]
-    refs.sort(key=lambda r: (r.started, r.id), reverse=True)
-    return refs
+def list_sessions(cwd: str, **options) -> list[SessionRef]:
+    """Sessions in the requested path/profile scope, newest first."""
+    from sxr.claude_discovery import list_sessions as discover
+
+    return discover(cwd, **options)
 
 
 def session_paths(ref: SessionRef) -> list[Path]:

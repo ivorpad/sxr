@@ -14,7 +14,6 @@ from sxr import util
 from sxr.model import SessionRef
 from sxr.util import one_line
 
-_HEX = set("0123456789abcdef-")
 CANDIDATES = 5
 CANDIDATE_TITLE = 60
 WHEN_RE = re.compile(
@@ -35,9 +34,7 @@ def fail(message: str, hint: str = "") -> NoReturn:
 
 def _candidates(hits: list[SessionRef]) -> str:
     """Up to 5 candidates with short titles; full first messages are a bomb."""
-    shown = ", ".join(
-        f'{s.short_id} "{one_line(s.label, CANDIDATE_TITLE)}"' for s in hits[:CANDIDATES]
-    )
+    shown = ", ".join(f'{s.id} "{one_line(s.label, CANDIDATE_TITLE)}"' for s in hits[:CANDIDATES])
     extra = len(hits) - CANDIDATES
     return f"{shown}, +{extra} more" if extra > 0 else shown
 
@@ -76,15 +73,17 @@ def resolve(
             return sessions[min(a, b) : max(a, b) + 1]
         return [sessions[_ordinal(arg, len(sessions))]]
     lowered = arg.lower()
-    if set(lowered) <= _HEX:
-        hits = [s for s in sessions if s.id.lower().startswith(lowered)]
-        exact = [s for s in hits if s.id.lower() == lowered]
-        if exact:
-            return exact
-        if len(hits) == 1:
-            return hits
-        if hits:
-            fail(f"ambiguous id '{arg}': {_candidates(hits)}", hint)
+    hits = [s for s in sessions if s.id.lower().startswith(lowered)]
+    exact = [s for s in hits if s.id.lower() == lowered]
+    if len(exact) == 1:
+        return exact
+    if len(exact) > 1:
+        paths = ", ".join(str(s.path) for s in exact[:CANDIDATES])
+        fail(f"duplicate id '{arg}' at {paths}; select an @N handle", hint)
+    if len(hits) == 1:
+        return hits
+    if hits:
+        fail(f"ambiguous id '{arg}': {_candidates(hits)}", hint)
     hits = [s for s in sessions if lowered in s.name.lower() or lowered in s.title.lower()]
     if len(hits) == 1:
         return hits

@@ -31,6 +31,11 @@ replacing those values with [sxr:redacted:<kind>:<fp>] markers; only
 --apply writes, atomically, skipping (live) sessions and entropy-tier
 candidates. Rotation is the fix; cleaning only stops re-propagation.
 \b
+scope: exact cwd by default; --path resolves relative paths, ~ and symlinks.
+--recursive includes descendants; --worktrees includes registered Git worktrees.
+Repeat --claude-root for explicit profiles; --include-agents searches Claude
+children; --codex --archives includes archives. --coverage shows roots on stderr.
+\b
 examples:
   sxr                          sessions for this directory (--codex for Codex)
   sxr grep -c timeout          which sessions mention it, before reading any
@@ -78,11 +83,17 @@ Sharp edges:
   started`: oldest recorded mention first (history may predate the corpus).
 - your own running session is in the corpus and matches your own commands:
   rows marked `(live)` are being written now; `--before today` scopes them out.
-- --codex switches provider. --json emits raw untruncated JSONL; get file
-  paths for jq via `sxr path @N`.
-- Transcripts record ATTEMPTS, not outcomes: trust the -> ok/err/? markers
-  and verify external state (git ls-remote, gh, brew) before believing a
-  command worked.
+- --path accepts relative paths and ~; symlinks resolve to their physical path.
+  Scope is exact by default. --recursive includes descendants; --worktrees
+  includes registered Git worktrees. --coverage prints searched/missing roots.
+- --claude-root DIR selects a config profile; repeat it to search several.
+  --include-agents searches nested Claude transcripts as parent-id/agent-id.
+  --codex switches provider; --archives includes Codex archived sessions.
+- Copy the printed zoom command: it retains provider, absolute path, roots,
+  and discovery options. --json emits raw JSONL; `sxr path <id>` gives the source.
+- -> ok/err/? describes the recorded command outcome; nonzero exits include
+  expected results such as grep finding nothing. Outer exec success does not
+  establish that a nested command succeeded. Verify external state when needed.
 """
 
 OPEN_RE = re.compile(r"^[ \t]*<!--[ \t]*sxr:primer(?:[ \t]+v(\S+))?[ \t]*-->[ \t]*$", re.M)

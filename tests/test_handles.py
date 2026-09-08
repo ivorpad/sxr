@@ -40,6 +40,41 @@ def test_unique_prefix_and_ambiguity() -> None:
     assert exc.value.code == 2
 
 
+def test_duplicate_exact_ids_fail_with_distinct_paths(capsys) -> None:
+    refs = [SessionRef("codex", "abcd-1234", Path(path)) for path in ("a.jsonl", "b.jsonl")]
+    with pytest.raises(SystemExit) as exc:
+        resolve("abcd-1234", refs)
+    assert exc.value.code == 2
+    err = capsys.readouterr().err
+    assert "duplicate id" in err and "a.jsonl" in err and "b.jsonl" in err
+    assert resolve("@2", refs) == [refs[1]]
+
+
+def test_codex_short_id_collision_names_recoverable_candidates(capsys) -> None:
+    refs = [
+        SessionRef("codex", "019f9510-5499-7000-8000-000000000001", Path("a.jsonl")),
+        SessionRef("codex", "019f9510-5499-7000-8000-000000000002", Path("b.jsonl")),
+    ]
+    assert refs[0].short_id == refs[1].short_id
+    with pytest.raises(SystemExit) as exc:
+        resolve(refs[0].short_id, refs)
+    assert exc.value.code == 2
+    err = capsys.readouterr().err
+    for ref in refs:
+        assert ref.id in err
+        assert resolve(ref.id, refs) == [ref]
+
+
+def test_parent_qualified_child_identity() -> None:
+    refs = [
+        SessionRef("claude", "abcd-1234/agent-5678", Path("child.jsonl")),
+        SessionRef("claude", "abcd-1234", Path("parent.jsonl")),
+    ]
+    assert resolve("abcd-1234", refs) == [refs[1]]
+    assert resolve("abcd-1234/agent-56", refs) == [refs[0]]
+    assert resolve("ABCD-1234/AGENT-5678", refs) == [refs[0]]
+
+
 def test_name_and_title_match() -> None:
     refs = _refs()
     assert resolve("some-name", refs) == [refs[0]]

@@ -5,6 +5,7 @@ import sys
 from collections import Counter
 
 from sxr.model import Event, SessionRef
+from sxr.navigation import command
 from sxr.providers.claude_code import INTERRUPT_MARKER
 from sxr.util import LIVE_NOTE, day, human_num, human_size, is_live, live_mark, tab_row
 
@@ -27,7 +28,19 @@ def _session_json(ref: SessionRef) -> dict:
         "tokens": ref.tokens,
         "size_bytes": ref.size_bytes,
         "path": str(ref.path),
+        "parent_id": ref.extra.get("parent_id") or ref.extra.get("parent_thread_id", ""),
+        "archived": bool(ref.extra.get("archived")),
+        "sources": ref.extra.get("provenance", [str(ref.path)]),
     }
+
+
+def list_scope(refs: list[SessionRef], cwd: str, json_out: bool, limit: int | None) -> int:
+    """Empty lists are successful; discovery already reports the roots checked."""
+    if not refs:
+        if not json_out:
+            print(f"no sessions found for {cwd}", flush=True)
+        return 0
+    return list_view(refs, json_out, limit, cwd)
 
 
 def list_view(refs: list[SessionRef], json_out: bool, limit: int | None, cwd: str = "") -> int:
@@ -62,8 +75,9 @@ def list_view(refs: list[SessionRef], json_out: bool, limit: int | None, cwd: st
         print(f"# +{len(refs) - limit} more (raise -n, -n 0 for all)")
     if any(is_live(ref.ended) for ref in shown):
         print(LIVE_NOTE)
+    read = command(shown[0], "show") if shown else "show @N"
     print(
-        "# read: show @N (transcript, zoom --around, end --tail) | prompts (user msgs) | "
+        f"# read: {read} (zoom --around, end --tail) | prompts (user msgs) | "
         "cmds (commands+ok/err) | errors (failures)"
     )
     print(
@@ -176,10 +190,13 @@ def cmds_view(
         needle = compile_pattern(pattern, literal=f"escape them (--grep '{escaped}')")
     cap = line_limit(None)
     total = shown = 0
+    first_call = None
     for ref in refs:
         calls = [e for e in parse(ref.path) if e.kind == "tool"]
         if needle is not None:
-            calls = [e for e in calls if needle.search(e.text)]
+            calls = [e for e in calls if needle.search(e.raw.get("command", e.text))]
+        if calls and first_call is None:
+            first_call = (ref, calls[0].seq)
         total += len(calls)
         if json_out:
             for event in calls if not limit else calls[: max(0, limit - shown)]:
@@ -192,7 +209,7 @@ def cmds_view(
                 break
             print(
                 f"{prefix}#{event.seq:04d}  {clock(event.ts)}  {event.tool}  "
-                f'"{one_line(event.text, cap)}" -> {event.tag or "?"}'
+                f'"{one_line(event.raw.get("command", event.text), cap)}" -> {event.tag or "?"}'
             )
             shown += 1
     if total == 0:
@@ -203,5 +220,8 @@ def cmds_view(
     if not json_out:
         if total > shown:
             print(f"# {total} commands, showing first {shown} (raise -n, or -n 0 for all)")
-        print("# attempts, not outcomes: err/? means verify; zoom: sxr show <id> --around <seq>")
+        if first_call:
+            ref, seq = first_call
+            zoom = command(ref, "show", "--around", str(seq))
+            print(f"# recorded outcomes; ? = unknown; zoom: {zoom}")
     return 0

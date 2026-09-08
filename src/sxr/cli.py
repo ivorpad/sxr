@@ -7,7 +7,7 @@ import typer
 from sxr import flags, onboard, views_grep, views_info, views_read, views_secrets
 from sxr.handles import fail, resolve
 from sxr.onboard import EPILOG
-from sxr.providers import codex
+from sxr.scope_options import scope_options
 from sxr.secrets import clean
 from sxr.views_grep import GrepOpts
 from sxr.views_read import ShowOpts
@@ -20,16 +20,8 @@ app = typer.Typer(
 )
 
 
-def _list(refs, provider, cwd: str, json_out: bool, limit: int | None) -> None:
-    """Shared body for bare invocation and the list command."""
-    if not refs:
-        where = "~/.codex/sessions" if provider is codex else "~/.claude/projects"
-        print(f"no sessions found for {cwd} (checked {where})", flush=True)
-        raise typer.Exit(0)
-    raise typer.Exit(views_info.list_view(refs, json_out, limit, cwd))
-
-
 @app.callback(invoke_without_command=True)
+@scope_options
 def main(
     ctx: typer.Context,
     use_codex: flags.CodexF = False,
@@ -41,32 +33,33 @@ def main(
     before: flags.BeforeF = None,
     version: Annotated[bool, typer.Option("--version", help="Print version and exit")] = False,
 ) -> None:
-    """sxr - session x-ray: read Claude Code and Codex sessions for a directory.
+    """sxr: read Claude Code and Codex sessions for a directory.
 
-    Bare invocation lists sessions for the cwd, newest first, with @N handles.
-    Commands accept @N, @A:@B ranges, id prefixes, or names; no id = newest.
-    (live) marks sessions written in the last 10 min; --since/--before scope by date.
+    Bare invocation lists sessions newest first, with @N handles.
     """
     if version:
         from sxr import __version__
 
         print(f"sxr {__version__}")
         raise typer.Exit(0)
-    ctx.obj = {
-        "codex": use_codex,
-        "claude": use_claude,
-        "path": path,
-        "json": json_out,
-        "limit": limit,
-        "since": since,
-        "before": before,
-    }
+    ctx.obj = dict(
+        codex=use_codex,
+        claude=use_claude,
+        path=path,
+        json=json_out,
+        limit=limit,
+        since=since,
+        before=before,
+    )
     if ctx.invoked_subcommand is None:
         provider, cwd, json_out, limit = flags.merge(ctx, False, False, None, False, None)
-        _list(flags.sessions(ctx, provider, cwd), provider, cwd, json_out, limit)
+        raise typer.Exit(
+            views_info.list_scope(flags.sessions(ctx, provider, cwd), cwd, json_out, limit)
+        )
 
 
 @app.command("list")
+@scope_options
 def list_cmd(
     ctx: typer.Context,
     use_codex: flags.CodexF = False,
@@ -79,10 +72,15 @@ def list_cmd(
 ) -> None:
     """List sessions for the directory, newest first; (live) = written just now."""
     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    _list(flags.sessions(ctx, provider, cwd, since, before), provider, cwd, json_out, limit)
+    raise typer.Exit(
+        views_info.list_scope(
+            flags.sessions(ctx, provider, cwd, since, before), cwd, json_out, limit
+        )
+    )
 
 
 @app.command()
+@scope_options
 def show(
     ctx: typer.Context,
     arg: flags.Arg = None,
@@ -127,6 +125,7 @@ def show(
 
 
 @app.command()
+@scope_options
 def prompts(
     ctx: typer.Context,
     arg: flags.Arg = None,
@@ -149,6 +148,7 @@ def prompts(
 
 
 @app.command()
+@scope_options
 def errors(
     ctx: typer.Context,
     arg: flags.Arg = None,
@@ -165,6 +165,7 @@ def errors(
 
 
 @app.command()
+@scope_options
 def tools(
     ctx: typer.Context,
     arg: flags.Arg = None,
@@ -181,6 +182,7 @@ def tools(
 
 
 @app.command()
+@scope_options
 def stats(
     ctx: typer.Context,
     arg: flags.Arg = None,
@@ -198,6 +200,7 @@ def stats(
 
 
 @app.command("path")
+@scope_options
 def path_cmd(
     ctx: typer.Context,
     arg: flags.Arg = None,
@@ -214,6 +217,7 @@ def path_cmd(
 
 
 @app.command()
+@scope_options
 def grep(
     ctx: typer.Context,
     pattern: flags.PatternF = None,
@@ -237,12 +241,9 @@ def grep(
     json_out: flags.JsonF = False,
     limit: flags.LimitF = None,
 ) -> None:
-    """Search event text across sessions in scope (default: all in cwd).
+    """Search event text across all sessions in scope; -c ranks matches.
 
-    -c is the decision table: which sessions match, how densely, and the
-    first matching event index to zoom into. Rows are capped by -n and by
-    the char budget; -n 0 prints everything. --since/--before scope the
-    sessions searched; your own (live) session is in scope until you do.
+    --since/--before narrow the sessions; -n 0 lifts row and budget limits.
     """
     if after_ctx is not None or before_ctx is not None:
         fail("no -A/-B; context is symmetric: -C 3 prints 3 events each side.")
@@ -266,6 +267,7 @@ def grep(
 
 
 @app.command()
+@scope_options
 def cmds(
     ctx: typer.Context,
     arg: flags.Arg = None,
@@ -280,11 +282,9 @@ def cmds(
     json_out: flags.JsonF = False,
     limit: flags.LimitF = None,
 ) -> None:
-    """Every tool command a session ran, one line each, with ok/err state.
+    """Tool commands with ok/err state; --grep searches all sessions in scope.
 
-    --grep filters by command text; with no session arg it searches ALL
-    sessions for the directory, one call to find the commands that did X.
-    --since/--before narrow that scope by session start date.
+    --since/--before narrow the scope by session start date.
     """
     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
     sessions = flags.sessions(ctx, provider, cwd, since, before)
@@ -294,5 +294,5 @@ def cmds(
 
 # init, secrets, and clean carry their own flags; their modules own them.
 app.command("init")(onboard.init_cmd)
-app.command("secrets")(views_secrets.secrets_cmd)
-app.command("clean")(clean.clean_cmd)
+app.command("secrets")(scope_options(views_secrets.secrets_cmd))
+app.command("clean")(scope_options(clean.clean_cmd))

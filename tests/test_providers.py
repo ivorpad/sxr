@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+from sxr.handles import resolve
 from sxr.providers import claude_code, codex
 
 CLAUDE_RECORDS = [
@@ -156,3 +157,34 @@ def test_codex_list_and_parse(tmp_path: Path, monkeypatch) -> None:
 def test_codex_ignores_other_cwd(tmp_path: Path, monkeypatch) -> None:
     _write_codex(tmp_path, monkeypatch)
     assert codex.list_sessions("/elsewhere") == []
+
+
+def test_codex_thread_identity_and_legacy_fallback(tmp_path: Path, monkeypatch) -> None:
+    parent = _write_codex(tmp_path, monkeypatch)
+    parent_id = CODEX_RECORDS[0]["payload"]["session_id"]
+    child_id = "019f9511-1234-7000-8000-000000000001"
+    child = parent.with_name("rollout-child.jsonl")
+    records = [
+        {
+            "type": "session_meta",
+            "payload": {
+                "id": child_id,
+                "session_id": parent_id,
+                "parent_thread_id": parent_id,
+                "cwd": "/w",
+            },
+        },
+        {"type": "event_msg", "payload": {"type": "user_message", "message": "child needle"}},
+    ]
+    child.write_text("\n".join(json.dumps(r) for r in records))
+    refs = codex.list_sessions("/w")
+    assert len(refs) == 2
+    parent_ref = resolve(parent_id, refs)[0]
+    child_ref = resolve(child_id, refs)[0]
+    assert parent_ref.path == parent and child_ref.path == child
+    assert child_ref.extra["session_id"] == parent_id
+    assert child_ref.extra["parent_thread_id"] == parent_id
+    assert resolve(child_id[:13], refs) == [child_ref]
+    event = next(e for e in codex.parse(child_ref.path) if "child needle" in e.text)
+    assert event.seq == 2 and event.raw["line"] == records[1]
+    assert all("child needle" not in e.text for e in codex.parse(parent_ref.path))

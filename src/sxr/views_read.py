@@ -6,6 +6,7 @@ import sys
 from dataclasses import dataclass
 
 from sxr.model import Event, SessionRef
+from sxr.navigation import command
 from sxr.util import clock, day, middle_trim, one_line
 
 
@@ -261,5 +262,5 @@ def errors(refs: list[SessionRef], parse, json_out: bool, limit: int | None) -> 
         parts = ", ".join(f"{tool} {n}" for tool, n in sorted(by_tool.items(), key=lambda i: -i[1]))
         print(f"# {total} error records ({parts})")
         if len(refs) == 1:
-            print(f"# zoom: sxr show {refs[0].short_id} --around <seq>")
+            print(f"# zoom: {command(refs[0], 'show', '--around', str(picked[0].seq))}")
     return 0

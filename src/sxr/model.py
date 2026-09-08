@@ -28,6 +28,10 @@ class SessionRef:
     @property
     def short_id(self) -> str:
         """Display prefix: 8 chars for Claude uuid4, 13 for Codex uuid7."""
+        if self.extra.get("display_id"):
+            return self.extra["display_id"]
+        if "/" in self.id:
+            return self.id
         return self.id[:13] if self.provider == "codex" else self.id[:8]
 
     @property
