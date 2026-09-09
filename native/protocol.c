@@ -39,9 +39,15 @@ static int field(int fd, const char *value, size_t *budget) {
 int worker_connect(const char *path) {
     struct stat info;
     struct sockaddr_un address = {0};
-    if (strlen(path) >= sizeof address.sun_path || lstat(path, &info) ||
-        !S_ISSOCK(info.st_mode) || info.st_uid != getuid() || (info.st_mode & 077))
+    if (strlen(path) >= sizeof address.sun_path) {
+        errno = ENAMETOOLONG;
         return -1;
+    }
+    if (lstat(path, &info)) return -1;
+    if (!S_ISSOCK(info.st_mode) || info.st_uid != getuid() || (info.st_mode & 077)) {
+        errno = EACCES;
+        return -1;
+    }
     address.sun_family = AF_UNIX;
     strcpy(address.sun_path, path);
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);

@@ -55,14 +55,11 @@ static int socket_name(char *result, size_t size) {
     return n < 0 || (size_t)n >= size ? -1 : 0;
 }
 
-static void start_worker(const char *script, const char *path) {
+static pid_t start_worker(const char *script, const char *path) {
     pid_t child = fork();
-    if (child < 0) return;
+    if (child < 0) return -1;
     if (!child) {
         if (setsid() < 0) _exit(1);
-        pid_t worker = fork();
-        if (worker < 0) _exit(1);
-        if (worker) _exit(0);
         int null = open("/dev/null", O_RDWR);
         if (null < 0) _exit(1);
         for (int fd = 0; fd <= 2; fd++)
@@ -71,7 +68,7 @@ static void start_worker(const char *script, const char *path) {
         execl(script, script, "serve", "--foreground", path, (char *)NULL);
         _exit(1);
     }
-    while (waitpid(child, NULL, 0) < 0 && errno == EINTR) {}
+    return child;
 }
 
 int main(int argc, char **argv) {
@@ -85,12 +82,14 @@ int main(int argc, char **argv) {
         !socket_name(path, sizeof path)) {
         signal(SIGPIPE, SIG_IGN);
         int fd = worker_connect(path);
-        if (fd < 0) {
-            start_worker(script, path);
+        if (fd < 0 && errno != EACCES && errno != EPERM) {
+            pid_t child = start_worker(script, path);
             for (int i = 0; i < 100 && fd < 0; i++) {
+                if (child < 0 || waitpid(child, NULL, WNOHANG) == child) break;
                 struct timespec delay = {0, 10000000};
                 nanosleep(&delay, NULL);
                 fd = worker_connect(path);
+                if (fd < 0 && (errno == EACCES || errno == EPERM)) break;
             }
         }
         if (fd >= 0) {

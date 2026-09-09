@@ -149,3 +149,13 @@ def test_protocol_rejects_oversized_frames_and_environment():
         sender.sendall(struct.pack("!I", 1024 * 1024 + 1))
         with pytest.raises(ValueError, match="too large"):
             request(receiver)
+
+
+def test_worker_refused_path_falls_back_without_replacing_it(launcher):
+    command, _ = launcher
+    path = Path(os.environ["SXR_CACHE_DIR"]) / f"find-{__version__}.sock"
+    path.write_text("keep this file")
+    result = find(command)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["total"] == 1
+    assert path.read_text() == "keep this file"
