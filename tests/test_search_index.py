@@ -6,7 +6,7 @@ import sqlite3
 import pytest
 from typer.testing import CliRunner
 
-from sxr import index_store, search_index
+from sxr import index_records, index_store, search_index
 from sxr.cli import app
 from sxr.model import SessionRef
 from test_index_records import record
@@ -34,7 +34,7 @@ def test_warm_index_does_not_decode_unchanged_sources(transcript, monkeypatch):
     def unexpected(*args):
         raise AssertionError("unchanged transcript decoded again")
 
-    monkeypatch.setattr(index_store, "read_update", unexpected)
+    monkeypatch.setattr(index_records, "read_update", unexpected)
     assert search_index.candidates([transcript], "absent", False) == set()
     assert search_index.candidates([transcript], "needle", False) == {transcript.path}
 

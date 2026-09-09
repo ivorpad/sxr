@@ -7,7 +7,7 @@ import zlib
 from contextlib import closing, contextmanager
 from pathlib import Path
 
-from sxr.index_records import fold, read_update, signature
+from sxr.file_stamp import signature
 
 # Bump when normalization or the index schema changes.
 FORMAT = 2
@@ -79,6 +79,8 @@ class Index:
 
     def refresh(self, path: Path, provider: str) -> tuple[int, tuple[int, ...]] | None:
         """Reuse an unchanged file, or atomically replace its changed index documents."""
+        from sxr.index_records import read_update
+
         row = self.db.execute(
             "SELECT * FROM files WHERE path=? AND provider=?", (str(path), provider)
         ).fetchone()
@@ -120,6 +122,8 @@ class Index:
 
     def matches(self, literal: str, eligible: set[int] | None = None) -> set[int]:
         """Intersect sampled trigrams, then confirm the substring in compressed text."""
+        from sxr.index_records import fold
+
         text = fold(literal)
         count = len(text) - 2
         grams = dict.fromkeys(text[i : i + 3] for i in range(0, count, max(1, (count + 11) // 12)))

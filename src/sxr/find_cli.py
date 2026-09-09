@@ -11,6 +11,7 @@ def main(arguments):
     """Parse the find command without importing unrelated commands or Typer."""
     parser = argparse.ArgumentParser(
         prog="sxr find",
+        formatter_class=lambda prog: argparse.HelpFormatter(prog, width=80),
         description="Find sessions with source evidence across Claude and Codex. "
         "Use a few distinctive words or quoted phrases; default scope is cwd.",
     )
@@ -22,6 +23,12 @@ def main(arguments):
     parser.add_argument("--claude", dest="use_claude", action="store_true", help="Only Claude")
     parser.add_argument("--path", type=Path, help="Project directory (default: cwd)")
     parser.add_argument("--json", dest="json_out", action="store_true", help="Structured results")
+    parser.add_argument(
+        "--paths",
+        dest="paths_only",
+        action="store_true",
+        help="Matching source paths, without ranking or excerpts (default: all)",
+    )
     parser.add_argument("--limit", "-n", type=int, help="Session result limit (default: 5; 0: all)")
     parser.add_argument("--since", help="Session start on/after DATE")
     parser.add_argument("--before", help="Session start before DATE")

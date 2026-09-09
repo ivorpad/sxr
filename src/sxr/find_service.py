@@ -10,10 +10,10 @@ from pathlib import Path
 from sxr.catalog import inventory
 from sxr.discovery import normalize_path, project_paths
 from sxr.file_selection import selected as select_file
+from sxr.file_stamp import signature
 from sxr.find_index import refresh
-from sxr.find_query import clues, search
+from sxr.find_query import clues, search, search_paths
 from sxr.handles import fail, window
-from sxr.index_records import signature
 from sxr.index_store import connect
 from sxr.providers import claude_code, codex
 from sxr.util import one_line
@@ -53,16 +53,24 @@ def _roots(ctx, use_codex, use_claude):
     return list(dict.fromkeys(roots))
 
 
+def _targets(ctx, path, all_projects):
+    if all_projects or ctx.meta.get("discovery", {}).get("file"):
+        return None
+    root = ctx.obj or {}
+    return [
+        str(p)
+        for p in project_paths(
+            str(path or root.get("path") or Path.cwd()),
+            ctx.meta.get("discovery", {}).get("worktrees", False),
+        )
+    ]
+
+
 def _scope(refs, ctx, path, all_projects, since, before):
     root = ctx.obj or {}
     options = ctx.meta.get("discovery", {})
     if not all_projects and not options.get("file"):
-        targets = [
-            str(p)
-            for p in project_paths(
-                str(path or root.get("path") or Path.cwd()), options.get("worktrees", False)
-            )
-        ]
+        targets = ctx.meta.get("find_targets") or _targets(ctx, path, all_projects)
         kept = []
         for r in refs:
             legacy = (
@@ -118,7 +126,7 @@ def _exclude(refs, ctx, include_current, exclude_sessions, coverage):
     return kept
 
 
-def _render(results, coverage, errors, total, json_out, show_coverage=False):
+def _render(results, coverage, errors, total, json_out, show_coverage=False, paths_only=False):
     if show_coverage:
         for scope in coverage:
             print(
@@ -129,7 +137,11 @@ def _render(results, coverage, errors, total, json_out, show_coverage=False):
         print(
             json.dumps(
                 dict(
-                    results=results,
+                    **(
+                        {"paths": [r["path"] for r in results]}
+                        if paths_only
+                        else {"results": results}
+                    ),
                     total=total,
                     complete=not errors,
                     coverage=coverage,
@@ -138,6 +150,12 @@ def _render(results, coverage, errors, total, json_out, show_coverage=False):
                 ensure_ascii=True,
             )
         )
+        return
+    if paths_only:
+        for result in results:
+            _display(result["path"])
+        for error in errors:
+            print(f"# incomplete: {error}", file=sys.stderr)
         return
     for rank, result in enumerate(results, 1):
         print(f"{rank}. {result['provider']} {result['id']}  {result['started'][:10]}")
@@ -170,10 +188,13 @@ def execute(
     before=None,
     include_current=False,
     exclude_sessions=None,
+    paths_only=False,
 ):
     """Return session evidence with current scope and a completeness indicator."""
     if not query and not index:
         fail("provide search clues, or --index to prepare searches")
+    if paths_only and not query:
+        fail("--paths needs search clues")
     terms = clues(query) if query else []
     root = ctx.obj or {}
     json_out = json_out or root.get("json", False)
@@ -202,15 +223,26 @@ def execute(
                     [],
                 )
             else:
-                refs, coverage, errors = inventory(db, _roots(ctx, use_codex, use_claude))
+                targets = _targets(ctx, path, all_projects)
+                ctx.meta["find_targets"] = targets
+                refs, coverage, errors = inventory(
+                    db,
+                    _roots(ctx, use_codex, use_claude),
+                    targets,
+                    ctx.meta.get("discovery", {}).get("recursive", False),
+                )
             refs = _scope(refs, ctx, path, all_projects, since, before)
             refs = _exclude(refs, ctx, include_current, exclude_sessions, coverage)
             selected, problems = refresh(db, refs)
             errors.extend(problems)
             for scope in coverage:
                 scope["searched"] = sum(r.extra["root"] == scope["root"] for r in selected.values())
+            query_search = search_paths if paths_only else search
+            default_limit = 0 if paths_only else 5
             results, total = (
-                search(db, selected, terms, 5 if limit is None else limit, any_term)
+                query_search(
+                    db, selected, terms, default_limit if limit is None else limit, any_term
+                )
                 if terms
                 else ([], 0)
             )
@@ -232,6 +264,7 @@ def execute(
                 total,
                 json_out,
                 ctx.meta.get("discovery", {}).get("coverage"),
+                paths_only,
             )
             if index and not query:
                 print(f"# prepared {len(selected)} sessions", file=sys.stderr)

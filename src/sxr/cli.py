@@ -84,6 +84,14 @@ def list_cmd(
 app.command("show")(scope_options(show))
 
 
+@app.command("serve")
+def serve_cmd(action: Annotated[str, typer.Argument()] = "status") -> None:
+    """Show status or stop the local find worker (bundled installs start it automatically)."""
+    from sxr.find_worker import main as worker
+
+    raise typer.Exit(worker([action]))
+
+
 @app.command()
 @scope_options
 def prompts(

@@ -31,13 +31,40 @@ def _excerpt(text, terms, cap=600):
     return ("…" if start else "") + text[start:end] + ("…" if end < len(text) else "")
 
 
+def search_paths(db, refs, terms, limit=0, any_term=False):
+    """Find every matching source path without scoring passages or loading their text."""
+    db.execute("CREATE TEMP TABLE IF NOT EXISTS find_scope (id INTEGER PRIMARY KEY)")
+    db.execute("DELETE FROM find_scope")
+    db.executemany("INSERT INTO find_scope VALUES (?)", ((identity,) for identity in refs))
+    matched = set() if any_term else set(refs)
+    for term in sorted(terms, key=len, reverse=True):
+        expression = '"' + term.replace('"', '""') + '"'
+        found = {
+            row[0]
+            for row in db.execute(
+                "SELECT DISTINCT p.file FROM find_terms "
+                "JOIN passages p ON p.id=find_terms.rowid "
+                "JOIN find_scope s ON s.id=p.file WHERE find_terms MATCH ?",
+                (expression,),
+            )
+        }
+        if any_term:
+            matched.update(found)
+        else:
+            matched.intersection_update(found)
+            if not matched:
+                break
+    paths = sorted(str(refs[identity].path) for identity in matched)
+    return [{"path": path} for path in (paths[:limit] if limit else paths)], len(paths)
+
+
 def search(db, refs, terms, limit=5, any_term=False):
     """Require every clue somewhere in a session, then rank its strongest passages."""
     db.execute("CREATE TEMP TABLE IF NOT EXISTS find_scope (id INTEGER PRIMARY KEY)")
     db.execute("DELETE FROM find_scope")
     db.executemany("INSERT INTO find_scope VALUES (?)", ((identity,) for identity in refs))
     eligible = set(refs)
-    if not any_term:
+    if not any_term and len(terms) > 1:
         # Determine which sessions contain every clue before ranking individual passages.
         for term in sorted(terms, key=len, reverse=True):
             expression = '"' + term.replace('"', '""') + '"'
@@ -82,7 +109,12 @@ def search(db, refs, terms, limit=5, any_term=False):
             str(refs[item[0]].path),
         )
     )
-    info_by_id = {row["id"]: row for row in db.execute("SELECT id,title,digest FROM find_files")}
+    info_by_id = {
+        row["id"]: row
+        for row in db.execute(
+            "SELECT f.id,f.title,f.digest FROM find_files f JOIN find_scope s ON s.id=f.id"
+        )
+    }
     seen, output = {}, []
     for identity, hits in candidates:
         ref = refs[identity]

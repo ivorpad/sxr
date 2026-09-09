@@ -6,6 +6,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from sxr.file_stamp import signature as signature
 from sxr.providers.claude_code import _record_events
 from sxr.providers.codex_events import _record_event
 
@@ -17,11 +18,6 @@ FOLD = str.maketrans({"İ": "i", "ı": "i", "\0": "\ufffd"})
 def fold(text: str) -> str:
     """A case-insensitive candidate superset; the real regex checks final hits."""
     return text.translate(FOLD).casefold()
-
-
-def signature(stat: os.stat_result) -> tuple[int, ...]:
-    """Detect replacement, rewriting, truncation and metadata-preserving edits."""
-    return stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns
 
 
 def record_text(seq: int, raw: bytes, provider: str) -> str:

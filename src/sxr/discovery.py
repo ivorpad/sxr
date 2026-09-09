@@ -1,7 +1,5 @@
 """Path scope and duplicate-copy handling shared by transcript providers."""
 
-import hashlib
-import subprocess
 from pathlib import Path
 
 from sxr.model import SessionRef
@@ -17,6 +15,8 @@ def project_paths(cwd: str, worktrees: bool = False) -> list[Path]:
     target = normalize_path(cwd)
     if not worktrees:
         return [target]
+    import subprocess
+
     try:
         result = subprocess.run(
             ["git", "-C", str(target), "worktree", "list", "--porcelain", "-z"],
@@ -50,6 +50,8 @@ def deduplicate(refs: list[SessionRef]) -> list[SessionRef]:
     Differing files with the same identity remain separate for the resolver
     to reject, rather than silently picking a profile or an archive copy.
     """
+    import hashlib
+
     counts: dict[tuple[str, str], int] = {}
     for ref in refs:
         key = (ref.provider, ref.id)

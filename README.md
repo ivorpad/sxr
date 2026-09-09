@@ -17,41 +17,58 @@ plain text.
 brew install ivorpad/tap/sxr
 ```
 
-Homebrew is the only channel today; a PyPI publish is pending.
+Homebrew installs a prebuilt bundle containing Python, SQLite, and the other
+runtime libraries. It does not depend on Homebrew's Python or OpenSSL, so a
+custom Homebrew prefix does not trigger compilation of that dependency chain.
+
+Without Homebrew, download the matching macOS or Linux archive from
+[Releases](https://github.com/ivorpad/sxr/releases), unpack it into a directory
+you own, and symlink its `sxr` executable into `~/.local/bin`. Keep the bundle's
+files together; the launcher finds its runtime relative to itself. No root
+access or existing Python installation is needed. Both arm64 and x86_64 builds
+are provided. A PyPI publish is pending.
 
 ## Performance
 
-With a prepared index, `sxr find` returned ranked session evidence about
-**13× faster** than an `rg` + JSONL extraction workflow in a local benchmark.
+With a prepared index and running search worker, the 0.9.0 candidate returned
+ranked session evidence **2.9× faster than RTK's filename search** and **29×
+faster than its displayed matching lines** in a local benchmark.
 
-| Measurement | sxr find | rg + JSONL |
-|---|---:|---:|
-| 12 queries, sum of per-query medians | **1.09 s** | 14.19 s |
-| Known historical targets ranked first | **5/5** | 4/5 |
+| 12 queries, sum of per-query medians | Time |
+|---|---:|
+| sxr find, top five sessions with evidence | **0.290 s** |
+| sxr find --paths, all matching source paths | **0.254 s** |
+| RTK 0.48.0 rg -l, all matching raw-file paths | 0.830 s |
+| RTK 0.48.0 rg -n, compressed matching lines | 8.428 s |
 
-Individual queries were **1.5×–28× faster**. The first index build took
-**28.35 seconds and 338 MiB**, excluded from the search timings above.
-Including preparation, one run of these 12 queries was slower than direct JSONL.
+Path-only lookup was **3.3× faster in aggregate**, winning all 12 queries.
+Ranked lookup won 11; the common `pnpm` clue took 37.9 ms versus RTK's
+28.2 ms filename search. The five clues with identical physical file sets
+(including three misses) took 101 ms with sxr paths versus 433 ms with RTK,
+a **4.3×** difference.
 
-Measured on 2026-09-09 with sxr 0.8.0, macOS and Python 3.13.15, across
-**738 transcripts (1.60 GB)**: 606 Codex files and 132 Claude files from two
-profiles, including children and archives. Seven trials per query alternated
-arm order. Both arms received the same clues and roots without a known filename
-or event location, and returned ranked sessions with bounded source excerpts.
-The independent baseline used `rg -l -i -F` to locate files, then decoded JSONL
-to extract evidence. Process startup and output serialization were included;
-filesystem caches were not controlled. All returned excerpts were checked
-against source records.
+Measured on 2026-09-09, macOS arm64 and bundled Python 3.13.15, across
+**738 transcripts (1.60 GB)**: 606 Codex and 132 Claude files from two profiles,
+including children and archives. Seven trials per clue rotated command order,
+336 calls total. Process startup and output serialization were included.
+The native launcher reused a worker; index preparation and worker startup were
+excluded. Every sxr request still checked files for changes. Filesystem caches
+were not controlled, and the corpus was hash-verified before timing.
+All 12 ranked responses matched the previously source-verified 0.8.1 results
+exactly.
 
-A separate installed 0.8.1 check searched **8,032 local files in 0.31–0.89
-seconds per query**, with all five expected targets ranked first. Those are
-single-run observations, separate from the repeated benchmark.
+These commands do different work: sxr searches decoded event words and phrases;
+RTK searches literal JSONL bytes with `-i -F`. Match counts can differ. RTK paths
+are unranked; its displayed matches are capped. These numbers measure session
+retrieval, not agent reasoning time, and do not establish a winner for every
+query. The private transcript corpus is not distributed with this repository.
 
-These measurements cover finding session evidence, not agent reasoning time
-or identical exhaustive match counts: word search and literal JSONL filtering
-have different semantics. Direct JSONL reads can still win when the file and
-location are already known. The benchmark corpus contains private transcripts
-and is not distributed with this repository.
+In the earlier 0.8.0 benchmark, a different 12-query workload took 1.09 seconds
+with sxr versus 14.19 seconds with independent `rg` + JSONL evidence extraction.
+Known targets ranked first in 5/5 versus 4/5 cases. Building that index took
+**28.35 seconds and 338 MiB**, excluded from both warm-search comparisons.
+Including preparation, a single run of those 12 queries was slower than direct
+JSONL. Direct reads can also win when the file and location are already known.
 
 ## Use
 
@@ -61,6 +78,7 @@ Start with clues when you do not know the session or filename:
 sxr find "webhook retries"                    # this project, both providers
 sxr find '"build 19" CloudKit' --all-projects # project unknown
 sxr find "release signing" --path ~/src/app --json
+sxr find "release signing" --all-projects --paths # every matching source path
 ```
 
 `find` returns the top five sessions with source excerpts and an exact command
@@ -76,6 +94,18 @@ with `…` marking a cut. `--json` returns one object containing `results`, `tot
 `complete`, `coverage`, and `errors`. This is bounded evidence, not raw JSONL.
 `-n` changes the session limit; `-n 0` returns all. Result ranks are not `@N`
 handles: use the printed follow-up command to select the same source.
+
+`--paths` skips ranking and excerpt loading. It prints all matching physical
+source paths in sorted order, including duplicate copies; `-n` limits that list.
+Its JSON response uses `paths` instead of `results`. Matching, scope, freshness,
+and completeness checks are the same as ranked search.
+
+Bundled installs start an owner-only local worker automatically for `sxr find`.
+It exits after five idle minutes. `sxr serve status` shows its PID and version;
+`sxr serve stop` releases it immediately. Each call forwards its own working
+directory, provider roots, and current-session ID. `SXR_NO_DAEMON=1` runs in a
+fresh process. Source/Python installs also use the fresh-process path. A worker
+that cannot start falls back to normal execution.
 
 The first search builds a local ranked index. Prepare it ahead of an agent's
 first lookup with `sxr find --index --all-projects`. Every request checks the

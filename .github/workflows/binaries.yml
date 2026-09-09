@@ -1,0 +1,50 @@
+name: Portable binaries
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            target: macos-arm64
+          - runner: macos-15-intel
+            target: macos-x86_64
+          - runner: ubuntu-22.04
+            target: linux-x86_64
+          - runner: ubuntu-22.04-arm
+            target: linux-arm64
+    runs-on: ${{ matrix.runner }}
+    env:
+      UV_FROZEN: "true"
+      UV_PYTHON: "3.13.15"
+      UV_PYTHON_PREFERENCE: only-managed
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - run: uv sync --frozen
+      - name: Check source and native worker
+        run: |
+          uv run ruff format --check .
+          uv run ruff check .
+          uv run konpy validate
+          uv run konpy check
+          uv run pytest
+      - name: Build bundled interpreter and launcher
+        run: |
+          uv pip install --python .venv/bin/python -r packaging/requirements.txt
+          .venv/bin/python packaging/build.py
+      - name: Test relocated bundle without Python on PATH
+        run: .venv/bin/python packaging/verify.py dist/sxr-*-*.tar.gz
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: sxr-${{ matrix.target }}
+          path: dist/sxr-*-*.tar.gz
+          if-no-files-found: error

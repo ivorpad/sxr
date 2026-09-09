@@ -1,12 +1,11 @@
 """Ranked event passages with source coordinates, maintained per transcript."""
 
-import hashlib
 import json
 import sqlite3
 import sys
 import zlib
 
-from sxr.index_records import signature
+from sxr.file_stamp import signature
 from sxr.providers import claude_code, codex
 
 FORMAT = 4
@@ -89,6 +88,8 @@ def refresh(db, refs):
             print(f"# refreshing session {updated}", file=sys.stderr, flush=True)
         provider = codex if ref.provider == "codex" else claude_code
         try:
+            import hashlib
+
             events = provider.parse(ref.path)
             digest = hashlib.sha256(ref.path.read_bytes()).hexdigest()
             rows = list(_passages(events))

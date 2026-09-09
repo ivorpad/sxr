@@ -113,7 +113,7 @@ def test_project_and_provider_filters(corpus):
 def test_cache_clear_removes_catalogue_and_passages(corpus):
     find("thing")
     with connect() as index:
-        assert index.db.execute("SELECT count(*) FROM catalog").fetchone()[0] == 2
+        assert index.db.execute("SELECT count(*) FROM catalog_fast").fetchone()[0] == 2
         assert index.db.execute("SELECT count(*) FROM passages").fetchone()[0] > 0
     clear()
     assert find("thing")["total"] == 1

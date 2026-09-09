@@ -38,6 +38,10 @@ def find_cmd(
         list[str] | None,
         typer.Option("--exclude-session", help="Exclude a full session ID; repeat for several"),
     ] = None,
+    paths_only: Annotated[
+        bool,
+        typer.Option("--paths", help="All matching source paths, without ranking or excerpts"),
+    ] = False,
 ) -> None:
     """Find ranked sessions with evidence. Both providers, children and archives are included.
 
@@ -60,5 +64,6 @@ def find_cmd(
             before,
             include_current,
             exclude_sessions,
+            paths_only,
         )
     )

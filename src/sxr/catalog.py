@@ -1,25 +1,15 @@
 """A fresh file inventory with reusable session metadata for ranked retrieval."""
 
-import json
 import os
-from dataclasses import asdict
 from pathlib import Path
 
+from sxr import catalog_store
 from sxr.claude_discovery import _metadata
 from sxr.discovery import normalize_path
 from sxr.file_selection import _parent
-from sxr.index_records import signature
+from sxr.file_stamp import signature
 from sxr.model import SessionRef
 from sxr.providers import codex
-
-FORMAT = 2
-
-
-def _schema(db):
-    db.execute(
-        "CREATE TABLE IF NOT EXISTS catalog (path TEXT PRIMARY KEY, stamp TEXT, "
-        "format INTEGER, metadata TEXT)"
-    )
 
 
 def _files(root, provider, errors):
@@ -28,12 +18,13 @@ def _files(root, provider, errors):
         with os.scandir(root) as entries:
             for entry in entries:
                 if entry.is_dir(follow_symlinks=False):
-                    yield from _files(Path(entry.path), provider, errors)
-                elif entry.name.endswith(".jsonl") and entry.is_file():
-                    path = Path(entry.path)
-                    # Roots below are traversed recursively; store filtering happens in inventory.
-                    if provider == "claude" or entry.name.startswith("rollout-"):
-                        yield path, signature(entry.stat()), entry.is_symlink()
+                    yield from _files(entry.path, provider, errors)
+                elif (
+                    entry.name.endswith(".jsonl")
+                    and entry.is_file()
+                    and (provider == "claude" or entry.name.startswith("rollout-"))
+                ):
+                    yield entry.path, signature(entry.stat()), entry.is_symlink()
     except OSError as exc:
         errors.append(f"{root}: {exc.strerror or exc}")
 
@@ -54,61 +45,82 @@ def _reference(path, provider):
     return ref
 
 
-def _encode(ref):
-    ref._summary_loader = None
-    data = asdict(ref)
-    data.pop("_summary_loader")
-    data["path"] = str(ref.path)
-    return json.dumps(data, ensure_ascii=True)
-
-
-def inventory(db, roots):
-    """Return current references and explicit coverage, re-reading only changed headers."""
-    _schema(db)
-    cached = {row["path"]: row for row in db.execute("SELECT * FROM catalog")}
-    refs, errors, seen = [], [], set()
-    coverage = []
+def _update(db, errors):
     updates = []
+    for row in catalog_store.changes(db):
+        path = Path(row["path"])
+        stamp = tuple(row[field] for field in catalog_store.STAMP.split(","))
+        try:
+            ref = _reference(path, row["provider"])
+            if ref is None:
+                raise ValueError("missing session metadata; retry after the header is written")
+            if signature(path.stat()) != stamp:
+                raise ValueError("file changed while reading metadata; retry")
+            cwd = str(normalize_path(ref.cwd)) if ref.cwd else ""
+            updates.append(
+                (
+                    str(path),
+                    ref.provider,
+                    ref.id,
+                    cwd,
+                    ref.started,
+                    ref.kind,
+                    ref.extra.get("parent_path", ""),
+                    ref.extra.get("project_key", ""),
+                    *stamp,
+                )
+            )
+        except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+            errors.append(f"{path}: {exc}")
+            db.execute("DELETE FROM catalog_live WHERE path=?", (str(path),))
+    db.executemany(
+        "INSERT OR REPLACE INTO catalog_fast VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", updates
+    )
+
+
+def inventory(db, roots, targets=None, recursive=False):
+    """Return scoped references after checking every source file for metadata changes."""
+    catalog_store.schema(db)
+    errors, seen, live, coverage = [], set(), [], []
     for root, provider in roots:
-        root = normalize_path(root)
-        before = len(refs)
-        for path, stamp, symlink in _files(root, provider, errors):
+        root = str(normalize_path(root))
+        prefix = root.rstrip(os.sep) + os.sep
+        for name, stamp, symlink in _files(root, provider, errors):
             if provider == "claude":
-                parts = path.relative_to(root).parts
+                parts = name[len(prefix) :].split(os.sep)
                 if len(parts) != 2 and "subagents" not in parts[2:-1]:
                     continue
             if symlink:
-                path = path.resolve()
-            name = str(path)
+                name = str(Path(name).resolve())
             if name in seen:
                 continue
             seen.add(name)
-            old = cached.get(name)
-            try:
-                if old and old["format"] == FORMAT and tuple(json.loads(old["stamp"])) == stamp:
-                    data = json.loads(old["metadata"])
-                    data["path"] = Path(data["path"])
-                    ref = SessionRef(**data)
-                else:
-                    ref = _reference(path, provider)
-                    if ref is None:
-                        raise ValueError(
-                            "missing session metadata; retry after the header is written"
-                        )
-                    if signature(path.stat()) != stamp:
-                        raise ValueError("file changed while reading metadata; retry")
-                    ref.cwd = str(normalize_path(ref.cwd)) if ref.cwd else ""
-                    updates.append((name, json.dumps(stamp), FORMAT, _encode(ref)))
-                ref.extra.update(root=str(root), navigation=["--file", name], stamp=stamp)
-                refs.append(ref)
-            except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
-                errors.append(f"{path}: {exc}")
-        coverage.append(dict(root=str(root), provider=provider, files=len(refs) - before))
+            live.append((name, root, provider, *stamp))
+        coverage.append(dict(root=root, provider=provider, files=0))
     with db:
-        db.executemany("INSERT OR REPLACE INTO catalog VALUES (?,?,?,?)", updates)
-    by_path = {str(ref.path): ref for ref in refs}
-    for ref in refs:
-        parent = by_path.get(ref.extra.get("parent_path"))
-        if parent:
-            ref.cwd = parent.cwd or ref.cwd
+        db.executemany("INSERT INTO catalog_live VALUES (?,?,?,?,?,?,?,?)", live)
+        _update(db, errors)
+    counts = dict(db.execute("SELECT root,count(*) FROM catalog_live GROUP BY root"))
+    for scope in coverage:
+        scope["files"] = counts.get(scope["root"], 0)
+    refs = []
+    for row in catalog_store.records(db, targets, recursive):
+        extra = dict(
+            root=row["root"],
+            navigation=["--file", row["path"]],
+            stamp=tuple(row[field] for field in catalog_store.STAMP.split(",")),
+            parent_path=row["parent_path"],
+            project_key=row["project_key"],
+        )
+        refs.append(
+            SessionRef(
+                provider=row["provider"],
+                id=row["identity"],
+                path=Path(row["path"]),
+                cwd=row["cwd"],
+                started=row["started"],
+                kind=row["kind"],
+                extra=extra,
+            )
+        )
     return refs, coverage, errors

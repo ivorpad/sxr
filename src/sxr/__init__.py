@@ -1,12 +1,16 @@
 """sxr: x-ray Codex and Claude Code sessions from the terminal."""
 
-__version__ = "0.8.1"
+__version__ = "0.9.0"
 
 
 def main() -> None:
     """CLI entry point."""
     import sys
 
+    if sys.argv[1:2] == ["serve"]:
+        from sxr.find_worker import main as worker
+
+        raise SystemExit(worker(sys.argv[2:]))
     if sys.argv[1:2] == ["find"]:
         from sxr.find_cli import main as find
 
