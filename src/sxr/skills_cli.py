@@ -3,9 +3,10 @@
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
-from sxr.skills_catalog import matches, unchanged
+from sxr.skills_catalog import matches
 from sxr.skills_store import load, map_path
 
 
@@ -18,13 +19,13 @@ def parser():
     )
     result.add_argument("query", nargs="?", default="", help="Skill name or qualified path clues")
     result.add_argument(
-        "--index", action="store_true", help="Rebuild the map; remember --root choices"
+        "--index", action="store_true", help="Discover SKILL.md files (default: all of HOME)"
     )
     result.add_argument(
-        "--root", action="append", type=Path, help="Search this directory; repeat for more"
+        "--root", action="append", type=Path, help="Discover below this directory; repeat for more"
     )
     result.add_argument(
-        "--defaults", action="store_true", help="With --index, reset to default roots"
+        "--defaults", action="store_true", help="With --index, restore discovery across HOME"
     )
     result.add_argument("--paths", action="store_true", help="Print only canonical SKILL.md paths")
     result.add_argument(
@@ -43,16 +44,42 @@ def parser():
     return result
 
 
+def _current(record):
+    if not Path(record["path"]).is_file():
+        return None
+    aliases = []
+    for alias in record["aliases"]:
+        try:
+            if Path(alias).is_file() and str(Path(alias).resolve(strict=True)) == record["path"]:
+                aliases.append(alias)
+        except OSError:
+            pass
+    return dict(record, aliases=aliases)
+
+
+def _progress():
+    previous = time.monotonic()
+
+    def report(directories, skills):
+        nonlocal previous
+        now = time.monotonic()
+        if now - previous >= 10:
+            print(f"# discovering: {directories} directories, {skills} skills", file=sys.stderr)
+            previous = now
+
+    return report
+
+
 def _render(options, path, data):
     selected = matches(data["skills"], options.query, options.exact)
     total = len(selected)
     limit = options.limit if options.limit is not None else (0 if options.paths else 20)
     selected = selected[:limit] if limit else selected
     errors = list(data["errors"])
-    count = len(selected)
-    selected = [record for record in selected if Path(record["path"]).is_file()]
-    if count != len(selected) or not unchanged(data["watched"]):
-        errors.append("skill directories changed during lookup; retry")
+    current = [updated for record in selected if (updated := _current(record))]
+    if current != selected:
+        errors.append("indexed SKILL.md paths changed; rerun sxr skills --index")
+    selected = current
     if options.json:
         print(
             json.dumps(
@@ -63,6 +90,8 @@ def _render(options, path, data):
                     errors=errors,
                     coverage=data["coverage"],
                     index=str(path),
+                    indexed_at=data["indexed_at"],
+                    cycles_skipped=data.get("cycles_skipped", 0),
                 ),
                 ensure_ascii=True,
             )
@@ -78,11 +107,13 @@ def _render(options, path, data):
         for record in selected:
             print(f"{record['name']}\t{record['path']}")
         print(f"# {len(selected)} of {total} matching skills")
-    for error in errors:
+    for error in errors[:8]:
         print(f"# incomplete: {error}", file=sys.stderr)
+    if len(errors) > 8:
+        print(f"# {len(errors) - 8} more discovery errors; use --json for all", file=sys.stderr)
     if options.index:
         print(
-            f"# indexed {len(data['skills'])} skills across {len(data['roots'])} roots: {path}",
+            f"# discovered {len(data['skills'])} skills across {len(data['roots'])} roots: {path}",
             file=sys.stderr,
         )
     return 2 if errors else (0 if selected or options.index else 1)
@@ -106,7 +137,7 @@ def main(arguments):
         if options.clear:
             map_path().unlink(missing_ok=True)
             return 0
-        path, data = load(options.root, options.index, options.defaults)
+        path, data = load(options.root, options.index, options.defaults, _progress())
         return _render(options, path, data)
     except (OSError, ValueError) as exc:
         print(f"error: cannot look up skills: {exc}", file=sys.stderr)

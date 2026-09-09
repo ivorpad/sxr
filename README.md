@@ -35,40 +35,49 @@ use glibc. A PyPI publish is pending.
 sxr skills notify --paths           # canonical SKILL.md path
 sxr skills notify --paths --aliases # include symlinked paths
 sxr skills 'sites:sites-building' --json
-sxr skills --index                  # prepare or rebuild the map
+sxr skills --index                  # discover SKILL.md files across your home
 ```
 
-The first lookup builds a JSON map automatically. Defaults cover `~/.claude/skills`,
-`~/.agents/skills`, `~/.codex/skills`, `~/.cursor/skills`,
-`~/.config/opencode/skills`, `~/.gemini/skills`, `~/.copilot/skills`, and the
-Claude and Codex `plugins/cache` directories. `CLAUDE_CONFIG_DIR`, `CODEX_HOME`,
-and `XDG_CONFIG_HOME` override their corresponding locations. Missing default
-directories are recorded and checked again on later calls.
+`--index` discovers files named `SKILL.md` recursively across your home directory.
+The containing directory is the skill. No folder registry or frontmatter is
+required: `~/Developer`, downloads, hidden folders, plugin caches, and dependency
+directories are all searched. Configured Claude, Codex, and OpenCode directories
+outside your home are included too. Symlinked directories are followed, and each
+physical directory is scanned once. Symlink cycles are skipped without losing
+physical files; JSON reports their count as `cycles_skipped`. Only sxr's own
+cache is excluded.
+
+The first lookup builds the map if one does not exist. After installing a new
+skill anywhere in the discovery scope, rerun `sxr skills --index` to find it.
+Lookups use the saved snapshot and validate returned paths; they do not walk
+your home again. Missing files or changed aliases prompt you to reindex.
 
 Search uses case-insensitive directory names and path clues; `--exact` matches
 the whole skill directory name. Symlinks to the same physical file share one
 result with aliases. Different cached plugin versions remain separate results.
 This locates files; it does not read skill instructions or activate plugins.
 
-Choose roots once, or scope a single lookup:
+You can also choose where discovery starts. `--root /` searches the whole
+filesystem accessible to your user; it does not require or request root access.
+Protected directories make coverage incomplete and are reported as errors.
 
 ```bash
-sxr skills --index --root ~/.claude/skills --root ~/.agents/skills
-sxr skills notify --paths           # reuse those saved roots
-sxr skills --index --defaults       # restore automatic roots
-sxr skills notify --root ~/Developer/skills --paths # one lookup only
+sxr skills --index --root ~/Developer --root ~/.agents
+sxr skills notify --paths           # use that discovered map
+sxr skills --index --defaults       # return to discovery across your home
+sxr skills notify --root ~/Downloads --paths # separate discovery map
 ```
 
 The map lives at `~/.cache/sxr/skills.json`, respecting `XDG_CACHE_HOME` and
-`SXR_CACHE_DIR`. It belongs to your user and survives CLI upgrades. Every lookup
-checks directory and file metadata; installations, removals, and changed links
-trigger a rebuild. Unchanged trees reuse the map and the native bundle's worker.
-One-off roots get separate maps. Discovery skips Git metadata, virtual
-environments, `node_modules`, `__pycache__`, and sxr's own cache directory.
+`SXR_CACHE_DIR`. It belongs to your user and survives CLI upgrades. Indexing
+replaces the snapshot atomically. `--index --root` remembers the chosen roots;
+repeat `--root` for each location. One-off roots get separate maps. The native
+bundle reuses its worker for fast lookups. Explicit indexing runs in a separate
+process so existing lookups can continue using the previous snapshot.
 
 Text and JSON return 20 skills by default; `-n 0` returns all. `--paths` returns
 all matching canonical paths unless limited explicitly. JSON includes `skills`,
-`total`, `complete`, `errors`, `coverage`, and the map's `index` path. Missing
+`total`, `complete`, `errors`, `coverage`, `indexed_at`, and the map's `index` path. Missing
 explicit roots and inaccessible directories make the lookup incomplete (exit 2).
 `sxr skills --clear` removes the default map and saved roots. `SXR_NO_CACHE=1`
 scans without saving a map.
@@ -76,6 +85,9 @@ scans without saving a map.
 ## Performance
 
 ### Installed skills (sxr 0.10.0)
+
+These measurements cover 0.10.0's nine predefined roots. Version 0.11.0 discovers
+across the home directory; the preparation cost and scope are different.
 
 For `notify`, a prepared map and running worker returned the same physical
 `SKILL.md` path **8.4× faster** than recursive native `find -L` across all nine

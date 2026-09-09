@@ -143,7 +143,7 @@ def verify(executable, environment, sources):
     run("index", "--clear")
     assert json.loads(run("find", "replacement", "--all-projects", "--json"))["total"] == 1
     assert json.loads(run("serve", "status"))["pid"] == status["pid"]
-    skill_root = Path(environment["HOME"]) / ".agents/skills/notify"
+    skill_root = Path(environment["HOME"]) / "Developer/arbitrary/notify"
     skill_root.mkdir(parents=True)
     skill_file = skill_root / "SKILL.md"
     skill_file.write_text("Fixture instructions; never executed.\n")
@@ -151,6 +151,8 @@ def verify(executable, environment, sources):
     assert json.loads(run("skills", "notify", "--json"))["complete"]
     assert json.loads(run("serve", "status"))["pid"] == status["pid"]
     skill_file.unlink()
+    run("skills", "notify", "--paths", codes=(2,))
+    run("skills", "--index")
     run("skills", "notify", "--paths", codes=(1,))
     assert run("init")
     run("serve", "stop")

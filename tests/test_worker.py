@@ -163,7 +163,7 @@ def test_worker_refused_path_falls_back_without_replacing_it(launcher):
     assert path.read_text() == "keep this file"
 
 
-def test_worker_skill_lookup_observes_installs_and_caller_roots(launcher, tmp_path):
+def test_worker_skill_discovery_refresh_and_caller_roots(launcher, tmp_path):
     command, _ = launcher
     root = tmp_path / ".agents/skills/notify"
     root.mkdir(parents=True)
@@ -171,12 +171,68 @@ def test_worker_skill_lookup_observes_installs_and_caller_roots(launcher, tmp_pa
     result = run(command, "skills", "notify", "--paths")
     assert result.returncode == 0 and result.stdout.strip() == str(root / "SKILL.md")
     status = json.loads(run(command, "serve", "status").stdout)
-    other = tmp_path / "other-config/skills/other"
+    home = tmp_path / "other-home"
+    home.mkdir()
+    other = home / "Developer/arbitrary/other"
     other.mkdir(parents=True)
     (other / "SKILL.md").write_text("fixture")
-    env = dict(os.environ, CLAUDE_CONFIG_DIR=str(other.parent.parent))
+    env = dict(os.environ, HOME=str(home))
     assert run(command, "skills", "other", "--exact", "--paths", env=env).returncode == 0
-    assert run(command, "skills", "other", "--exact", "--paths").returncode == 1
+    assert run(command, "skills", "other", "--exact", "--paths").returncode == 0
+    new = tmp_path / "Downloads/new-skill"
+    new.mkdir(parents=True)
+    (new / "SKILL.md").write_text("fixture")
+    assert run(command, "skills", "new-skill", "--paths").returncode == 1
+    assert run(command, "skills", "--index").returncode == 0
+    assert run(command, "skills", "new-skill", "--paths").returncode == 0
     (root / "SKILL.md").unlink()
+    assert run(command, "skills", "notify", "--paths").returncode == 2
+    assert run(command, "skills", "--index").returncode == 0
     assert run(command, "skills", "notify", "--paths").returncode == 1
     assert json.loads(run(command, "serve", "status").stdout)["pid"] == status["pid"]
+
+
+def test_explicit_skill_index_does_not_block_existing_worker(launcher, tmp_path):
+    command, _ = launcher
+    skill = tmp_path / "Developer/notify/SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("fixture")
+    assert run(command, "skills", "notify", "--paths").returncode == 0
+    shim = command.parent / "sxr-python"
+    original = shim.read_text()
+    lines = original.splitlines(keepends=True)
+    gate = tmp_path / "discovery-gate"
+    gate.mkdir()
+    pause = """import os, sys, time
+from pathlib import Path
+if sys.argv[1:] == ["skills", "--index"]:
+    gate = Path(os.environ["SXR_TEST_DISCOVERY_GATE"])
+    (gate / "started").touch()
+    deadline = time.monotonic() + 5
+    while not (gate / "release").exists() and time.monotonic() < deadline:
+        time.sleep(0.01)
+"""
+    shim.write_text(lines[0] + pause + "".join(lines[1:]))
+    process = subprocess.Popen(
+        [str(command), "skills", "--index"],
+        env=dict(os.environ, SXR_TEST_DISCOVERY_GATE=str(gate)),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    try:
+        deadline = time.monotonic() + 5
+        while not (gate / "started").exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert (gate / "started").exists(), "Index request was routed to the shared worker"
+        result = subprocess.run(
+            [str(command), "skills", "notify", "--paths"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        assert result.returncode == 0 and result.stdout.strip() == str(skill)
+    finally:
+        (gate / "release").touch()
+        stdout, stderr = process.communicate(timeout=10)
+        shim.write_text(original)
+    assert process.returncode == 0, (stdout, stderr)

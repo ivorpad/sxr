@@ -82,10 +82,11 @@ Details that affect retrieval:
   ahead of searches with `sxr find --index --all-projects`. An incomplete
   search exits 2; find --json includes complete, coverage and errors. A cached
   search still checks source files. `sxr index --clear` removes session caches.
-- skills searches installed SKILL.md paths by directory name or path clues.
-  --paths prints canonical paths; --aliases includes symlinks. It builds a JSON
-  map automatically. `sxr skills --index --root DIR` remembers custom roots;
-  repeat --root for more. Directory changes refresh the map on the next lookup.
+- skills locates SKILL.md files by directory name or path clues. --paths prints
+  canonical paths; --aliases includes symlinks. `sxr skills --index` discovers
+  them across your home directory, including hidden folders and repositories.
+  Rerun it after installing skills to refresh the JSON map; lookups reuse that
+  snapshot. Add --root DIR to choose discovery roots; repeat it for more.
 - grep patterns are smart-case regex: lowercase ignores case, capitals match
   exact case. Use -i to ignore case, -F for literal text, -l for matching IDs.
 - find skips the invoking Codex session when its ID is in the environment;

@@ -78,8 +78,12 @@ int main(int argc, char **argv) {
         return 2;
     }
     const char *disabled = getenv("SXR_NO_DAEMON");
+    int discovering = 0;
+    if (argc > 1 && !strcmp(argv[1], "skills"))
+        for (int i = 2; i < argc; i++)
+            if (!strcmp(argv[i], "--index")) discovering = 1;
     if (argc > 1 && (!strcmp(argv[1], "find") || !strcmp(argv[1], "skills")) &&
-        (!disabled || strcmp(disabled, "1")) &&
+        !discovering && (!disabled || strcmp(disabled, "1")) &&
         !socket_name(path, sizeof path)) {
         signal(SIGPIPE, SIG_IGN);
         int fd = worker_connect(path);

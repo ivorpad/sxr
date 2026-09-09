@@ -1,4 +1,4 @@
-"""Private JSON skill maps, atomically replaced and refreshed after directory changes."""
+"""Private discovery snapshots, atomically replaced by explicit indexing."""
 
 import json
 import os
@@ -6,7 +6,7 @@ import tempfile
 from functools import lru_cache
 from pathlib import Path
 
-from sxr.skills_catalog import absolute, default_roots, scan, stamp, unchanged
+from sxr.skills_catalog import absolute, default_roots, scan, stamp
 
 
 def map_path(roots=None):
@@ -30,9 +30,8 @@ def _read(path, signature):
     data = json.loads(Path(path).read_text())
     if (
         not isinstance(data, dict)
-        or data.get("version") != 1
+        or data.get("version") not in (1, 2)
         or not isinstance(data.get("roots"), list)
-        or not isinstance(data.get("watched"), dict)
         or not isinstance(data.get("skills"), list)
         or not isinstance(data.get("errors"), list)
         or not isinstance(data.get("coverage"), list)
@@ -48,16 +47,8 @@ def _read(path, signature):
             raise ValueError("invalid skill alias")
     if not all(isinstance(root, str) and os.path.isabs(root) for root in data["roots"]):
         raise ValueError("invalid skill roots")
-    for name, value in data["watched"].items():
-        if not os.path.isabs(name) or (
-            value is not None
-            and (
-                not isinstance(value, list)
-                or len(value) != 5
-                or not all(isinstance(part, int) for part in value)
-            )
-        ):
-            raise ValueError("invalid skill snapshot")
+    if data["version"] == 2 and not isinstance(data.get("indexed_at"), str):
+        raise ValueError("invalid discovery timestamp")
     if not all(isinstance(error, str) for error in data["errors"]):
         raise ValueError("invalid skill errors")
     return data
@@ -87,7 +78,7 @@ def write(path, data):
         Path(temporary).unlink(missing_ok=True)
 
 
-def load(roots=None, force=False, defaults=False):
+def load(roots=None, force=False, defaults=False, progress=None):
     """Remember roots only with --index; a scoped lookup never changes the default map."""
     explicit = list(dict.fromkeys(map(absolute, roots))) if roots else None
     path = map_path(explicit if explicit and not force else None)
@@ -98,19 +89,14 @@ def load(roots=None, force=False, defaults=False):
         not force
         and not os.environ.get("SXR_NO_CACHE")
         and previous
+        and previous["version"] == 2
         and previous["roots"] == chosen
-        and not previous["errors"]
-        and unchanged(previous["watched"])
     ):
         return path, previous
     if not os.environ.get("SXR_NO_CACHE"):
         path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     excluded = {str(map_path().parent.resolve())}
-    data = scan(chosen, custom, excluded)
-    if not unchanged(data["watched"]):
-        data = scan(chosen, custom, excluded)
-        if not unchanged(data["watched"]):
-            data["errors"].append("skill directories changed during indexing; retry")
+    data = scan(chosen, custom, excluded, progress)
     if not os.environ.get("SXR_NO_CACHE"):
         write(path, data)
     return path, data
