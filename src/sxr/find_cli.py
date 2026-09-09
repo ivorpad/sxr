@@ -40,6 +40,15 @@ def main(arguments):
     )
     parser.add_argument("--archives", action="store_true", help="Archives are included by default")
     parser.add_argument("--coverage", action="store_true", help="Include source coverage")
+    parser.add_argument(
+        "--include-current", action="store_true", help="Include the invoking Codex session"
+    )
+    parser.add_argument(
+        "--exclude-session",
+        dest="exclude_sessions",
+        action="append",
+        help="Exclude a full session ID; repeat for several",
+    )
     options = vars(parser.parse_args(arguments))
     scope = {
         key: options.pop(key)

@@ -55,6 +55,13 @@ Use `--claude` or `--codex` to restrict `find` to one provider, and repeat
 `--claude-root` for alternate profiles. The other commands below default to
 Claude and require explicit flags for child transcripts and archives.
 
+Inside Codex, `find` excludes the invoking session using `CODEX_THREAD_ID`
+(or the older `CODEX_SESSION_ID`). This avoids searching the agent's own copied
+evidence and rebuilding its growing transcript on every lookup. `--include-current`
+includes it; an explicit `--file` also selects it. `--exclude-session FULL_ID`
+excludes a session for either provider and can be repeated. Coverage reports
+the number of excluded files. No sessions are excluded just because they are live.
+
 ```
 $ sxr                    # sessions for this directory, newest first
 # @   id        started               msgs  errs  tokens  size  title

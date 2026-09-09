@@ -95,6 +95,29 @@ def _display(value):
     print(value.encode(encoding, errors="backslashreplace").decode(encoding))
 
 
+def _exclude(refs, ctx, include_current, exclude_sessions, coverage):
+    current = os.environ.get("CODEX_THREAD_ID") or os.environ.get("CODEX_SESSION_ID")
+    if include_current or ctx.meta.get("discovery", {}).get("file"):
+        current = None
+    excluded = set(exclude_sessions or [])
+    kept = []
+    counts = dict.fromkeys((item["root"] for item in coverage), 0)
+    for ref in refs:
+        if ref.id in excluded or (ref.provider == "codex" and ref.id == current):
+            counts[ref.extra["root"]] += 1
+        else:
+            kept.append(ref)
+    for scope in coverage:
+        scope["excluded"] = counts[scope["root"]]
+    if any(counts.values()):
+        print(
+            f"# excluded {sum(counts.values())} session files; "
+            "--include-current includes the invoking session",
+            file=sys.stderr,
+        )
+    return kept
+
+
 def _render(results, coverage, errors, total, json_out, show_coverage=False):
     if show_coverage:
         for scope in coverage:
@@ -145,6 +168,8 @@ def execute(
     limit=None,
     since=None,
     before=None,
+    include_current=False,
+    exclude_sessions=None,
 ):
     """Return session evidence with current scope and a completeness indicator."""
     if not query and not index:
@@ -179,6 +204,7 @@ def execute(
             else:
                 refs, coverage, errors = inventory(db, _roots(ctx, use_codex, use_claude))
             refs = _scope(refs, ctx, path, all_projects, since, before)
+            refs = _exclude(refs, ctx, include_current, exclude_sessions, coverage)
             selected, problems = refresh(db, refs)
             errors.extend(problems)
             for scope in coverage:

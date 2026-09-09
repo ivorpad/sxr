@@ -31,6 +31,13 @@ def find_cmd(
     limit: flags.LimitF = None,
     since: flags.SinceF = None,
     before: flags.BeforeF = None,
+    include_current: Annotated[
+        bool, typer.Option("--include-current", help="Include the invoking Codex session")
+    ] = False,
+    exclude_sessions: Annotated[
+        list[str] | None,
+        typer.Option("--exclude-session", help="Exclude a full session ID; repeat for several"),
+    ] = None,
 ) -> None:
     """Find ranked sessions with evidence. Both providers, children and archives are included.
 
@@ -51,5 +58,7 @@ def find_cmd(
             limit,
             since,
             before,
+            include_current,
+            exclude_sessions,
         )
     )

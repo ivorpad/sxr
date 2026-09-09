@@ -82,8 +82,11 @@ Details that affect retrieval:
   search still checks source files. `sxr index --clear` removes all caches.
 - grep patterns are smart-case regex: lowercase ignores case, capitals match
   exact case. Use -i to ignore case, -F for literal text, -l for matching IDs.
-- Your own running session matches your commands. --before today searches
-  sessions started before today (UTC), excluding today's useful sessions too.
+- find skips the invoking Codex session when its ID is in the environment;
+  --include-current includes it. For Claude or other sessions, use
+  --exclude-session FULL_ID. Other views still include your own commands.
+  --before today filters session start dates (UTC), not last activity, so it
+  does not exclude a live session resumed from yesterday.
 - --path accepts relative paths and ~; symlinks resolve to their physical path.
   Scope is exact by default. --recursive includes descendants; --worktrees
   includes registered Git worktrees. --coverage prints searched/missing roots.
