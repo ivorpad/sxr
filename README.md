@@ -84,33 +84,6 @@ scans without saving a map.
 
 ## Performance
 
-### Installed skills (sxr 0.10.0)
-
-These measurements cover 0.10.0's nine predefined roots. Version 0.11.0 discovers
-across the home directory; the preparation cost and scope are different.
-
-For `notify`, a prepared map and running worker returned the same physical
-`SKILL.md` path **8.4× faster** than recursive native `find -L` across all nine
-default roots, including plugin caches.
-
-| Roots searched | sxr skills notify --exact --paths | find -L | find -L -maxdepth 2 |
-|---|---:|---:|---:|
-| Claude and Agents skills | 4.79 ms | 11.45 ms | **4.50 ms** |
-| All nine default roots | **15.12 ms** | 127.12 ms | Not applicable |
-
-Measured on 2026-09-09, macOS arm64, with the 0.10.0 native bundle. Medians
-of 31 trials rotated command order after two warmups. Each row used identical
-roots; `find` matched `-type f -path '*/notify/SKILL.md'`, and its aliases were
-resolved to verify identical physical results. Three additional queries,
-including a miss, also returned identical sets. Process startup, output, and
-sxr's freshness checks were included; filesystem caches were not controlled.
-
-The nine-root map contained **376 skills**, occupied **470 KiB**, and took
-**249 ms** to build on its first call, including worker startup. Restarting the
-worker with an existing map took 75 ms. Those costs are excluded from the warm
-table. A depth-limited `find` still wins for the two known, shallow skill roots;
-that limit would miss nested plugin skills in the wider search.
-
 ### RTK (sxr 0.9.0)
 
 With a prepared index and running search worker, the 0.9.0 release returned
