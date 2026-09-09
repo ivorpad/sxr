@@ -26,26 +26,27 @@ Without Homebrew, download the matching macOS or Linux archive from
 you own, and symlink its `sxr` executable into `~/.local/bin`. Keep the bundle's
 files together; the launcher finds its runtime relative to itself. No root
 access or existing Python installation is needed. Both arm64 and x86_64 builds
-are provided. A PyPI publish is pending.
+are provided. Bundles are tested on macOS 14/15 and Ubuntu 22.04; Linux builds
+use glibc. A PyPI publish is pending.
 
 ## Performance
 
-With a prepared index and running search worker, the 0.9.0 candidate returned
-ranked session evidence **2.9× faster than RTK's filename search** and **29×
+With a prepared index and running search worker, the 0.9.0 release returned
+ranked session evidence **3.0× faster than RTK's filename search** and **31×
 faster than its displayed matching lines** in a local benchmark.
 
 | 12 queries, sum of per-query medians | Time |
 |---|---:|
-| sxr find, top five sessions with evidence | **0.290 s** |
-| sxr find --paths, all matching source paths | **0.254 s** |
-| RTK 0.48.0 rg -l, all matching raw-file paths | 0.830 s |
-| RTK 0.48.0 rg -n, compressed matching lines | 8.428 s |
+| sxr find, top five sessions with evidence | **0.255 s** |
+| sxr find --paths, all matching source paths | **0.220 s** |
+| RTK 0.48.0 rg -l, all matching raw-file paths | 0.763 s |
+| RTK 0.48.0 rg -n, compressed matching lines | 7.921 s |
 
-Path-only lookup was **3.3× faster in aggregate**, winning all 12 queries.
-Ranked lookup won 11; the common `pnpm` clue took 37.9 ms versus RTK's
-28.2 ms filename search. The five clues with identical physical file sets
-(including three misses) took 101 ms with sxr paths versus 433 ms with RTK,
-a **4.3×** difference.
+Path-only lookup was **3.5× faster in aggregate**, winning all 12 queries.
+Ranked lookup won 11; the common `pnpm` clue took 33.4 ms versus RTK's
+24.9 ms filename search. The five clues with identical physical file sets
+(including three misses) took 89 ms with sxr paths versus 407 ms with RTK,
+a **4.6×** difference.
 
 Measured on 2026-09-09, macOS arm64 and bundled Python 3.13.15, across
 **738 transcripts (1.60 GB)**: 606 Codex and 132 Claude files from two profiles,

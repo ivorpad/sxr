@@ -87,6 +87,8 @@ def prepare(version, head, directory):
             raise SystemExit(f"Expected exactly one verified CI artifact: {name}")
         shutil.copy2(source[0], assets / name)
     call("uv", "build", "--out-dir", str(assets))
+    # uv creates this directory marker; it is not a distributable release asset.
+    (assets / ".gitignore").unlink(missing_ok=True)
     checksums = [
         f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}"
         for path in sorted(assets.iterdir())
