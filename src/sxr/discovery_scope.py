@@ -52,6 +52,11 @@ def _coverage(refs: list, roots: list[Path], cwd: str, options: dict) -> None:
 
 def discover(ctx, provider, cwd: str) -> list:
     """Discover once; diagnostics describe roots even when nothing matched."""
+    if ctx.meta.get("file_ref") is not None:
+        ref = ctx.meta["file_ref"]
+        if ctx.meta.get("discovery", {}).get("coverage"):
+            print(f"# coverage: explicit file {ref.path}; 1 source", file=sys.stderr)
+        return [ref]
     options = ctx.meta.get("discovery", {})
     if provider is codex and (options.get("claude_roots") or options.get("include_agents")):
         fail("--claude-root and --include-agents apply to Claude sessions")

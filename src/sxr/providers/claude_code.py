@@ -251,6 +251,8 @@ def list_sessions(cwd: str, **options) -> list[SessionRef]:
 def session_paths(ref: SessionRef) -> list[Path]:
     """Main transcript path plus any subagent transcript files."""
     paths = [ref.path]
+    if ref.extra.get("explicit_file"):
+        return paths
     subagents = ref.path.parent / ref.id / "subagents"
     if subagents.is_dir():
         paths.extend(sorted(subagents.glob("*.jsonl")))

@@ -31,7 +31,7 @@ def test_relative_home_and_absolute_scopes_produce_same_session(tmp_path, monkey
             line.split("zoom: ", 1)[1] for line in result.output.splitlines() if "zoom: " in line
         )
         args = shlex.split(zoom)
-        assert args[1:4] == ["--claude", "--path", str(repo)]
+        assert args[1:3] == ["--file", str(path)]
         assert "aaaabbbb-cccc" in args
         with monkeypatch.context() as other:
             other.chdir(tmp_path)
@@ -131,8 +131,8 @@ def test_conflicting_profile_copies_navigate_by_handles_after_time_window(tmp_pa
             line.split("zoom: ", 1)[1] for line in result.stdout.splitlines() if "zoom: " in line
         )
         args = shlex.split(zoom)[1:]
-        assert args[args.index("show") + 1] == handle
-        assert args[: args.index("show")] == flags
+        assert args[args.index("show") + 1] == sid
+        assert args[: args.index("show")] == ["--file", str(paths[needle])]
         shown = runner.invoke(app, args)
         assert shown.exit_code == 0, shown.output
         assert f"file:     {paths[needle]}" in shown.stdout

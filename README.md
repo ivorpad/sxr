@@ -37,6 +37,7 @@ sxr show @2                    # transcript skeleton, one line per event
 sxr show @2 --around 1247      # zoom to event #1247, text untruncated
 sxr show @2 --tail 5           # how a session ended, whole text
 sxr show @2 --type ai-title    # select events by record type
+sxr show --file /path/session.jsonl --around 1247 # skip discovery, either provider
 sxr prompts                    # user messages of the newest session, as stored
 sxr cmds @6                    # every command a session ran, with ok/err
 sxr cmds --grep "git push"     # commands that did X, across all sessions
@@ -94,7 +95,7 @@ $ sxr grep -c webhook
 8118457e	234	4	2026-07-20	Webhook retries dropping events
 eec026f8	206	16	2026-07-10	Fix webhok typo in route table
 6ba59ad2	54	7	2026-06-26	Debug webhook and queue outage
-# 22 of 47 sessions match; zoom: sxr --claude --path /repo --claude-root /home/me/.claude show 8118457e-1111-2222-3333-444444444444 --around 4
+# 22 of 47 sessions match; zoom: sxr --file /home/me/.claude/projects/-repo/8118457e-1111-2222-3333-444444444444.jsonl show 8118457e-1111-2222-3333-444444444444 --around 4
 # oldest first: --sort started; keep zero-match rows: --all
 ```
 
@@ -115,6 +116,23 @@ Match rows are capped at 40k chars (`--budget`, env `SXR_BUDGET`) or at `-n`
 rows, whichever comes first; the footer reports the true match count and
 `-n 0` prints all of them.
 
+When the JSONL location is known, `--file` skips session discovery. It detects
+Claude or Codex from the records, retains parent-qualified Claude child IDs,
+and checks an optional session ID and explicit provider/project/profile flags.
+Follow-up commands printed by sxr include the file path automatically, so they
+still select the same copy after changing directories. `--file` scopes every
+session command to that one file, including `path` and `clean`.
+
+The first `show --around`, `--range`, `--type` or `--tail` caches event positions
+and annotations for the selected file. Repeated zooms seek to the selected
+records, preserving whole-session tool outcomes and the total event count.
+Appending a result can change an earlier call's status, so any file change
+rebuilds this read cache. For a one-off read that should skip cache construction:
+
+```bash
+SXR_NO_CACHE=1 sxr show --file /path/session.jsonl --around 1247
+```
+
 Literal searches of at least three characters automatically build a local
 search index. This includes plain patterns such as `grep timeout`, `grep -F`
 and literal `cmds --grep` searches. The first search pays the indexing cost;
@@ -124,11 +142,11 @@ parser, with the same case rules, counts and event numbers.
 
 ```bash
 sxr --codex --archives index   # build ahead of the next search, in this scope
-sxr index --clear              # discard the whole local search index
+sxr index --clear              # discard search and event-position caches
 SXR_NO_CACHE=1 sxr grep timeout # bypass the index
 ```
 
-The index lives in `$XDG_CACHE_HOME/sxr/search.sqlite3`, defaulting to
+Both caches live in `$XDG_CACHE_HOME/sxr/search.sqlite3`, defaulting to
 `~/.cache/sxr/search.sqlite3`; `SXR_CACHE_DIR` chooses another directory.
 It contains derived transcript data and is created with owner-only access.
 Verified appends index new records; edits, replacements and truncations rebuild
@@ -153,7 +171,7 @@ $ sxr grep -c "live session" --path ~/src/sxr
 # session	matches	first	started	title
 d2e9fcb0	2	39	2026-07-27	(live) implement the (live) label and --since/--bef
 31e98111	1	9	2026-07-27	implement the bounded grep output
-# 3 of 24 sessions match; zoom: sxr --claude --path /home/me/src/sxr --claude-root /home/me/.claude show d2e9fcb0-1111-2222-3333-444444444444 --around 39
+# 3 of 24 sessions match; zoom: sxr --file /home/me/.claude/projects/-home-me-src-sxr/d2e9fcb0-1111-2222-3333-444444444444.jsonl show d2e9fcb0-1111-2222-3333-444444444444 --around 39
 # (live) = written in the last 10 min, your own session included; scope it out with --before today
 ```
 
@@ -207,8 +225,9 @@ shows the command; `grep` and `errors` also search or display its output. Stable
 item IDs remove repeated representations without merging separate executions.
 A nonzero exit is a recorded outcome, including expected empty grep results.
 
-The search index narrows candidate files; session discovery and result rendering
-read source records. Unknown record types pass through as their own kind.
+The search index narrows candidate files. Cached zooms read selected source
+records and restore their canonical annotations. Unknown record types pass
+through as their own kind.
 
 Breaking since 0.2.3: `grep -c` prints five columns (session, matches, first,
 started, title), prunes zero-match rows, and exits 1 when nothing matches.

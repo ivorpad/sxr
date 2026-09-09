@@ -79,6 +79,10 @@ def merge(
         fail("--claude and --codex are mutually exclusive")
     provider = codex if use_codex else claude_code
     cwd = str(Path(path or root.get("path") or Path.cwd()).expanduser().resolve())
+    if ctx.meta.get("discovery", {}).get("file"):
+        from sxr.file_selection import selected
+
+        provider, cwd = selected(ctx, use_codex, use_claude, path or root.get("path"))
     return (
         provider,
         cwd,

@@ -211,10 +211,9 @@ def test_archive_only_and_duplicate_active_copy(tmp_path, monkeypatch):
         line.split("zoom: ", 1)[1] for line in result.stdout.splitlines() if "zoom: " in line
     )
     args = shlex.split(zoom)
-    assert args[:3] == ["env", f"CODEX_HOME={root}", "sxr"]
-    assert "--archives" in args
+    assert args[:3] == ["sxr", "--file", str(archived)]
     monkeypatch.chdir(tmp_path)
-    shown = runner.invoke(app, args[3:])
+    shown = runner.invoke(app, args[1:])
     assert shown.exit_code == 0, shown.output
     assert str(archived) in shown.stdout
 

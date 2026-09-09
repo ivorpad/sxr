@@ -22,10 +22,10 @@ def sessions_root() -> Path:
     return Path(root).expanduser() / "sessions"
 
 
-def history_titles() -> dict[str, str]:
+def history_titles(root: Path | None = None) -> dict[str, str]:
     """First recorded user text per session id, from history.jsonl."""
     titles: dict[str, str] = {}
-    history = sessions_root().parent / "history.jsonl"
+    history = (root if root is not None else sessions_root().parent) / "history.jsonl"
     if not history.is_file():
         return titles
     with history.open(encoding="utf-8", errors="replace") as fh:

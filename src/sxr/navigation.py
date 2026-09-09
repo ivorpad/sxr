@@ -7,6 +7,8 @@ from sxr.model import SessionRef
 
 def command(ref: SessionRef, verb: str, *args: str) -> str:
     """A pasteable command; discovered refs carry absolute discovery options."""
+    if ref.extra.get("navigation"):
+        return shlex.join(["sxr", "--file", str(ref.path), verb, ref.id, *args])
     scope = ref.extra.get("navigation", [])
     session = ref.extra.get("navigation_arg", ref.id if scope else ref.short_id)
     environment = ref.extra.get("navigation_env", {})

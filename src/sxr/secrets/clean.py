@@ -19,21 +19,12 @@ import tempfile
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Annotated
 
-import typer
-
-from sxr import flags
-from sxr.handles import resolve
 from sxr.index_store import clear
 from sxr.model import SessionRef
 from sxr.secrets.detect import scan_text
 from sxr.secrets.fingerprint import marker
 from sxr.util import is_live, tab_row
-
-ApplyF = Annotated[
-    bool, typer.Option("--apply", help="Write the changes; without it this is a dry run")
-]
 
 
 @dataclass
@@ -196,28 +187,3 @@ def clean_view(refs: list[SessionRef], session_paths, apply: bool) -> int:
             "Write with: sxr clean --apply"
         )
     return 0
-
-
-def clean_cmd(
-    ctx: typer.Context,
-    arg: flags.Arg = None,
-    apply: ApplyF = False,
-    since: flags.SinceF = None,
-    before: flags.BeforeF = None,
-    use_codex: flags.CodexF = False,
-    use_claude: flags.ClaudeF = False,
-    path: flags.PathF = None,
-    json_out: flags.JsonF = False,
-    limit: flags.LimitF = None,
-) -> None:
-    """Replace leaked secrets in session files with masked markers. DRY RUN unless --apply.
-
-    Only certain/probable findings are rewritten, never entropy candidates.
-    Changed lines are validated as JSON and files replaced atomically;
-    (live) sessions are skipped. No backup is kept: a backup keeps the
-    secrets. sxr secrets first shows what would be found.
-    """
-    provider, cwd, _json, _limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    sessions = flags.sessions(ctx, provider, cwd, since, before)
-    refs = sessions if arg is None else resolve(arg, sessions)
-    raise typer.Exit(clean_view(refs, provider.session_paths, apply))

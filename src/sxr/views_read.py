@@ -121,7 +121,7 @@ def _trim_decision(events: list[Event], limit: int | None, budget_flag: int | No
     return budget > 0 and total > budget, total, budget
 
 
-def _header(ref: SessionRef, events: list[Event]) -> None:
+def _header(ref: SessionRef, total_events: int) -> None:
     """Session header: full id, file, provenance properties, record counts."""
     print(f"session:  {ref.id}")
     print(f"file:     {ref.path}")
@@ -134,11 +134,13 @@ def _header(ref: SessionRef, events: list[Event]) -> None:
     print(line)
     if ref.model:
         print(f"model:    {ref.model}")
-    print(f"events:   {len(events)}")
+    print(f"events:   {total_events}")
     print()
 
 
-def show(ref: SessionRef, events: list[Event], opts: ShowOpts) -> int:
+def show(
+    ref: SessionRef, events: list[Event], opts: ShowOpts, *, total_events: int | None = None
+) -> int:
     """Render a transcript skeleton or an explicit zoom; exit code 0.
 
     Text prints whole whenever the view fits the char budget; only
@@ -153,7 +155,7 @@ def show(ref: SessionRef, events: list[Event], opts: ShowOpts) -> int:
         return 0 if selected else 1
     trim, total, budget = _trim_decision(selected, opts.limit, opts.budget)
     trim = trim and not zoom
-    _header(ref, events)
+    _header(ref, len(events) if total_events is None else total_events)
     cap = line_limit(opts.line_limit)
     _print_events(selected, trim=trim, limit=opts.limit, cap=cap)
     if trim:

@@ -9,21 +9,11 @@ remediation; cleaning transcripts only stops re-propagation.
 import json
 import sys
 from dataclasses import dataclass, field
-from typing import Annotated
 
-import typer
-
-from sxr import flags
-from sxr.handles import resolve
 from sxr.model import SessionRef
 from sxr.secrets import fingerprint, scan_text
 from sxr.secrets.detect import SEVERITIES
 from sxr.util import tab_row
-
-CandidatesF = Annotated[
-    bool,
-    typer.Option("--candidates", help="Include high-entropy review candidates (noisy)"),
-]
 
 
 @dataclass
@@ -82,27 +72,3 @@ def secrets_view(
         "Rotate certain ones first; zoom: sxr show <id> --around <seq>"
     )
     return 0
-
-
-def secrets_cmd(
-    ctx: typer.Context,
-    arg: flags.Arg = None,
-    candidates: CandidatesF = False,
-    since: flags.SinceF = None,
-    before: flags.BeforeF = None,
-    use_codex: flags.CodexF = False,
-    use_claude: flags.ClaudeF = False,
-    path: flags.PathF = None,
-    json_out: flags.JsonF = False,
-    limit: flags.LimitF = None,
-) -> None:
-    """Audit sessions for leaked keys and passwords, masked; a rotation worklist.
-
-    With no session arg the whole directory scope is scanned. Output is one
-    row per distinct secret (kind, salted fingerprint, spread); the value
-    itself is never printed, in --json mode included.
-    """
-    provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    sessions = flags.sessions(ctx, provider, cwd, since, before)
-    refs = sessions if arg is None else resolve(arg, sessions)
-    raise typer.Exit(secrets_view(refs, provider.parse, candidates, json_out, limit))

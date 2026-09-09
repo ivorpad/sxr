@@ -8,6 +8,13 @@ from typing import Annotated
 import typer
 
 OPTIONS = {
+    "file": (
+        None,
+        Annotated[
+            Path | None,
+            typer.Option("--file", help="Read this JSONL file directly; detect Claude or Codex"),
+        ],
+    ),
     "recursive": (
         False,
         Annotated[
@@ -72,6 +79,12 @@ def scope_options(function):
             value = kwargs.pop(name, default)
             if name == "claude_roots":
                 scope[name] = [*scope.get(name, []), *(value or [])]
+            elif name == "file":
+                if value is not None and scope.get(name) not in (None, value):
+                    from sxr.handles import fail
+
+                    fail("conflicting --file selections")
+                scope[name] = value or scope.get(name)
             else:
                 scope[name] = scope.get(name, False) or value
         return function(*args, **kwargs)
