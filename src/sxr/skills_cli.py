@@ -88,8 +88,16 @@ def _progress():
 
 
 def _render(options, path, data):
-    errors = list(data["errors"])
+    errors = []
     selected, unique, files = _selected(options, data, errors)
+    display_errors = [*data["errors"], *errors] if options.index else errors
+    if data["errors"] and not options.index and not options.json:
+        print(
+            f"# index incomplete ({len(data['errors'])} discovery errors); "
+            "use sxr skills --index --json for details",
+            file=sys.stderr,
+        )
+    errors = [*data["errors"], *errors]
     total = len(selected)
     limit = options.limit if options.limit is not None else (0 if options.paths else 20)
     selected = selected[:limit] if limit else selected
@@ -122,10 +130,10 @@ def _render(options, path, data):
         for record in selected:
             print(f"{record['name']}\t{record['copies']}\t{record['path']}")
         print(f"# {len(selected)} of {total} results ({unique} distinct contents, {files} files)")
-    for error in errors[:8]:
+    for error in display_errors[:8]:
         print(f"# incomplete: {error}", file=sys.stderr)
-    if len(errors) > 8:
-        print(f"# {len(errors) - 8} more discovery errors; use --json for all", file=sys.stderr)
+    if len(display_errors) > 8:
+        print(f"# {len(display_errors) - 8} more errors; use --json for all", file=sys.stderr)
     if options.index:
         count = len({record["sha256"] for record in data["skills"] if record["sha256"]})
         print(

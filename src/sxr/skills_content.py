@@ -60,10 +60,34 @@ def hashed(data, previous=()):
     for record in data["skills"]:
         try:
             records.append(identify(record, known.get(record["path"])))
+        except (FileNotFoundError, NotADirectoryError):
+            continue
         except OSError as exc:
             records.append(dict(record, sha256=None, signature=None))
             errors.append(f"{record['path']}: {exc.strerror or exc}")
     return dict(data, version=3, skills=records, errors=errors)
+
+
+def repair_missing(data):
+    """Discard vanished unhashed entries and their saved errors from older indexes."""
+    removed = set()
+    for record in data["skills"]:
+        if record["sha256"] is not None:
+            continue
+        try:
+            os.stat(record["path"])
+        except (FileNotFoundError, NotADirectoryError):
+            removed.add(record["path"])
+        except OSError:
+            pass
+    if not removed:
+        return data
+    prefixes = tuple(f"{path}: " for path in removed)
+    return dict(
+        data,
+        skills=[record for record in data["skills"] if record["path"] not in removed],
+        errors=[error for error in data["errors"] if not error.startswith(prefixes)],
+    )
 
 
 def current(record):

@@ -7,7 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from sxr.skills_catalog import absolute, default_roots, scan, stamp
-from sxr.skills_content import hashed
+from sxr.skills_content import hashed, repair_missing
 
 
 def map_path(roots=None):
@@ -68,7 +68,7 @@ def _read(path, signature):
         raise ValueError("invalid discovery timestamp")
     if not all(isinstance(error, str) for error in data["errors"]):
         raise ValueError("invalid skill errors")
-    return data
+    return repair_missing(data) if data["version"] == 3 else data
 
 
 def read(path):

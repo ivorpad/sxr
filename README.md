@@ -53,6 +53,9 @@ skill anywhere in the discovery scope, rerun `sxr skills --index` to find it.
 Lookups use the saved snapshot and validate matching files; they do not walk
 your home again. Missing files, edited contents, or changed aliases prompt you
 to reindex. Edited files are rehashed before grouping results.
+Files deleted during indexing are skipped. Existing maps with saved errors for
+those vanished files are repaired when loaded. Other discovery errors remain in
+JSON; normal lookups summarize them instead of listing unrelated paths.
 
 Search uses case-insensitive directory names and path clues; `--exact` matches
 the whole skill directory name. Indexing computes SHA-256 from each `SKILL.md`
