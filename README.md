@@ -1,6 +1,6 @@
 # sxr
 
-Session x-ray: read the sessions Claude Code and Codex leave on disk.
+Session x-ray: find and read past Claude Code and Codex sessions.
 
 Both CLIs record everything to JSONL (`~/.claude/projects/`,
 `~/.codex/sessions/`), but the files run to megabytes and the interesting
@@ -20,6 +20,40 @@ brew install ivorpad/tap/sxr
 Homebrew is the only channel today; a PyPI publish is pending.
 
 ## Use
+
+Start with clues when you do not know the session or filename:
+
+```bash
+sxr find "webhook retries"                    # this project, both providers
+sxr find '"build 19" CloudKit' --all-projects # project unknown
+sxr find "release signing" --path ~/src/app --json
+```
+
+`find` returns the top five sessions with source excerpts and an exact command
+for reading more context. Claude children and Codex archives are included.
+All clues must appear somewhere in the same session; `--any` broadens the
+search. Quoted phrases must occur within one event. Matching uses words,
+ignores case and most Latin diacritics, and treats punctuation as separators.
+Use `grep -F` for literal strings in decoded text, or `grep` for regexes and counts.
+
+Results carry provider, full session ID, project, source paths, and physical
+JSONL line numbers. Up to three excerpts per result are capped at 600 characters,
+with `…` marking a cut. `--json` returns one object containing `results`, `total`,
+`complete`, `coverage`, and `errors`. This is bounded evidence, not raw JSONL.
+`-n` changes the session limit; `-n 0` returns all. Result ranks are not `@N`
+handles: use the printed follow-up command to select the same source.
+
+The first search builds a local ranked index. Prepare it ahead of an agent's
+first lookup with `sxr find --index --all-projects`. Every request checks the
+file inventory, reuses unchanged metadata and text, and refreshes changed
+transcripts. Warm searches load text only for the displayed results. Missing
+roots or files changed during a query make coverage incomplete and exit 2.
+A locked or corrupt ranked index reports an error with recovery instructions.
+`find` needs its index; `grep` remains available for direct scans.
+
+Use `--claude` or `--codex` to restrict `find` to one provider, and repeat
+`--claude-root` for alternate profiles. The other commands below default to
+Claude and require explicit flags for child transcripts and archives.
 
 ```
 $ sxr                    # sessions for this directory, newest first
@@ -146,13 +180,15 @@ sxr index --clear              # discard search and event-position caches
 SXR_NO_CACHE=1 sxr grep timeout # bypass the index
 ```
 
-Both caches live in `$XDG_CACHE_HOME/sxr/search.sqlite3`, defaulting to
+Search, ranked retrieval, and read caches share
+`$XDG_CACHE_HOME/sxr/search.sqlite3`, defaulting to
 `~/.cache/sxr/search.sqlite3`; `SXR_CACHE_DIR` chooses another directory.
 It contains derived transcript data and is created with owner-only access.
 Verified appends index new records; edits, replacements and truncations rebuild
 the affected file. An incomplete final line is revisited when more bytes arrive.
 `clean --apply` clears the index before and after cleaning. Unavailable, locked
-or corrupt caches fall back to direct reads; `index --clear` removes a bad cache.
+or corrupt caches fall back to direct reads for grep and read views; `find`
+reports an error. `index --clear` removes a bad cache.
 Indexing requires SQLite 3.43 or newer with FTS5, included by the Homebrew install.
 
 An agent searching history matches its own transcript: the search it just ran
@@ -199,17 +235,18 @@ binary, exit 1 prints which version is stale.
 
 ## Rules the output follows
 
-- What is in the JSONL is what comes out. Every filter and count keys off a
+- Read views preserve JSONL content. Every filter and count keys off a
   property the record already has (`is_error`, `isMeta`, `toolDenialKind`,
-  `payload.type`); nothing classifies or interprets content.
+  `payload.type`). `find` ranks lexical matches and returns source excerpts;
+  it does not generate answers or summaries.
 - Truncation happens only in broad scans and is always marked
   (`...[+180 chars]`). Zoomed views (`--around`, `--range`, `--type`) and
-  `--json` print everything, whole.
+  read-view `--json` print everything, whole. `find` always returns bounded excerpts.
 - stdout carries data only; diagnostics go to stderr. Exit codes: 0 with
   content, 1 for an empty result, 2 for usage or a bad id. A bad regex is
   usage (2), never the empty result (1) — a typo must not read as "no hits".
-- Rows are single-tab-separated with a `#` header line. No color into
-  pipes, no wrapping, no pagers, no progress bars.
+- Table rows are tab-separated with a `#` header line; `find` groups evidence
+  by session. No color into pipes, no pagers, no progress bars.
 - Nothing prints unbounded. `-n` caps rows across the whole scope (not per
   session), `-n 0` lifts the cap, and any view that stopped early says how
   many rows it held back.

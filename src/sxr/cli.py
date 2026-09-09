@@ -5,6 +5,7 @@ from typing import Annotated
 import typer
 
 from sxr import flags, onboard, views_grep, views_info, views_read
+from sxr.find_command import find_cmd
 from sxr.handles import fail, resolve
 from sxr.onboard import EPILOG
 from sxr.scope_options import scope_options
@@ -256,3 +257,4 @@ app.command("init")(onboard.init_cmd)
 app.command("secrets")(scope_options(secrets_cmd))
 app.command("clean")(scope_options(clean_cmd))
 app.command("index")(scope_options(index_cmd))
+app.command("find")(scope_options(find_cmd))
