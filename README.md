@@ -31,6 +31,8 @@ use glibc. A PyPI publish is pending.
 
 ## Performance
 
+### RTK (sxr 0.9.0)
+
 With a prepared index and running search worker, the 0.9.0 release returned
 ranked session evidence **3.0× faster than RTK's filename search** and **31×
 faster than its displayed matching lines** in a local benchmark.
@@ -64,10 +66,26 @@ are unranked; its displayed matches are capped. These numbers measure session
 retrieval, not agent reasoning time, and do not establish a winner for every
 query. The private transcript corpus is not distributed with this repository.
 
-In the earlier 0.8.0 benchmark, a different 12-query workload took 1.09 seconds
-with sxr versus 14.19 seconds with independent `rg` + JSONL evidence extraction.
-Known targets ranked first in 5/5 versus 4/5 cases. Building that index took
-**28.35 seconds and 338 MiB**, excluded from both warm-search comparisons.
+### rg + JSONL (sxr 0.8.0)
+
+With a prepared index, sxr returned ranked session evidence about **13× faster**
+than an independent `rg` + JSONL extraction workflow.
+
+| Measurement | sxr find | rg + JSONL |
+|---|---:|---:|
+| 12 queries, sum of per-query medians | **1.09 s** | 14.19 s |
+| Known historical targets ranked first | **5/5** | 4/5 |
+
+Individual queries were **1.5×–28× faster**. This benchmark used sxr 0.8.0 and
+the same 738-file corpus, with a different set of 12 queries from the RTK race.
+Seven trials per query alternated command order. Both arms received the same
+clues and roots without a known filename or event location, and returned ranked
+sessions with bounded excerpts. The baseline used `rg -l -i -F` to locate files,
+then decoded JSONL to extract evidence. All returned excerpts were checked
+against source records.
+
+Building the index took **28.35 seconds and 338 MiB**, excluded from both
+warm-search comparisons.
 Including preparation, a single run of those 12 queries was slower than direct
 JSONL. Direct reads can also win when the file and location are already known.
 
