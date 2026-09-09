@@ -6,6 +6,6 @@
 #error SXR_VERSION must match the bundled Python package
 #endif
 int worker_connect(const char *path);
-int worker_request(int fd, int argc, char **argv);
+int worker_request(int fd, const char *action, int argc, char **argv);
 int worker_response(int fd);
 #endif

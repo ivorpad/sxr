@@ -21,6 +21,8 @@ from test_providers import CODEX_RECORDS, _write_claude, _write_codex
 
 @pytest.fixture
 def launcher(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / ".config"))
     monkeypatch.setenv("SXR_CACHE_DIR", str(tmp_path / "cache"))
     monkeypatch.delenv("SXR_NO_DAEMON", raising=False)
     monkeypatch.delenv("CODEX_THREAD_ID", raising=False)
@@ -159,3 +161,22 @@ def test_worker_refused_path_falls_back_without_replacing_it(launcher):
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["total"] == 1
     assert path.read_text() == "keep this file"
+
+
+def test_worker_skill_lookup_observes_installs_and_caller_roots(launcher, tmp_path):
+    command, _ = launcher
+    root = tmp_path / ".agents/skills/notify"
+    root.mkdir(parents=True)
+    (root / "SKILL.md").write_text("fixture")
+    result = run(command, "skills", "notify", "--paths")
+    assert result.returncode == 0 and result.stdout.strip() == str(root / "SKILL.md")
+    status = json.loads(run(command, "serve", "status").stdout)
+    other = tmp_path / "other-config/skills/other"
+    other.mkdir(parents=True)
+    (other / "SKILL.md").write_text("fixture")
+    env = dict(os.environ, CLAUDE_CONFIG_DIR=str(other.parent.parent))
+    assert run(command, "skills", "other", "--exact", "--paths", env=env).returncode == 0
+    assert run(command, "skills", "other", "--exact", "--paths").returncode == 1
+    (root / "SKILL.md").unlink()
+    assert run(command, "skills", "notify", "--paths").returncode == 1
+    assert json.loads(run(command, "serve", "status").stdout)["pid"] == status["pid"]

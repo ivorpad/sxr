@@ -39,6 +39,7 @@ children; --codex --archives includes archives. --coverage shows roots on stderr
 examples:
   sxr                          sessions for this directory (--codex for Codex)
   sxr find "webhook retries"   ranked sessions and evidence, both providers
+  sxr skills notify --paths    locate an installed SKILL.md by name
   sxr grep -c timeout          which sessions mention it, before reading any
   sxr grep "release" @2 -C 3   matches with 3 surrounding events inline
   sxr cmds @2                  every command a session ran, with ok/err
@@ -64,6 +65,7 @@ past decision         sxr find "webhook retries"  # this project's history
 project unknown       sxr find "webhook retries" --all-projects
 another project       sxr find "webhook retries" --path /repo
 structured evidence   sxr find "webhook retries" --json
+installed skill       sxr skills notify --paths
 exact text counts     sxr grep -c -F "literal"
 recorded commands     sxr cmds --grep "git push"
 session ending        sxr show @N --tail 5
@@ -79,7 +81,11 @@ Details that affect retrieval:
 - find builds its index on first use and refreshes changed files. Prepare it
   ahead of searches with `sxr find --index --all-projects`. An incomplete
   search exits 2; find --json includes complete, coverage and errors. A cached
-  search still checks source files. `sxr index --clear` removes all caches.
+  search still checks source files. `sxr index --clear` removes session caches.
+- skills searches installed SKILL.md paths by directory name or path clues.
+  --paths prints canonical paths; --aliases includes symlinks. It builds a JSON
+  map automatically. `sxr skills --index --root DIR` remembers custom roots;
+  repeat --root for more. Directory changes refresh the map on the next lookup.
 - grep patterns are smart-case regex: lowercase ignores case, capitals match
   exact case. Use -i to ignore case, -F for literal text, -l for matching IDs.
 - find skips the invoking Codex session when its ID is in the environment;

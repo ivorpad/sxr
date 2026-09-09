@@ -1,6 +1,6 @@
 # sxr
 
-Session x-ray: find and read past Claude Code and Codex sessions.
+Session x-ray: find and read past Claude Code and Codex sessions, and locate installed skills.
 
 Both CLIs record everything to JSONL (`~/.claude/projects/`,
 `~/.codex/sessions/`), but the files run to megabytes and the interesting
@@ -29,7 +29,75 @@ access or existing Python installation is needed. Both arm64 and x86_64 builds
 are provided. Bundles are tested on macOS 14/15 and Ubuntu 22.04; Linux builds
 use glibc. A PyPI publish is pending.
 
+## Find installed skills
+
+```bash
+sxr skills notify --paths           # canonical SKILL.md path
+sxr skills notify --paths --aliases # include symlinked paths
+sxr skills 'sites:sites-building' --json
+sxr skills --index                  # prepare or rebuild the map
+```
+
+The first lookup builds a JSON map automatically. Defaults cover `~/.claude/skills`,
+`~/.agents/skills`, `~/.codex/skills`, `~/.cursor/skills`,
+`~/.config/opencode/skills`, `~/.gemini/skills`, `~/.copilot/skills`, and the
+Claude and Codex `plugins/cache` directories. `CLAUDE_CONFIG_DIR`, `CODEX_HOME`,
+and `XDG_CONFIG_HOME` override their corresponding locations. Missing default
+directories are recorded and checked again on later calls.
+
+Search uses case-insensitive directory names and path clues; `--exact` matches
+the whole skill directory name. Symlinks to the same physical file share one
+result with aliases. Different cached plugin versions remain separate results.
+This locates files; it does not read skill instructions or activate plugins.
+
+Choose roots once, or scope a single lookup:
+
+```bash
+sxr skills --index --root ~/.claude/skills --root ~/.agents/skills
+sxr skills notify --paths           # reuse those saved roots
+sxr skills --index --defaults       # restore automatic roots
+sxr skills notify --root ~/Developer/skills --paths # one lookup only
+```
+
+The map lives at `~/.cache/sxr/skills.json`, respecting `XDG_CACHE_HOME` and
+`SXR_CACHE_DIR`. It belongs to your user and survives CLI upgrades. Every lookup
+checks directory and file metadata; installations, removals, and changed links
+trigger a rebuild. Unchanged trees reuse the map and the native bundle's worker.
+One-off roots get separate maps. Discovery skips Git metadata, virtual
+environments, `node_modules`, `__pycache__`, and sxr's own cache directory.
+
+Text and JSON return 20 skills by default; `-n 0` returns all. `--paths` returns
+all matching canonical paths unless limited explicitly. JSON includes `skills`,
+`total`, `complete`, `errors`, `coverage`, and the map's `index` path. Missing
+explicit roots and inaccessible directories make the lookup incomplete (exit 2).
+`sxr skills --clear` removes the default map and saved roots. `SXR_NO_CACHE=1`
+scans without saving a map.
+
 ## Performance
+
+### Installed skills (sxr 0.10.0)
+
+For `notify`, a prepared map and running worker returned the same physical
+`SKILL.md` path **8.4× faster** than recursive native `find -L` across all nine
+default roots, including plugin caches.
+
+| Roots searched | sxr skills notify --exact --paths | find -L | find -L -maxdepth 2 |
+|---|---:|---:|---:|
+| Claude and Agents skills | 4.79 ms | 11.45 ms | **4.50 ms** |
+| All nine default roots | **15.12 ms** | 127.12 ms | Not applicable |
+
+Measured on 2026-09-09, macOS arm64, with the 0.10.0 native bundle. Medians
+of 31 trials rotated command order after two warmups. Each row used identical
+roots; `find` matched `-type f -path '*/notify/SKILL.md'`, and its aliases were
+resolved to verify identical physical results. Three additional queries,
+including a miss, also returned identical sets. Process startup, output, and
+sxr's freshness checks were included; filesystem caches were not controlled.
+
+The nine-root map contained **376 skills**, occupied **470 KiB**, and took
+**249 ms** to build on its first call, including worker startup. Restarting the
+worker with an existing map took 75 ms. Those costs are excluded from the warm
+table. A depth-limited `find` still wins for the two known, shallow skill roots;
+that limit would miss nested plugin skills in the wider search.
 
 ### RTK (sxr 0.9.0)
 
@@ -119,7 +187,8 @@ source paths in sorted order, including duplicate copies; `-n` limits that list.
 Its JSON response uses `paths` instead of `results`. Matching, scope, freshness,
 and completeness checks are the same as ranked search.
 
-Bundled installs start an owner-only local worker automatically for `sxr find`.
+Bundled installs start an owner-only local worker automatically for `sxr find`
+and `sxr skills`.
 It exits after five idle minutes. `sxr serve status` shows its PID and version;
 `sxr serve stop` releases it immediately. Each call forwards its own working
 directory, provider roots, and current-session ID. `SXR_NO_DAEMON=1` runs in a

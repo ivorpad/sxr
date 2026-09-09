@@ -13,6 +13,7 @@ ENVIRONMENT = (
     "CODEX_THREAD_ID",
     "CODEX_SESSION_ID",
     "TZ",
+    "XDG_CONFIG_HOME",
 )
 MAX_FIELD = 1024 * 1024
 MAX_REQUEST = 4 * MAX_FIELD
@@ -62,7 +63,7 @@ def request(stream):
         if key not in ENVIRONMENT or key in environment:
             raise ValueError("invalid environment setting")
         environment[key] = value
-    if not version or action not in ("find", "status", "stop") or not cwd:
+    if not version or action not in ("find", "skills", "status", "stop") or not cwd:
         raise ValueError("invalid worker request")
     if any(arg is None for arg in arguments):
         raise ValueError("missing find argument")

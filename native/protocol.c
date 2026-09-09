@@ -58,13 +58,14 @@ int worker_connect(const char *path) {
     return fd;
 }
 
-int worker_request(int fd, int argc, char **argv) {
+int worker_request(int fd, const char *action, int argc, char **argv) {
     const char *keys[] = {"HOME", "PATH", "SXR_CACHE_DIR", "SXR_NO_CACHE", "XDG_CACHE_HOME",
-        "CODEX_HOME", "CLAUDE_CONFIG_DIR", "CODEX_THREAD_ID", "CODEX_SESSION_ID", "TZ"};
+        "CODEX_HOME", "CLAUDE_CONFIG_DIR", "CODEX_THREAD_ID", "CODEX_SESSION_ID", "TZ",
+        "XDG_CONFIG_HOME"};
     char *cwd = getcwd(NULL, 0);
     size_t budget = 0;
     if (!cwd || argc > 4096) { free(cwd); return -1; }
-    int failed = field(fd, SXR_VERSION, &budget) || field(fd, "find", &budget) ||
+    int failed = field(fd, SXR_VERSION, &budget) || field(fd, action, &budget) ||
         field(fd, cwd, &budget) || number(fd, (uint32_t)argc);
     free(cwd);
     if (failed) return -1;

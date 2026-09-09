@@ -78,7 +78,8 @@ int main(int argc, char **argv) {
         return 2;
     }
     const char *disabled = getenv("SXR_NO_DAEMON");
-    if (argc > 1 && !strcmp(argv[1], "find") && (!disabled || strcmp(disabled, "1")) &&
+    if (argc > 1 && (!strcmp(argv[1], "find") || !strcmp(argv[1], "skills")) &&
+        (!disabled || strcmp(disabled, "1")) &&
         !socket_name(path, sizeof path)) {
         signal(SIGPIPE, SIG_IGN);
         int fd = worker_connect(path);
@@ -93,7 +94,7 @@ int main(int argc, char **argv) {
             }
         }
         if (fd >= 0) {
-            if (worker_request(fd, argc - 2, argv + 2)) {
+            if (worker_request(fd, argv[1], argc - 2, argv + 2)) {
                 close(fd);
                 fputs("error: cannot send search request\n", stderr);
                 return 2;

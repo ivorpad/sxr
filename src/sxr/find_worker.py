@@ -28,10 +28,15 @@ def _handle(stream):
     if version != __version__:
         raise ValueError("worker version mismatch")
     with redirect_stdout(Output(stream, b"O")), redirect_stderr(Output(stream, b"E")):
-        if action == "find":
+        if action in ("find", "skills"):
             with caller(cwd, environment):
                 try:
-                    code = find(arguments)
+                    if action == "skills":
+                        from sxr.skills_cli import main as skills
+
+                        code = skills(arguments)
+                    else:
+                        code = find(arguments)
                 except SystemExit as exc:
                     code = exc.code if isinstance(exc.code, int) else 2
         else:
