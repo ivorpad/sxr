@@ -162,10 +162,26 @@ def _pair_tools(events: list[Event]) -> None:
             call.tag = "err" if event.is_error else "ok"
 
 
-def _summarize(path: Path) -> SessionRef:
+def _summary_records(path: Path, events: list[Event] | None):
+    """One record per physical line, even when it produced several events."""
+    if events is None:
+        yield from _iter_records(path)
+        return
+    previous = 0
+    for event in events:
+        if event.seq != previous:
+            yield event.seq, event.raw["line"]
+            previous = event.seq
+
+
+def _summarize(
+    path: Path, events: list[Event] | None = None, *, ref: SessionRef | None = None
+) -> SessionRef:
     """List-view metadata for one session file, from record properties."""
-    ref = SessionRef("claude", path.stem, path, size_bytes=path.stat().st_size)
-    for _seq, rec in _iter_records(path):
+    preserve_cwd = ref is not None and ref.kind != "agent"
+    ref = ref or SessionRef("claude", path.stem, path, size_bytes=path.stat().st_size)
+    fallback_cwd = ref.cwd
+    for _seq, rec in _summary_records(path, events):
         rtype = rec.get("type", "")
         ts = rec.get("timestamp", "")
         if ts:
@@ -185,7 +201,8 @@ def _summarize(path: Path) -> SessionRef:
             ref.tokens += int((msg.get("usage") or {}).get("output_tokens") or 0)
         elif rtype == "user":
             ref.messages += 1
-            ref.cwd = rec.get("cwd", ref.cwd)
+            if not preserve_cwd:
+                ref.cwd = rec.get("cwd", ref.cwd)
             ref.extra.setdefault("gitBranch", rec.get("gitBranch", ""))
             ref.errors += _error_blocks(rec)
         elif rtype == "ai-title":
@@ -200,6 +217,8 @@ def _summarize(path: Path) -> SessionRef:
                 ref.extra["first_user"] = text
     if not ref.title:
         ref.title = ref.extra.get("first_user", "")
+    if ref.kind == "agent":
+        ref.cwd = ref.cwd or fallback_cwd
     return ref
 
 

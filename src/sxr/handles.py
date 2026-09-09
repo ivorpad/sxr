@@ -84,6 +84,8 @@ def resolve(
         return hits
     if hits:
         fail(f"ambiguous id '{arg}': {_candidates(hits)}", hint)
+    for ref in sessions:
+        ref.summarize()
     hits = [s for s in sessions if lowered in s.name.lower() or lowered in s.title.lower()]
     if len(hits) == 1:
         return hits

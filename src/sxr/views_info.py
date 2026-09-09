@@ -46,6 +46,8 @@ def list_scope(refs: list[SessionRef], cwd: str, json_out: bool, limit: int | No
 def list_view(refs: list[SessionRef], json_out: bool, limit: int | None, cwd: str = "") -> int:
     """Sessions newest first with @N handles; -n 0 = all; exit 0 even when empty."""
     shown = refs if not limit else refs[:limit]
+    for ref in shown:
+        ref.summarize()
     if json_out:
         for ref in shown:
             print(json.dumps(_session_json(ref), ensure_ascii=False))

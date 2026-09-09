@@ -7,6 +7,7 @@ session_meta; scoping to a cwd means reading first lines. Titles come from
 
 import json
 import os
+from functools import cache, partial
 from pathlib import Path
 from typing import Any
 
@@ -72,8 +73,8 @@ def parse(path: Path) -> list[Event]:
     return events
 
 
-def _summarize(path: Path, meta: dict[str, Any], titles: dict[str, str]) -> SessionRef:
-    """List-view metadata for one rollout, from record properties."""
+def _metadata(path: Path, meta: dict[str, Any]) -> SessionRef:
+    """Identity, scope and ordering from the rollout's first record."""
     payload = meta.get("payload") or {}
     sid = payload.get("id") or payload.get("session_id") or path.stem
     ref = SessionRef(
@@ -94,7 +95,12 @@ def _summarize(path: Path, meta: dict[str, Any], titles: dict[str, str]) -> Sess
     )
     ref.extra["originator"] = payload.get("originator", "")
     ref.extra["cli_version"] = payload.get("cli_version", "")
-    for event in parse(path):
+    return ref
+
+
+def _summarize(ref: SessionRef, titles, events: list[Event] | None = None) -> None:
+    """Fill summary fields without reading the transcript a second time."""
+    for event in parse(ref.path) if events is None else events:
         rec = event.raw["line"]
         pay = rec.get("payload") or {}
         ptype = pay.get("type", "")
@@ -110,19 +116,23 @@ def _summarize(path: Path, meta: dict[str, Any], titles: dict[str, str]) -> Sess
             ref.extra["first_user"] = event.text
         if event.is_error:
             ref.errors += 1
-    ref.title = titles.get(sid) or ref.extra.get("first_user", "")
-    return ref
+    ref.title = titles().get(ref.id) or ref.extra.get("first_user", "")
 
 
 def list_sessions(
-    cwd: str, *, recursive: bool = False, worktrees: bool = False, include_archives: bool = False
+    cwd: str,
+    *,
+    recursive: bool = False,
+    worktrees: bool = False,
+    include_archives: bool = False,
+    lazy: bool = False,
 ) -> list[SessionRef]:
     """Matching rollouts, optionally including descendants, worktrees and archives."""
     targets = project_paths(cwd, worktrees)
     roots = [normalize_path(sessions_root())]
     if include_archives:
         roots.append(roots[0].parent / "archived_sessions")
-    titles = history_titles()
+    titles = cache(history_titles)
     refs = []
     for root in roots:
         if not root.is_dir():
@@ -132,11 +142,15 @@ def list_sessions(
             if meta and matches_path(
                 (meta.get("payload") or {}).get("cwd", ""), targets, recursive
             ):
-                ref = _summarize(path, meta, titles)
+                ref = _metadata(path, meta)
+                ref._summary_loader = partial(_summarize, ref, titles)
                 ref.extra.update(root=str(root), archived=root != roots[0], provenance=[str(path)])
                 refs.append(ref)
     refs = deduplicate(refs)
     refs.sort(key=lambda r: (r.started, r.id), reverse=True)
+    if not lazy:
+        for ref in refs:
+            ref.summarize()
     return refs
 
 

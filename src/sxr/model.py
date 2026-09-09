@@ -1,5 +1,6 @@
 """Session references and transcript events shared by providers and views."""
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,19 @@ class SessionRef:
     tokens: int = 0
     size_bytes: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
+    _summary_loader: Callable | None = field(default=None, repr=False, compare=False)
+
+    def summarize(self, events: list["Event"] | None = None) -> None:
+        """Load display metadata once, reusing already parsed events when available."""
+        if self._summary_loader is not None:
+            self._summary_loader(events)
+            self._summary_loader = None
+
+    def read(self, parse: Callable) -> list["Event"]:
+        """Read this transcript and derive its summary from the same records."""
+        events = parse(self.path)
+        self.summarize(events)
+        return events
 
     @property
     def short_id(self) -> str:
@@ -37,6 +51,7 @@ class SessionRef:
     @property
     def label(self) -> str:
         """Best human handle: user-assigned name, else generated title."""
+        self.summarize()
         return self.name or self.title
 
 

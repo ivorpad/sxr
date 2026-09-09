@@ -65,7 +65,7 @@ def discover(ctx, provider, cwd: str) -> list:
     else:
         kwargs["roots"] = [root.parent for root in roots]
         kwargs["include_agents"] = options.get("include_agents", False)
-    refs = provider.list_sessions(cwd, **kwargs)
+    refs = provider.list_sessions(cwd, lazy=True, **kwargs)
     if options.get("coverage") or len(roots) > 1 or not refs:
         _coverage(refs, roots, cwd, options)
     navigation = ["--codex" if provider is codex else "--claude", "--path", cwd]

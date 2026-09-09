@@ -8,6 +8,7 @@ from sxr import flags, onboard, views_grep, views_info, views_read, views_secret
 from sxr.handles import fail, resolve
 from sxr.onboard import EPILOG
 from sxr.scope_options import scope_options
+from sxr.search_index import cmds_view, grep_view, index_cmd
 from sxr.secrets import clean
 from sxr.views_grep import GrepOpts
 from sxr.views_read import ShowOpts
@@ -121,7 +122,7 @@ def show(
         budget=budget,
         line_limit=line_cap,
     )
-    raise typer.Exit(views_read.show(ref, provider.parse(ref.path), opts))
+    raise typer.Exit(views_read.show(ref, ref.read(provider.parse), opts))
 
 
 @app.command()
@@ -195,7 +196,7 @@ def stats(
     """Counts by record property: the elevation view."""
     provider, cwd, json_out, _limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
     for ref in resolve(arg, flags.sessions(ctx, provider, cwd)):
-        views_info.stats_view(ref, provider.parse(ref.path), json_out)
+        views_info.stats_view(ref, ref.read(provider.parse), json_out)
     raise typer.Exit(0)
 
 
@@ -263,7 +264,7 @@ def grep(
         limit=limit,
         budget=budget,
     )
-    raise typer.Exit(views_grep.grep_view(pattern, refs, provider.parse, opts))
+    raise typer.Exit(grep_view(pattern, refs, provider, opts))
 
 
 @app.command()
@@ -289,10 +290,11 @@ def cmds(
     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
     sessions = flags.sessions(ctx, provider, cwd, since, before)
     refs = sessions if arg is None and grep_ else resolve(arg, sessions)
-    raise typer.Exit(views_info.cmds_view(refs, provider.parse, json_out, limit, grep_))
+    raise typer.Exit(cmds_view(refs, provider, json_out, limit, grep_))
 
 
 # init, secrets, and clean carry their own flags; their modules own them.
 app.command("init")(onboard.init_cmd)
 app.command("secrets")(scope_options(views_secrets.secrets_cmd))
 app.command("clean")(scope_options(clean.clean_cmd))
+app.command("index")(scope_options(index_cmd))

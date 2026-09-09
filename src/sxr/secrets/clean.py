@@ -13,6 +13,7 @@ credential is the real remediation.
 import contextlib
 import json
 import os
+import sqlite3
 import sys
 import tempfile
 from collections import Counter
@@ -24,6 +25,7 @@ import typer
 
 from sxr import flags
 from sxr.handles import resolve
+from sxr.index_store import clear
 from sxr.model import SessionRef
 from sxr.secrets.detect import scan_text
 from sxr.secrets.fingerprint import marker
@@ -145,10 +147,17 @@ def _clean_file(path: Path, apply: bool) -> FileResult:
 
 def clean_view(refs: list[SessionRef], session_paths, apply: bool) -> int:
     """Clean (or preview) every file of every session in scope; exit 1 if none."""
+    if apply:
+        try:
+            clear()
+        except (OSError, sqlite3.Error) as exc:
+            print(f"error: cannot clear search index before cleaning: {exc}", file=sys.stderr)
+            return 2
     total = files = 0
     skipped_live = 0
     print(tab_row("# session", "file", "lines", "replacements", "kinds"))
     for ref in refs:
+        ref.summarize()
         if is_live(ref.ended):
             skipped_live += 1
             continue
@@ -169,6 +178,14 @@ def clean_view(refs: list[SessionRef], session_paths, apply: bool) -> int:
         print("# nothing to clean in scope")
         return 1
     if apply:
+        try:
+            clear()
+        except (OSError, sqlite3.Error) as exc:
+            print(
+                f"error: files cleaned but search index could not be cleared: {exc}",
+                file=sys.stderr,
+            )
+            return 2
         print(
             f"# cleaned {total} secret occurrences across {files} files; "
             "markers: [sxr:redacted:<kind>:<fp>]. Rotation is still the real fix."

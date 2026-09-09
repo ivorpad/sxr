@@ -9,6 +9,7 @@ import re
 import sys
 from dataclasses import dataclass
 
+from sxr.grep_options import GrepOpts
 from sxr.handles import fail, resolve
 from sxr.model import Event, SessionRef
 from sxr.navigation import command
@@ -28,22 +29,6 @@ METACHARS = "\\.^$*+?[]{}()|"
 TITLE_CAP = 50
 BROADEN = "# smart-case regex; -F for literal; --codex / --path <dir> widen scope"
 SORTS = ("matches", "started")
-
-
-@dataclass
-class GrepOpts:
-    """Search and output flags for the grep view."""
-
-    fixed: bool = False
-    count: bool = False
-    context: int = 0
-    ignore_case: bool = False
-    ids_only: bool = False
-    include_all: bool = False
-    sort: str = "matches"
-    json_out: bool = False
-    limit: int | None = None
-    budget: int | None = None
 
 
 def compile_pattern(
@@ -181,6 +166,8 @@ def _count_view(pattern: str, rows: list[tuple], opts: GrepOpts, warn: list[str]
         return _empty(pattern, len(rows), warn)
     kept = _order(rows, opts)
     shown = kept if not opts.limit else kept[: opts.limit]
+    for ref, _, _ in shown:
+        ref.summarize()
     if opts.json_out:
         for ref, count, first in shown:
             print(
@@ -216,11 +203,13 @@ def _count_view(pattern: str, rows: list[tuple], opts: GrepOpts, warn: list[str]
     return 0
 
 
-def _counts(refs: list[SessionRef], parse, needle: re.Pattern) -> list[tuple]:
+def _counts(refs: list[SessionRef], parse, needle: re.Pattern, opts: GrepOpts) -> list[tuple]:
     """(session, matches, first matching seq) for every session in scope."""
     rows = []
     for ref in refs:
-        hits = [e for e in parse(ref.path) if e.text and needle.search(e.text)]
+        hits = [
+            e for e in opts.events(ref, parse, summarize=True) if e.text and needle.search(e.text)
+        ]
         rows.append((ref, len(hits), hits[0].seq if hits else 0))
     return rows
 
@@ -262,7 +251,7 @@ def _hits_view(
     sessions = 0
     first_hit = None
     for ref in refs:
-        events = parse(ref.path)
+        events = opts.events(ref, parse)
         hits = [e for e in events if e.text and needle.search(e.text)]
         total += len(hits)
         if hits:
@@ -295,5 +284,5 @@ def grep_view(pattern: str, refs: list[SessionRef], parse, opts: GrepOpts) -> in
     needle = compile_pattern(pattern, opts.fixed, opts.ignore_case)
     warn = _warnings(pattern, opts)
     if opts.count:
-        return _count_view(pattern, _counts(refs, parse, needle), opts, warn)
+        return _count_view(pattern, _counts(refs, parse, needle, opts), opts, warn)
     return _hits_view(pattern, refs, parse, needle, opts, warn)

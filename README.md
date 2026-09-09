@@ -115,6 +115,28 @@ Match rows are capped at 40k chars (`--budget`, env `SXR_BUDGET`) or at `-n`
 rows, whichever comes first; the footer reports the true match count and
 `-n 0` prints all of them.
 
+Literal searches of at least three characters automatically build a local
+search index. This includes plain patterns such as `grep timeout`, `grep -F`
+and literal `cmds --grep` searches. The first search pays the indexing cost;
+later searches skip unchanged files that cannot match. Short patterns and
+regexes with operators use direct reads. Results still come from the JSONL
+parser, with the same case rules, counts and event numbers.
+
+```bash
+sxr --codex --archives index   # build ahead of the next search, in this scope
+sxr index --clear              # discard the whole local search index
+SXR_NO_CACHE=1 sxr grep timeout # bypass the index
+```
+
+The index lives in `$XDG_CACHE_HOME/sxr/search.sqlite3`, defaulting to
+`~/.cache/sxr/search.sqlite3`; `SXR_CACHE_DIR` chooses another directory.
+It contains derived transcript data and is created with owner-only access.
+Verified appends index new records; edits, replacements and truncations rebuild
+the affected file. An incomplete final line is revisited when more bytes arrive.
+`clean --apply` clears the index before and after cleaning. Unavailable, locked
+or corrupt caches fall back to direct reads; `index --clear` removes a bad cache.
+Indexing requires SQLite 3.43 or newer with FTS5, included by the Homebrew install.
+
 An agent searching history matches its own transcript: the search it just ran
 is a record in the session it is running in, so counts drift between two
 identical calls and the top-ranked "source" is itself. Sessions written in the
@@ -185,8 +207,8 @@ shows the command; `grep` and `errors` also search or display its output. Stable
 item IDs remove repeated representations without merging separate executions.
 A nonzero exit is a recorded outcome, including expected empty grep results.
 
-A SQLite backend and a discovery index cache remain separate work. Unknown
-record types pass through as their own kind.
+The search index narrows candidate files; session discovery and result rendering
+read source records. Unknown record types pass through as their own kind.
 
 Breaking since 0.2.3: `grep -c` prints five columns (session, matches, first,
 started, title), prunes zero-match rows, and exits 1 when nothing matches.
