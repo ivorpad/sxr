@@ -8,6 +8,7 @@ from sxr import flags, onboard, skills_command, views_grep, views_info, views_re
 from sxr.find_command import find_cmd
 from sxr.handles import fail, resolve
 from sxr.onboard import EPILOG
+from sxr.prompt_selection import prompt_session
 from sxr.scope_options import scope_options
 from sxr.search_index import cmds_view, grep_view, index_cmd
 from sxr.secrets_commands import clean_cmd, secrets_cmd
@@ -108,10 +109,13 @@ def prompts(
     json_out: flags.JsonF = False,
     limit: flags.LimitF = None,
 ) -> None:
-    """Human prompts in order, excluding records labelled as injected context."""
+    """Human prompts, defaulting to the newest human conversation.
+
+    Skip empty, subagent and review sessions unless an ID or --file is given.
+    --all includes injected context and tool results in the selected session.
+    """
     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    ref = resolve(arg, flags.sessions(ctx, provider, cwd))[0]
-    events = provider.parse(ref.path)
+    ref, events = prompt_session(arg, flags.sessions(ctx, provider, cwd), provider.parse)
     raise typer.Exit(
         views_read.prompts(ref, events, include_all, json_out, limit, budget, line_cap)
     )

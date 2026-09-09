@@ -232,7 +232,8 @@ $ sxr                    # sessions for this directory, newest first
 ```
 
 Address sessions by `@N` from the list, by any unique id prefix, by name,
-or not at all: no id means the newest session. `--codex` switches provider.
+or not at all: no id means the newest session. `prompts` skips empty, subagent
+and review sessions to find the newest human conversation. `--codex` switches provider.
 
 ```bash
 sxr show @2                    # transcript skeleton, one line per event
@@ -240,7 +241,7 @@ sxr show @2 --around 1247      # zoom to event #1247, text untruncated
 sxr show @2 --tail 5           # how a session ended, whole text
 sxr show @2 --type ai-title    # select events by record type
 sxr show --file /path/session.jsonl --around 1247 # skip discovery, either provider
-sxr prompts                    # user messages of the newest session, as stored
+sxr prompts                    # prompts from the newest human conversation
 sxr cmds @6                    # every command a session ran, with ok/err
 sxr cmds --grep "git push"     # commands that did X, across all sessions
 sxr errors @6                  # records flagged is_error, with denial kinds
@@ -255,6 +256,10 @@ sxr clean                      # preview replacing those with masked markers; --
 sxr errors @6 --json | jq .    # the original records, untouched
 sxr init --write               # teach agents sxr before their first call
 ```
+
+An explicit session ID, handle or `--file` is always used as requested, even if
+it has no human prompts. `prompts --all` expands the records in the selected
+session without changing which session the default selects.
 
 `prompts --codex` uses explicit user-message events when present. Otherwise,
 it reads user-role text and uses recorded content labels to exclude injected

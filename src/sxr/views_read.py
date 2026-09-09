@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from sxr.model import Event, SessionRef
 from sxr.navigation import command
+from sxr.prompt_selection import prompt_records
 from sxr.util import clock, day, middle_trim, one_line
 
 
@@ -188,21 +189,6 @@ def _hidden_note(events: list[Event], selected: list[Event]) -> None:
     print(f"# hidden: {', '.join(parts)}; zoom: --around <seq>; by kind: --type <kind>")
 
 
-def _prompt_record(event: Event, kind: str) -> bool:
-    """Select human input using the transcript's recorded content provenance."""
-    if event.kind != kind:
-        return False
-    record = event.raw.get("line", {})
-    if record.get("isMeta") or record.get("isCompactSummary"):
-        return False
-    payload = record.get("payload") or {}
-    metadata = payload.get("internal_chat_message_metadata_passthrough") or {}
-    kinds = metadata.get("content_item_kinds")
-    if not isinstance(kinds, list):
-        return True  # Legacy rollouts do not label response-item content.
-    return any(isinstance(value, str) and value.startswith("user.") for value in kinds)
-
-
 def prompts(
     ref: SessionRef,
     events: list[Event],
@@ -215,9 +201,7 @@ def prompts(
     """Human prompts, or all user-role records with --all; exit 1 when empty."""
     from sxr.util import human_num, line_limit
 
-    has_user_message = any(e.kind == "user_message" for e in events)
-    kind = "user_message" if has_user_message else "text"
-    picked = [e for e in events if e.role == "user" and (include_all or _prompt_record(e, kind))]
+    picked = prompt_records(events, include_all)
     rest = sum(1 for e in events if e.role == "user") - len(picked)
     if json_out:
         for event in picked:

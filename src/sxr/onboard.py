@@ -12,6 +12,8 @@ from sxr.handles import fail
 EPILOG = """\b
 ids: @N from the list; @A:@B names a range; any unique id prefix; a session
 name (set via /rename); no id at all means the newest session.
+prompts skips empty, subagent and review sessions to find the newest human
+conversation. Explicit IDs and --file always select exactly that session.
 \b
 output: tab-separated rows with a # header line; data on stdout, notices on
 stderr; exit 0 = content, 1 = empty result, 2 = usage or bad id. --json
@@ -47,7 +49,7 @@ examples:
   sxr grep -c x --before today history only: not your own (live) session
   sxr show @2 --around 1247    untruncated window around event #1247
   sxr show @2 --tail 5         how a session ended, whole text
-  sxr prompts                  user messages of the newest session, as stored
+  sxr prompts                  prompts from the newest human conversation
   sxr errors @2                is_error records with event indexes
   sxr init --write             install the primer in the nearest AGENTS.md
   sxr init --check             is the installed primer this version?
@@ -105,7 +107,8 @@ Details that affect retrieval:
   rediscovery. Read views emit raw JSONL with --json; find emits bounded excerpts.
   Zoom (--around, --range, --type) or --full prints whole text.
 - IDs: @N from bare sxr (newest first), @A:@B range, unique ID prefix, or name.
-  No ID means newest. For an origin, `sxr grep -c "x" --sort started` orders
+  No ID means newest; prompts skips empty, subagent and review sessions.
+  For an origin, `sxr grep -c "x" --sort started` orders
   oldest recorded mentions first; history may predate the corpus.
 - -> ok/err/? describes the recorded command outcome. Nonzero exits include
   expected empty grep results. Outer exec success does not prove a nested

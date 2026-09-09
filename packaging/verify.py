@@ -127,6 +127,31 @@ def verify_prompts(run, provider):
     assert len(records) == 1 and "portable needle" in records[0]
 
 
+def verify_default_prompt_session(run, source):
+    """Exercise default discovery with newer empty, subagent and review sessions."""
+    original = [json.loads(line) for line in source.read_text().splitlines()]
+    for day, (name, kind, message) in enumerate(
+        [
+            ("empty", "cli", original[1]),
+            ("child", "subagent", original[2]),
+            ("review", "guardian_review", original[2]),
+        ],
+        start=2,
+    ):
+        meta = {
+            "type": "session_meta",
+            "timestamp": f"2026-09-{day:02d}T12:00:00Z",
+            "payload": {"id": name, "cwd": "/w", "source": kind},
+        }
+        sibling = source.with_name(f"rollout-{name}.jsonl")
+        sibling.write_text(json.dumps(meta) + "\n" + json.dumps(message) + "\n")
+    selected = run("prompts", "--codex", "--path", "/w", "--json")
+    assert json.loads(selected) == original[2]
+    assert not run("prompts", "empty", "--codex", "--path", "/w", "--json", codes=(1,))
+    selected = run("prompts", "empty", "--codex", "--path", "/w", "--all", "--json")
+    assert json.loads(selected) == original[1]
+
+
 def verify(executable, environment, sources):
     """Test command families, bundled rule data, fresh indexing, and worker reuse."""
 
@@ -199,6 +224,7 @@ def verify(executable, environment, sources):
     run("skills", "notify", "--paths", codes=(2,))
     run("skills", "--index")
     run("skills", "notify", "--paths", codes=(1,))
+    verify_default_prompt_session(run, sources[1])
     assert run("init")
     run("serve", "stop")
 
