@@ -260,6 +260,9 @@ sxr init --write               # teach agents sxr before their first call
 An explicit session ID, handle or `--file` is always used as requested, even if
 it has no human prompts. `prompts --all` expands the records in the selected
 session without changing which session the default selects.
+Text output identifies the selected `@N` handle and prints a `sessions:` command
+that lists the other sessions in the same scope. Use a handle from that list
+with `prompts` to choose another conversation.
 
 `prompts --codex` uses explicit user-message events when present. Otherwise,
 it reads user-role text and uses recorded content labels to exclude injected

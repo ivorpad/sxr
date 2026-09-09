@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from sxr.model import Event, SessionRef
 from sxr.navigation import command
-from sxr.prompt_selection import prompt_records
+from sxr.prompt_selection import prompt_navigation, prompt_records
 from sxr.util import clock, day, middle_trim, one_line
 
 
@@ -201,6 +201,7 @@ def prompts(
     """Human prompts, or all user-role records with --all; exit 1 when empty."""
     from sxr.util import human_num, line_limit
 
+    prompt_navigation(ref, json_out)
     picked = prompt_records(events, include_all)
     rest = sum(1 for e in events if e.role == "user") - len(picked)
     if json_out:

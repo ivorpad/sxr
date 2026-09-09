@@ -6,6 +6,7 @@ from pathlib import Path
 
 from sxr.handles import resolve
 from sxr.model import Event, SessionRef
+from sxr.navigation import scope_command
 
 
 def _prompt_record(event: Event, kind: str) -> bool:
@@ -38,6 +39,8 @@ def prompt_session(
     """Honor explicit selections, otherwise find the newest human conversation."""
     if arg is not None or not refs or refs[0].extra.get("explicit_file"):
         ref = resolve(arg, refs)[0]
+        if not ref.extra.get("explicit_file"):
+            ref.extra["prompt_handle"] = f"@{refs.index(ref) + 1}"
         return ref, parse(ref.path)
     for index, ref in enumerate(refs):
         if (
@@ -48,12 +51,20 @@ def prompt_session(
             continue
         events = parse(ref.path)
         if prompt_records(events):
-            if index:
-                print(
-                    f"# prompts: {ref.short_id} "
-                    f"(skipped {index} newer empty or background sessions)",
-                    file=sys.stderr,
-                )
+            ref.extra.update(prompt_handle=f"@{index + 1}", prompt_skipped=index)
             return ref, events
     print(f"no human prompts in {len(refs)} sessions in scope", file=sys.stderr)
     raise SystemExit(1)
+
+
+def prompt_navigation(ref: SessionRef, json_out: bool) -> None:
+    """Identify the selected session and show how to discover other handles."""
+    skipped = ref.extra.get("prompt_skipped", 0)
+    if not ref.extra.get("navigation") or (json_out and not skipped):
+        return
+    handle = ref.extra.get("prompt_handle", "")
+    selected = f"{handle} {ref.id}" if handle else f"{ref.id} (--file)"
+    note = f" (skipped {skipped} newer empty or background sessions)" if skipped else ""
+    print(f"# prompts: {selected}{note}", file=sys.stderr)
+    if not json_out and not ref.extra.get("explicit_file"):
+        print(f"# sessions: {scope_command(ref, 'list')}", file=sys.stderr)

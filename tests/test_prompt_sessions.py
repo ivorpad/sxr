@@ -1,6 +1,7 @@
 """Default prompt discovery must reach human sessions past newer background work."""
 
 import json
+import shlex
 
 import pytest
 from typer.testing import CliRunner
@@ -94,6 +95,45 @@ def test_default_reaches_latest_human_session(scope, flags):
         assert json.loads(result.stdout) == scope["human"]
     else:
         assert ("injected setup" in result.stdout) == ("--all" in flags)
+
+
+@pytest.mark.parametrize("window,handle", [([], "@5"), (["--before", "2026-09-06"], "@4")])
+def test_prompt_output_supplies_a_working_session_list(
+    scope, monkeypatch, tmp_path, window, handle
+):
+    result = runner.invoke(app, ["--codex", *window, "prompts"])
+    assert result.exit_code == 0, result.output
+    assert f"# prompts: {handle} human" in result.stderr
+    listing = next(
+        line.removeprefix("# sessions: ")
+        for line in result.stderr.splitlines()
+        if line.startswith("# sessions: ")
+    )
+    command = shlex.split(listing)
+    assert command[0] == "env"
+    sxr_index = command.index("sxr")
+    # Follow the printed command after changing directory and Codex profile.
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path / "wrong-profile"))
+    with monkeypatch.context() as copied_environment:
+        for assignment in command[1:sxr_index]:
+            key, value = assignment.split("=", 1)
+            copied_environment.setenv(key, value)
+        args = command[sxr_index + 1 :]
+        listed = runner.invoke(app, args)
+        assert listed.exit_code == 0, listed.output
+        assert f"{handle}\thuman\t" in listed.stdout
+        selected = runner.invoke(app, [*args[:-1], "prompts", handle, "--json"])
+        assert selected.exit_code == 0, selected.output
+        assert json.loads(selected.stdout) == scope["human"]
+
+
+def test_explicit_file_does_not_invent_a_global_handle(scope):
+    result = runner.invoke(app, ["prompts", "--file", str(scope["selected"])])
+    assert result.exit_code == 0, result.output
+    assert "# prompts: human (--file)" in result.stderr
+    assert "# sessions:" not in result.stderr
+    assert "@1" not in result.stderr
 
 
 def test_default_parses_only_candidates_until_a_human_session(scope, monkeypatch):
