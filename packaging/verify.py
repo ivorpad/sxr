@@ -150,6 +150,21 @@ def verify(executable, environment, sources):
     assert run("skills", "notify", "--paths").strip() == str(skill_file)
     assert json.loads(run("skills", "notify", "--json"))["complete"]
     assert json.loads(run("serve", "status"))["pid"] == status["pid"]
+    copy = skill_root.parent / "backup/notify/SKILL.md"
+    copy.parent.mkdir(parents=True)
+    copy.write_bytes(skill_file.read_bytes())
+    run("skills", "--index")
+    grouped = json.loads(run("skills", "notify", "--json"))
+    assert grouped["total"] == 1 and grouped["files"] == 2
+    assert grouped["skills"][0]["copies"] == 2
+    assert set(run("skills", "notify", "--paths", "--copies").splitlines()) == {
+        str(skill_file),
+        str(copy),
+    }
+    copy.write_text("Different instructions.\n")
+    assert json.loads(run("skills", "notify", "--json", codes=(2,)))["total"] == 2
+    copy.unlink()
+    run("skills", "--index")
     skill_file.unlink()
     run("skills", "notify", "--paths", codes=(2,))
     run("skills", "--index")

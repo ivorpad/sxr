@@ -7,6 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from sxr.skills_catalog import absolute, default_roots, scan, stamp
+from sxr.skills_content import hashed
 
 
 def map_path(roots=None):
@@ -30,7 +31,7 @@ def _read(path, signature):
     data = json.loads(Path(path).read_text())
     if (
         not isinstance(data, dict)
-        or data.get("version") not in (1, 2)
+        or data.get("version") not in (1, 2, 3)
         or not isinstance(data.get("roots"), list)
         or not isinstance(data.get("skills"), list)
         or not isinstance(data.get("errors"), list)
@@ -45,9 +46,25 @@ def _read(path, signature):
             raise ValueError("invalid skill aliases")
         if not all(isinstance(alias, str) for alias in record["aliases"]):
             raise ValueError("invalid skill alias")
+        if data["version"] == 3:
+            digest = record.get("sha256")
+            signature = record.get("signature")
+            if "sha256" not in record or "signature" not in record:
+                raise ValueError("missing skill content hash")
+            if digest is None and signature is not None:
+                raise ValueError("invalid unhashed skill signature")
+            if digest is not None and (
+                not isinstance(digest, str)
+                or len(digest) != 64
+                or any(char not in "0123456789abcdef" for char in digest)
+                or not isinstance(signature, list)
+                or len(signature) != 6
+                or not all(isinstance(value, int) for value in signature)
+            ):
+                raise ValueError("invalid skill content hash")
     if not all(isinstance(root, str) and os.path.isabs(root) for root in data["roots"]):
         raise ValueError("invalid skill roots")
-    if data["version"] == 2 and not isinstance(data.get("indexed_at"), str):
+    if data["version"] >= 2 and not isinstance(data.get("indexed_at"), str):
         raise ValueError("invalid discovery timestamp")
     if not all(isinstance(error, str) for error in data["errors"]):
         raise ValueError("invalid skill errors")
@@ -89,14 +106,20 @@ def load(roots=None, force=False, defaults=False, progress=None):
         not force
         and not os.environ.get("SXR_NO_CACHE")
         and previous
-        and previous["version"] == 2
+        and previous["version"] >= 2
         and previous["roots"] == chosen
     ):
-        return path, previous
+        if previous["version"] == 3:
+            return path, previous
+        data = hashed(previous)
+        write(path, data)
+        return path, data
     if not os.environ.get("SXR_NO_CACHE"):
         path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     excluded = {str(map_path().parent.resolve())}
     data = scan(chosen, custom, excluded, progress)
+    reusable = previous["skills"] if previous and not os.environ.get("SXR_NO_CACHE") else ()
+    data = hashed(data, reusable)
     if not os.environ.get("SXR_NO_CACHE"):
         write(path, data)
     return path, data

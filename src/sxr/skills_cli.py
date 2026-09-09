@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 from sxr.skills_catalog import matches
+from sxr.skills_content import current, groups
 from sxr.skills_store import load, map_path
 
 
@@ -31,6 +32,11 @@ def parser():
     result.add_argument(
         "--aliases", action="store_true", help="With --paths, include symlinked paths"
     )
+    result.add_argument(
+        "--copies",
+        action="store_true",
+        help="Show every matching file instead of grouping by SHA-256",
+    )
     result.add_argument("--exact", action="store_true", help="Match the whole skill directory name")
     result.add_argument(
         "--json", action="store_true", help="Include paths, aliases, roots, and completeness"
@@ -44,17 +50,28 @@ def parser():
     return result
 
 
-def _current(record):
-    if not Path(record["path"]).is_file():
-        return None
-    aliases = []
-    for alias in record["aliases"]:
+def _selected(options, data, errors):
+    selected = matches(data["skills"], options.query, options.exact)
+    if options.index:
+        selected = [record for record in selected if record["sha256"]]
+        result, unique = groups(selected, options.copies)
+        return result, unique, len(selected)
+    valid = []
+    changed = False
+    for record in selected:
         try:
-            if Path(alias).is_file() and str(Path(alias).resolve(strict=True)) == record["path"]:
-                aliases.append(alias)
-        except OSError:
-            pass
-    return dict(record, aliases=aliases)
+            updated = current(record)
+            changed |= updated != record
+            valid.append(updated)
+        except OSError as exc:
+            errors.append(f"{record['path']}: {exc.strerror or exc}")
+            changed = True
+    if changed:
+        errors.append("indexed SKILL.md paths or contents changed; rerun sxr skills --index")
+    # A retargeted alias must not keep matching the old physical file.
+    valid = matches(valid, options.query, options.exact)
+    result, unique = groups(valid, options.copies)
+    return result, unique, len(valid)
 
 
 def _progress():
@@ -64,28 +81,26 @@ def _progress():
         nonlocal previous
         now = time.monotonic()
         if now - previous >= 10:
-            print(f"# discovering: {directories} directories, {skills} skills", file=sys.stderr)
+            print(f"# discovering: {directories} directories, {skills} files", file=sys.stderr)
             previous = now
 
     return report
 
 
 def _render(options, path, data):
-    selected = matches(data["skills"], options.query, options.exact)
+    errors = list(data["errors"])
+    selected, unique, files = _selected(options, data, errors)
     total = len(selected)
     limit = options.limit if options.limit is not None else (0 if options.paths else 20)
     selected = selected[:limit] if limit else selected
-    errors = list(data["errors"])
-    current = [updated for record in selected if (updated := _current(record))]
-    if current != selected:
-        errors.append("indexed SKILL.md paths changed; rerun sxr skills --index")
-    selected = current
     if options.json:
         print(
             json.dumps(
                 dict(
                     skills=selected,
                     total=total,
+                    unique=unique,
+                    files=files,
                     complete=not errors,
                     errors=errors,
                     coverage=data["coverage"],
@@ -103,17 +118,19 @@ def _render(options, path, data):
         for name in sorted(paths):
             print(name)
     elif not options.index or options.query:
-        print("# name\tpath")
+        print("# name\tcopies\tpath")
         for record in selected:
-            print(f"{record['name']}\t{record['path']}")
-        print(f"# {len(selected)} of {total} matching skills")
+            print(f"{record['name']}\t{record['copies']}\t{record['path']}")
+        print(f"# {len(selected)} of {total} results ({unique} distinct contents, {files} files)")
     for error in errors[:8]:
         print(f"# incomplete: {error}", file=sys.stderr)
     if len(errors) > 8:
         print(f"# {len(errors) - 8} more discovery errors; use --json for all", file=sys.stderr)
     if options.index:
+        count = len({record["sha256"] for record in data["skills"] if record["sha256"]})
         print(
-            f"# discovered {len(data['skills'])} skills across {len(data['roots'])} roots: {path}",
+            f"# discovered {len(data['skills'])} files ({count} distinct SKILL.md contents)"
+            f" across {len(data['roots'])} roots: {path}",
             file=sys.stderr,
         )
     return 2 if errors else (0 if selected or options.index else 1)

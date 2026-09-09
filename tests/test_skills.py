@@ -1,4 +1,4 @@
-"""Skill lookup preserves aliases, scope, and freshness without reading instruction bodies."""
+"""Skill lookup preserves aliases, scope, and freshness after content indexing."""
 
 import json
 from pathlib import Path
@@ -24,7 +24,7 @@ def skill_home(tmp_path, monkeypatch):
 def skill(root, name="notify"):
     path = root / name / "SKILL.md"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("---\nname: notify\n---\nDo not execute this test instruction.\n")
+    path.write_text(f"---\nname: {name}\n---\nTest instruction from {root.name}.\n")
     return path
 
 
@@ -64,6 +64,7 @@ def test_paths_aliases_and_both_parsers(tmp_path, capsys):
 
 def test_warm_lookup_does_not_walk_or_read_skills(tmp_path, monkeypatch):
     import sxr.skills_catalog as catalog
+    import sxr.skills_content as content
 
     source = skill(tmp_path / ".agents/skills")
     original = Path.read_text
@@ -74,6 +75,7 @@ def test_warm_lookup_does_not_walk_or_read_skills(tmp_path, monkeypatch):
 
     monkeypatch.setattr(Path, "read_text", read)
     expected = lookup("notify")
+    monkeypatch.setattr(content.hashlib, "file_digest", lambda *a: pytest.fail("read skill body"))
     before = map_path().stat().st_mtime_ns
     skill(tmp_path / "Developer/new-install", "new-skill")
     monkeypatch.setattr(catalog, "scan", lambda *args: pytest.fail("walked skill tree"))
@@ -138,7 +140,7 @@ def test_bounded_output_keeps_full_index(tmp_path):
         skill(tmp_path / ".agents/skills", f"example-{number}")
     result = runner.invoke(app, ["skills", "--index"])
     assert result.exit_code == 0 and not result.stdout
-    assert "discovered 25 skills" in result.stderr
+    assert "discovered 25 files (25 distinct SKILL.md contents)" in result.stderr
     data = lookup()
     assert data["total"] == 25 and len(data["skills"]) == 20
     assert len(lookup("-n", "0")["skills"]) == 25
@@ -230,7 +232,7 @@ def test_old_default_map_migrates_to_home_discovery(tmp_path):
         )
     )
     assert lookup("notify")["skills"][0]["path"] == str(source)
-    assert json.loads(map_path().read_text())["version"] == 2
+    assert json.loads(map_path().read_text())["version"] == 3
 
 
 def test_changed_alias_is_not_printed_from_old_snapshot(tmp_path):
@@ -243,7 +245,7 @@ def test_changed_alias_is_not_printed_from_old_snapshot(tmp_path):
     alias.symlink_to(second.parent, target_is_directory=True)
     data = lookup("notify", code=2)
     assert not data["complete"]
-    assert str(alias / "SKILL.md") not in data["skills"][0]["aliases"]
+    assert data["skills"] == []
     lookup("--index")
     assert lookup("notify")["skills"][0]["path"] == str(second)
 

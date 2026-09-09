@@ -33,6 +33,7 @@ use glibc. A PyPI publish is pending.
 
 ```bash
 sxr skills notify --paths           # canonical SKILL.md path
+sxr skills notify --paths --copies  # every matching copy, including identical files
 sxr skills notify --paths --aliases # include symlinked paths
 sxr skills 'sites:sites-building' --json
 sxr skills --index                  # discover SKILL.md files across your home
@@ -49,13 +50,23 @@ cache is excluded.
 
 The first lookup builds the map if one does not exist. After installing a new
 skill anywhere in the discovery scope, rerun `sxr skills --index` to find it.
-Lookups use the saved snapshot and validate returned paths; they do not walk
-your home again. Missing files or changed aliases prompt you to reindex.
+Lookups use the saved snapshot and validate matching files; they do not walk
+your home again. Missing files, edited contents, or changed aliases prompt you
+to reindex. Edited files are rehashed before grouping results.
 
 Search uses case-insensitive directory names and path clues; `--exact` matches
-the whole skill directory name. Symlinks to the same physical file share one
-result with aliases. Different cached plugin versions remain separate results.
-This locates files; it does not read skill instructions or activate plugins.
+the whole skill directory name. Indexing computes SHA-256 from each `SKILL.md`
+and groups identical contents into one result with a copy count. No existing
+hash or frontmatter is needed. Different contents remain separate, even when
+their directory names match. Symlink aliases do not count as additional copies.
+
+`--copies` shows every matching file. Path clues select the matching installation
+before grouping, so `sxr skills 'project-name:notify' --paths` finds that project's
+copy. JSON groups retain all matching `locations`, each with its own aliases.
+Identical instructions can have different supporting scripts or assets; grouping
+does not compare those files or delete anything. Instructions are hashed but
+never executed. Reindexing reuses hashes when file identity, size, permissions,
+and timestamps are unchanged.
 
 You can also choose where discovery starts. `--root /` searches the whole
 filesystem accessible to your user; it does not require or request root access.
@@ -75,9 +86,11 @@ repeat `--root` for each location. One-off roots get separate maps. The native
 bundle reuses its worker for fast lookups. Explicit indexing runs in a separate
 process so existing lookups can continue using the previous snapshot.
 
-Text and JSON return 20 skills by default; `-n 0` returns all. `--paths` returns
-all matching canonical paths unless limited explicitly. JSON includes `skills`,
-`total`, `complete`, `errors`, `coverage`, `indexed_at`, and the map's `index` path. Missing
+Text and JSON return 20 results by default; `-n 0` returns all. `--paths` returns
+one canonical path per distinct content unless `--copies` is set. JSON includes
+`skills`, `total` results, `unique` contents, matching `files`, `complete`, `errors`,
+`coverage`, `indexed_at`, and the map's `index` path. Copy counts describe matching
+files in the discovery snapshot; new installations require reindexing. Missing
 explicit roots and inaccessible directories make the lookup incomplete (exit 2).
 `sxr skills --clear` removes the default map and saved roots. `SXR_NO_CACHE=1`
 scans without saving a map.

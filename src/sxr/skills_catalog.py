@@ -166,5 +166,12 @@ def matches(records, query, exact=False):
         exact_name = query.casefold() in names
         if (exact and exact_name) or (not exact and all(clue in haystack for clue in clues)):
             result.append((not exact_name, record))
-    result.sort(key=lambda item: (item[0], item[1]["name"].casefold(), item[1]["path"]))
+    result.sort(
+        key=lambda item: (
+            item[0],
+            item[1]["name"].casefold(),
+            item[1]["path"].count(os.sep),
+            item[1]["path"],
+        )
+    )
     return [record for _, record in result]

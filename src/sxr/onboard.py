@@ -83,7 +83,8 @@ Details that affect retrieval:
   search exits 2; find --json includes complete, coverage and errors. A cached
   search still checks source files. `sxr index --clear` removes session caches.
 - skills locates SKILL.md files by directory name or path clues. --paths prints
-  canonical paths; --aliases includes symlinks. `sxr skills --index` discovers
+  one path per distinct SKILL.md content; --copies includes identical copies,
+  and --aliases includes symlinks. `sxr skills --index` discovers
   them across your home directory, including hidden folders and repositories.
   Rerun it after installing skills to refresh the JSON map; lookups reuse that
   snapshot. Add --root DIR to choose discovery roots; repeat it for more.
