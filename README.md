@@ -17,6 +17,8 @@ plain text.
 brew install ivorpad/tap/sxr
 ```
 
+To update an existing installation, run `brew upgrade sxr`.
+
 Homebrew installs a prebuilt bundle containing Python, SQLite, and the other
 runtime libraries. It does not depend on Homebrew's Python or OpenSSL, so a
 custom Homebrew prefix does not trigger compilation of that dependency chain.
@@ -32,71 +34,77 @@ use glibc. A PyPI publish is pending.
 ## Find installed skills
 
 ```bash
-sxr skills notify --paths           # canonical SKILL.md path
-sxr skills notify --paths --copies  # every matching copy, including identical files
-sxr skills notify --paths --aliases # include symlinked paths
-sxr skills 'sites:sites-building' --json
-sxr skills --index                  # discover SKILL.md files across your home
+sxr skills notify --exact --paths  # exact directory name, paths only
+sxr skills notify                  # broader matches, with copy counts
+sxr skills notify --paths --copies # every matching copy
+sxr skills 'project-name:notify' --json
+sxr skills --index                 # discover skills and refresh the map
 ```
 
+Queries match directory names and path clues without regard to case. A query
+like `notify` also matches names such as `notify-user`; `--exact` requires the
+whole directory name. Path clues select installations before grouping, so
+`project-name:notify` restricts results to matching project paths.
+
+Indexing computes SHA-256 from each `SKILL.md`. Identical contents share one
+result with a `copies` count; different contents remain separate even when their
+directory names match. No pre-existing hash is needed. `--copies` expands the
+matching files. JSON groups list those files and their aliases in `locations`.
+Symlink aliases do not count as extra copies. Add `--aliases` to `--paths` to
+include symlinked paths for the returned files.
+
+The index reports both file counts and distinct instruction contents. These
+counts describe instruction files. Supporting scripts and assets are not compared
+and can differ between copies with identical `SKILL.md` contents.
+
 `--index` discovers files named `SKILL.md` recursively across your home directory.
-The containing directory is the skill. No folder registry or frontmatter is
-required: `~/Developer`, downloads, hidden folders, plugin caches, and dependency
-directories are all searched. Configured Claude, Codex, and OpenCode directories
-outside your home are included too. Symlinked directories are followed, and each
-physical directory is scanned once. Symlink cycles are skipped without losing
-physical files; JSON reports their count as `cycles_skipped`. Only sxr's own
-cache is excluded.
+The containing directory is the skill; no registry or frontmatter is required.
+Repositories, downloads, hidden folders, plugin caches, and dependency directories
+are all searched. Configured Claude, Codex, and OpenCode directories outside
+your home are included too. Symlinked directories are followed, each physical
+directory is scanned once, and cycles are skipped. Only sxr's own cache is excluded.
 
-The first lookup builds the map if one does not exist. After installing a new
-skill anywhere in the discovery scope, rerun `sxr skills --index` to find it.
-Lookups use the saved snapshot and validate matching files; they do not walk
-your home again. Missing files, edited contents, or changed aliases prompt you
-to reindex. Edited files are rehashed before grouping results.
-Files deleted during indexing are skipped. Existing maps with saved errors for
-those vanished files are repaired when loaded. Other discovery errors remain in
-JSON; normal lookups summarize them instead of listing unrelated paths.
-
-Search uses case-insensitive directory names and path clues; `--exact` matches
-the whole skill directory name. Indexing computes SHA-256 from each `SKILL.md`
-and groups identical contents into one result with a copy count. No existing
-hash or frontmatter is needed. Different contents remain separate, even when
-their directory names match. Symlink aliases do not count as additional copies.
-
-`--copies` shows every matching file. Path clues select the matching installation
-before grouping, so `sxr skills 'project-name:notify' --paths` finds that project's
-copy. JSON groups retain all matching `locations`, each with its own aliases.
-Identical instructions can have different supporting scripts or assets; grouping
-does not compare those files or delete anything. Instructions are hashed but
-never executed. Reindexing reuses hashes when file identity, size, permissions,
-and timestamps are unchanged.
-
-You can also choose where discovery starts. `--root /` searches the whole
-filesystem accessible to your user; it does not require or request root access.
-Protected directories make coverage incomplete and are reported as errors.
+Choose narrower discovery roots when needed:
 
 ```bash
 sxr skills --index --root ~/Developer --root ~/.agents
-sxr skills notify --paths           # use that discovered map
-sxr skills --index --defaults       # return to discovery across your home
+sxr skills notify --exact --paths   # use that map
+sxr skills --index --defaults       # restore discovery across your home
 sxr skills notify --root ~/Downloads --paths # separate discovery map
 ```
 
+`--index --root` remembers the chosen roots; repeat `--root` for each location.
+A lookup with `--root` uses a separate map. `--root /` searches the filesystem
+accessible to your user without requesting root access. Inaccessible directories
+make discovery incomplete.
+
+The first lookup builds the map if needed. After installing a new skill, rerun
+`sxr skills --index`. Later lookups validate matching files without walking your
+home again. Edited files are rehashed before grouping. Reindexing reuses hashes
+when file identity, size, permissions, and timestamps are unchanged.
+
+If a recorded path is no longer present during indexing, sxr omits that entry.
+Older maps that saved errors for these vanished paths are repaired when loaded,
+so an unrelated lookup does not replay those errors. Index maintenance does
+not delete, move, edit, or execute skill files.
+
+A matching file or alias that changes after indexing still prompts a reindex.
+Permission failures and missing explicit roots remain errors (exit 2). Normal
+lookups summarize discovery failures; `sxr skills --index --json` shows the full
+diagnostics and coverage.
+
 The map lives at `~/.cache/sxr/skills.json`, respecting `XDG_CACHE_HOME` and
-`SXR_CACHE_DIR`. It belongs to your user and survives CLI upgrades. Indexing
-replaces the snapshot atomically. `--index --root` remembers the chosen roots;
-repeat `--root` for each location. One-off roots get separate maps. The native
-bundle reuses its worker for fast lookups. Explicit indexing runs in a separate
-process so existing lookups can continue using the previous snapshot.
+`SXR_CACHE_DIR`, and survives CLI upgrades. Indexing replaces it atomically in
+a separate process, allowing lookups to keep using the previous snapshot.
+The native bundle reuses its worker for fast lookups.
 
 Text and JSON return 20 results by default; `-n 0` returns all. `--paths` returns
-one canonical path per distinct content unless `--copies` is set. JSON includes
-`skills`, `total` results, `unique` contents, matching `files`, `complete`, `errors`,
-`coverage`, `indexed_at`, and the map's `index` path. Copy counts describe matching
-files in the discovery snapshot; new installations require reindexing. Missing
-explicit roots and inaccessible directories make the lookup incomplete (exit 2).
-`sxr skills --clear` removes the default map and saved roots. `SXR_NO_CACHE=1`
-scans without saving a map.
+all matching groups unless limited with `-n`. JSON includes `skills`, `total`
+results, `unique` contents, matching `files`, `complete`, `errors`, `coverage`,
+`indexed_at`, `cycles_skipped`, and the map's `index` path. Copy counts cover
+matching files in the snapshot; new installations require reindexing.
+`sxr skills --clear` removes the default map and saved roots.
+`SXR_NO_CACHE=1` scans without saving a map.
 
 ## Performance
 
