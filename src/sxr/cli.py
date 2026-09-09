@@ -97,7 +97,9 @@ def serve_cmd(action: Annotated[str, typer.Argument()] = "status") -> None:
 def prompts(
     ctx: typer.Context,
     arg: flags.Arg = None,
-    include_all: Annotated[bool, typer.Option("--all")] = False,
+    include_all: Annotated[
+        bool, typer.Option("--all", help="Include injected context and tool results")
+    ] = False,
     budget: flags.BudgetF = None,
     line_cap: flags.LineLimitF = None,
     use_codex: flags.CodexF = False,
@@ -106,7 +108,7 @@ def prompts(
     json_out: flags.JsonF = False,
     limit: flags.LimitF = None,
 ) -> None:
-    """User records in order, exactly as stored."""
+    """Human prompts in order, excluding records labelled as injected context."""
     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
     ref = resolve(arg, flags.sessions(ctx, provider, cwd))[0]
     events = provider.parse(ref.path)

@@ -28,6 +28,12 @@ def fixtures(root):
             dict(
                 type="user",
                 cwd="/w",
+                isMeta=True,
+                message=dict(role="user", content="injected-context"),
+            ),
+            dict(
+                type="user",
+                cwd="/w",
                 timestamp="2026-09-01T10:00:00Z",
                 message=dict(role="user", content="portable needle"),
             ),
@@ -68,9 +74,23 @@ def fixtures(root):
                 payload=dict(
                     type="message",
                     role="user",
+                    content=[dict(type="input_text", text="injected-context")],
+                    internal_chat_message_metadata_passthrough=dict(
+                        content_item_kinds=["agents_md.instructions"]
+                    ),
+                ),
+            ),
+            dict(
+                type="response_item",
+                payload=dict(
+                    type="message",
+                    role="user",
                     content=[
                         dict(type="input_text", text="portable needle"),
                     ],
+                    internal_chat_message_metadata_passthrough=dict(
+                        content_item_kinds=["user.text"]
+                    ),
                 ),
             ),
             dict(
@@ -96,6 +116,15 @@ def fixtures(root):
         path.parent.mkdir(parents=True)
         path.write_text("\n".join(json.dumps(item) for item in items) + "\n")
     return claude, codex
+
+
+def verify_prompts(run, provider):
+    """Check human-only selection and the explicit escape hatch in the installed CLI."""
+    prompts = run("prompts", provider, "--path", "/w")
+    assert "portable needle" in prompts and "injected-context" not in prompts
+    assert "injected-context" in run("prompts", provider, "--path", "/w", "--all")
+    records = run("prompts", provider, "--path", "/w", "--json").splitlines()
+    assert len(records) == 1 and "portable needle" in records[0]
 
 
 def verify(executable, environment, sources):
@@ -128,6 +157,7 @@ def verify(executable, environment, sources):
         assert run("list", provider, "--path", "/w", "--json")
         for command in ("show", "prompts", "errors", "tools", "stats", "path"):
             assert run(command, provider, "--path", "/w")
+        verify_prompts(run, provider)
         assert "needle" in run("grep", "needle", provider, "--path", "/w")
         assert "needle" in run("cmds", "--grep", "echo", provider, "--path", "/w")
         run("secrets", provider, "--path", "/w", codes=(0, 1))

@@ -256,6 +256,14 @@ sxr errors @6 --json | jq .    # the original records, untouched
 sxr init --write               # teach agents sxr before their first call
 ```
 
+`prompts --codex` uses explicit user-message events when present. Otherwise,
+it reads user-role text and uses recorded content labels to exclude injected
+instructions, environment context and internal reminders. Older transcripts
+without those labels retain the user-role text fallback. `prompts --all`
+includes every user-role record, including injected context and tool results.
+For Claude, the default also excludes records marked as metadata or compaction
+summaries.
+
 `--path` accepts absolute paths, relative paths and `~`. Both the requested
 path and the recorded cwd resolve symlinks to their physical path. The default
 scope is one exact directory. Broader searches are explicit:
