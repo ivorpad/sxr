@@ -19,6 +19,40 @@ brew install ivorpad/tap/sxr
 
 Homebrew is the only channel today; a PyPI publish is pending.
 
+## Performance
+
+With a prepared index, `sxr find` returned ranked session evidence about
+**13× faster** than an `rg` + JSONL extraction workflow in a local benchmark.
+
+| Measurement | sxr find | rg + JSONL |
+|---|---:|---:|
+| 12 queries, sum of per-query medians | **1.09 s** | 14.19 s |
+| Known historical targets ranked first | **5/5** | 4/5 |
+
+Individual queries were **1.5×–28× faster**. The first index build took
+**28.35 seconds and 338 MiB**, excluded from the search timings above.
+Including preparation, one run of these 12 queries was slower than direct JSONL.
+
+Measured on 2026-09-09 with sxr 0.8.0, macOS and Python 3.13.15, across
+**738 transcripts (1.60 GB)**: 606 Codex files and 132 Claude files from two
+profiles, including children and archives. Seven trials per query alternated
+arm order. Both arms received the same clues and roots without a known filename
+or event location, and returned ranked sessions with bounded source excerpts.
+The independent baseline used `rg -l -i -F` to locate files, then decoded JSONL
+to extract evidence. Process startup and output serialization were included;
+filesystem caches were not controlled. All returned excerpts were checked
+against source records.
+
+A separate installed 0.8.1 check searched **8,032 local files in 0.31–0.89
+seconds per query**, with all five expected targets ranked first. Those are
+single-run observations, separate from the repeated benchmark.
+
+These measurements cover finding session evidence, not agent reasoning time
+or identical exhaustive match counts: word search and literal JSONL filtering
+have different semantics. Direct JSONL reads can still win when the file and
+location are already known. The benchmark corpus contains private transcripts
+and is not distributed with this repository.
+
 ## Use
 
 Start with clues when you do not know the session or filename:
