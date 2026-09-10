@@ -8,6 +8,7 @@ from sxr import flags, onboard, skills_command, views_grep, views_info, views_re
 from sxr.find_command import find_cmd
 from sxr.handles import fail, resolve
 from sxr.onboard import EPILOG
+from sxr.prompt_catalog import prompt_catalog
 from sxr.prompt_selection import prompt_session
 from sxr.scope_options import scope_options
 from sxr.search_index import cmds_view, grep_view, index_cmd
@@ -98,6 +99,9 @@ def serve_cmd(action: Annotated[str, typer.Argument()] = "status") -> None:
 def prompts(
     ctx: typer.Context,
     arg: flags.Arg = None,
+    latest: Annotated[
+        bool, typer.Option("--latest", help="Read the newest session with human prompts")
+    ] = False,
     include_all: Annotated[
         bool, typer.Option("--all", help="Include injected context and tool results")
     ] = False,
@@ -109,13 +113,22 @@ def prompts(
     json_out: flags.JsonF = False,
     limit: flags.LimitF = None,
 ) -> None:
-    """Human prompts, defaulting to the newest human conversation.
+    """List human sessions with @N handles; give a handle or ID to read its prompts.
 
-    Skip empty, subagent and review sessions unless an ID or --file is given.
-    --all includes injected context and tool results in the selected session.
+    --latest reads the newest human conversation. --file reads an exact transcript.
+    --all includes injected context and tool results when reading a session.
+    --json lists session metadata, or raw records when reading a session.
     """
     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    ref, events = prompt_session(arg, flags.sessions(ctx, provider, cwd), provider.parse)
+    refs = flags.sessions(ctx, provider, cwd)
+    explicit = arg is not None or bool(refs and refs[0].extra.get("explicit_file"))
+    if latest and explicit:
+        fail("--latest cannot be combined with a session ID or --file")
+    if not explicit and not latest:
+        if include_all:
+            fail("--all needs a session ID, --file or --latest")
+        raise typer.Exit(prompt_catalog(refs, provider.parse, json_out, limit, line_cap))
+    ref, events = prompt_session(arg, refs, provider.parse)
     raise typer.Exit(
         views_read.prompts(ref, events, include_all, json_out, limit, budget, line_cap)
     )

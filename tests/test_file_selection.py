@@ -133,6 +133,8 @@ def test_codex_file_uses_its_own_history_profile(tmp_path, monkeypatch):
 def test_file_scope_matches_all_session_views(tmp_path, monkeypatch, writer, command):
     path = writer(tmp_path, monkeypatch)
     provider, ref = reference(path)
+    if command[0] == "prompts":
+        command = [*command, ref.id]
     scoped = runner.invoke(app, [f"--{ref.provider}", "--path", "/w", *command])
     explicit = runner.invoke(app, ["--file", str(path), *command])
     assert (explicit.exit_code, explicit.stdout, explicit.stderr) == (

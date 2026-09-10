@@ -11,13 +11,15 @@ from sxr.handles import fail
 
 EPILOG = """\b
 ids: @N from the list; @A:@B names a range; any unique id prefix; a session
-name (set via /rename); no id at all means the newest session.
-prompts skips empty, subagent and review sessions to find the newest human
-conversation. Explicit IDs and --file always select exactly that session.
+name (set via /rename); most read commands default to the newest session.
+Bare prompts lists human sessions with handles, counts and previews. Give it
+an ID to read messages, or --latest for the newest human conversation.
+Explicit IDs and --file always select exactly that session.
 \b
 output: tab-separated rows with a # header line; data on stdout, notices on
 stderr; exit 0 = content, 1 = empty result, 2 = usage or bad id. --json
-emits original JSONL in read views; find emits ranked evidence and coverage. ...[+N chars] marks a
+emits original JSONL in read views; bare prompts emits session metadata;
+find emits ranked evidence and coverage. ...[+N chars] marks a
 display trim; zooms (--around, --range, --type) and --full print whole text.
 \b
 budgets: scan views (show, prompts) print whole text whenever they fit
@@ -49,7 +51,9 @@ examples:
   sxr grep -c x --before today history only: not your own (live) session
   sxr show @2 --around 1247    untruncated window around event #1247
   sxr show @2 --tail 5         how a session ended, whole text
-  sxr prompts                  prompts from the newest human conversation
+  sxr prompts                  human sessions with handles, counts and previews
+  sxr prompts @2               read that session's human messages
+  sxr prompts --latest         read the newest human conversation
   sxr errors @2                is_error records with event indexes
   sxr init --write             install the primer in the nearest AGENTS.md
   sxr init --check             is the installed primer this version?
@@ -107,7 +111,9 @@ Details that affect retrieval:
   rediscovery. Read views emit raw JSONL with --json; find emits bounded excerpts.
   Zoom (--around, --range, --type) or --full prints whole text.
 - IDs: @N from bare sxr (newest first), @A:@B range, unique ID prefix, or name.
-  No ID means newest; prompts skips empty, subagent and review sessions.
+  Bare prompts lists human sessions with the same handles; prompts @N reads one,
+  and prompts --latest reads the newest human conversation. Other read views
+  default to newest. Bare prompts --json emits session metadata.
   For an origin, `sxr grep -c "x" --sort started` orders
   oldest recorded mentions first; history may predate the corpus.
 - -> ok/err/? describes the recorded command outcome. Nonzero exits include

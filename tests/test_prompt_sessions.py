@@ -79,8 +79,8 @@ def scope(tmp_path, monkeypatch):
         ["prompts", "--codex", "--all"],
     ],
 )
-def test_default_reaches_latest_human_session(scope, flags):
-    result = runner.invoke(app, flags)
+def test_latest_reaches_latest_human_session(scope, flags):
+    result = runner.invoke(app, [*flags, "--latest"])
     assert result.exit_code == 0, result.output
     assert "the latest human request" in result.stdout
     for text in (
@@ -101,7 +101,7 @@ def test_default_reaches_latest_human_session(scope, flags):
 def test_prompt_output_supplies_a_working_session_list(
     scope, monkeypatch, tmp_path, window, handle
 ):
-    result = runner.invoke(app, ["--codex", *window, "prompts"])
+    result = runner.invoke(app, ["--codex", *window, "prompts", "--latest"])
     assert result.exit_code == 0, result.output
     assert f"# prompts: {handle} human" in result.stderr
     listing = next(
@@ -136,7 +136,7 @@ def test_explicit_file_does_not_invent_a_global_handle(scope):
     assert "@1" not in result.stderr
 
 
-def test_default_parses_only_candidates_until_a_human_session(scope, monkeypatch):
+def test_latest_parses_only_candidates_until_a_human_session(scope, monkeypatch):
     paths = []
     parse = codex.parse
 
@@ -145,7 +145,7 @@ def test_default_parses_only_candidates_until_a_human_session(scope, monkeypatch
         return parse(path)
 
     monkeypatch.setattr(codex, "parse", tracked)
-    result = runner.invoke(app, ["prompts", "--codex"])
+    result = runner.invoke(app, ["prompts", "--codex", "--latest"])
     assert result.exit_code == 0, result.output
     assert paths == [scope["empty"], scope["selected"]]
 
@@ -224,5 +224,89 @@ def test_claude_default_skips_empty_roots_and_nested_agents(tmp_path, monkeypatc
     (children / "agent-child.jsonl").write_text(json.dumps(child))
     result = runner.invoke(app, ["prompts", "--include-agents", "--json"])
     assert result.exit_code == 0, result.output
-    assert json.loads(result.stdout) == human
-    assert "skipped 2" in result.stderr
+    row = json.loads(result.stdout)
+    assert (row["handle"], row["id"], row["prompts"]) == ("@3", "human", 1)
+    assert row["first_prompt"] == "human Claude request"
+    selected = runner.invoke(app, ["prompts", "--include-agents", row["handle"], "--json"])
+    assert selected.exit_code == 0, selected.output
+    assert json.loads(selected.stdout) == human
+
+
+@pytest.mark.parametrize("flags", [["prompts", "--codex"], ["--codex", "prompts"]])
+def test_bare_prompts_lists_human_sessions_with_existing_handles(scope, flags):
+    result = runner.invoke(app, flags)
+    assert result.exit_code == 0, result.output
+    rows = [line.split("\t") for line in result.stdout.splitlines() if line.startswith("@")]
+    assert [(row[0], row[1], row[3], row[4]) for row in rows] == [
+        ("@5", "human", "1", "the latest human request"),
+        ("@6", "older", "1", "older request"),
+    ]
+    assert "# 2 human sessions (4 empty or background sessions hidden)" in result.stdout
+    assert "#000" not in result.stdout
+    assert "injected setup" not in result.stdout
+    read = next(
+        line.removeprefix("# read: ")
+        for line in result.stdout.splitlines()
+        if line.startswith("# read: ")
+    )
+    command = shlex.split(read)
+    selected = runner.invoke(app, [*command[command.index("sxr") + 1 :], "--json"])
+    assert selected.exit_code == 0, selected.output
+    assert json.loads(selected.stdout) == scope["human"]
+
+
+@pytest.mark.parametrize("limit,handles", [(None, ["@5", "@6"]), (1, ["@5"]), (0, ["@5", "@6"])])
+def test_catalog_json_handles_and_exact_file_followups(
+    scope, monkeypatch, tmp_path, limit, handles
+):
+    args = ["prompts", "--codex", "--json"]
+    if limit is not None:
+        args.extend(["-n", str(limit)])
+    result = runner.invoke(app, args)
+    assert result.exit_code == 0, result.output
+    rows = [json.loads(line) for line in result.stdout.splitlines()]
+    assert [row["handle"] for row in rows] == handles
+    for row in rows:
+        assert row["type"] == "prompt_session"
+        assert row["cwd"] == str(scope["project"].resolve())
+        selected = runner.invoke(app, ["prompts", "--codex", row["handle"], "--json"])
+        assert selected.exit_code == 0, selected.output
+        records = [json.loads(line) for line in selected.stdout.splitlines()]
+        assert len(records) == row["prompts"]
+        assert records[0]["payload"]["content"][0]["text"] == row["first_prompt"]
+        # The JSON follow-up survives a changed cwd and provider profile.
+        with monkeypatch.context() as changed:
+            changed.chdir(tmp_path)
+            changed.setenv("CODEX_HOME", str(tmp_path / "wrong-profile"))
+            followed = runner.invoke(app, [*shlex.split(row["follow_up"])[1:], "--json"])
+        assert followed.exit_code == 0, followed.output
+        assert followed.stdout == selected.stdout
+
+
+def test_catalog_counts_only_human_prompts_and_flattens_preview(scope):
+    with scope["selected"].open("a") as stream:
+        stream.write("\n" + json.dumps(_text("second\nrequest")))
+    result = runner.invoke(app, ["prompts", "--codex", "-n", "1"])
+    assert result.exit_code == 0, result.output
+    assert "\t2\tthe latest human request" in result.stdout
+    assert "# +1 more" in result.stdout
+    assert "@6\t" not in result.stdout
+
+
+@pytest.mark.parametrize(
+    "args,error",
+    [
+        (["--all"], "--all needs a session ID, --file or --latest"),
+        (["--latest", "human"], "--latest cannot be combined"),
+    ],
+)
+def test_catalog_rejects_conflicting_read_options(scope, args, error):
+    result = runner.invoke(app, ["prompts", "--codex", *args])
+    assert result.exit_code == 2
+    assert error in result.stderr
+
+
+def test_latest_rejects_explicit_file(scope):
+    result = runner.invoke(app, ["prompts", "--file", str(scope["selected"]), "--latest"])
+    assert result.exit_code == 2
+    assert "--latest cannot be combined" in result.stderr

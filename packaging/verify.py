@@ -120,10 +120,15 @@ def fixtures(root):
 
 def verify_prompts(run, provider):
     """Check human-only selection and the explicit escape hatch in the installed CLI."""
-    prompts = run("prompts", provider, "--path", "/w")
+    catalog = run("prompts", provider, "--path", "/w")
+    assert "@1\t" in catalog and "portable needle" in catalog
+    row = json.loads(run("prompts", provider, "--path", "/w", "--json"))
+    assert row["type"] == "prompt_session" and row["handle"] == "@1"
+    assert row["prompts"] == 1 and row["first_prompt"] == "portable needle"
+    prompts = run("prompts", provider, "--path", "/w", "--latest")
     assert "portable needle" in prompts and "injected-context" not in prompts
-    assert "injected-context" in run("prompts", provider, "--path", "/w", "--all")
-    records = run("prompts", provider, "--path", "/w", "--json").splitlines()
+    assert "injected-context" in run("prompts", "@1", provider, "--path", "/w", "--all")
+    records = run("prompts", "@1", provider, "--path", "/w", "--json").splitlines()
     assert len(records) == 1 and "portable needle" in records[0]
 
 
@@ -145,7 +150,12 @@ def verify_default_prompt_session(run, source):
         }
         sibling = source.with_name(f"rollout-{name}.jsonl")
         sibling.write_text(json.dumps(meta) + "\n" + json.dumps(message) + "\n")
-    selected = run("prompts", "--codex", "--path", "/w", "--json")
+    row = json.loads(run("prompts", "--codex", "--path", "/w", "--json"))
+    assert row["handle"] == "@4" and row["prompts"] == 1
+    assert row["first_prompt"] == "portable needle"
+    selected = run("prompts", row["handle"], "--codex", "--path", "/w", "--json")
+    assert json.loads(selected) == original[2]
+    selected = run("prompts", "--latest", "--codex", "--path", "/w", "--json")
     assert json.loads(selected) == original[2]
     assert not run("prompts", "empty", "--codex", "--path", "/w", "--json", codes=(1,))
     selected = run("prompts", "empty", "--codex", "--path", "/w", "--all", "--json")

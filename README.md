@@ -232,8 +232,8 @@ $ sxr                    # sessions for this directory, newest first
 ```
 
 Address sessions by `@N` from the list, by any unique id prefix, by name,
-or not at all: no id means the newest session. `prompts` skips empty, subagent
-and review sessions to find the newest human conversation. `--codex` switches provider.
+or not at all: most read commands default to the newest session. Bare `prompts`
+lists human conversations with their handles. `--codex` switches provider.
 
 ```bash
 sxr show @2                    # transcript skeleton, one line per event
@@ -241,7 +241,9 @@ sxr show @2 --around 1247      # zoom to event #1247, text untruncated
 sxr show @2 --tail 5           # how a session ended, whole text
 sxr show @2 --type ai-title    # select events by record type
 sxr show --file /path/session.jsonl --around 1247 # skip discovery, either provider
-sxr prompts                    # prompts from the newest human conversation
+sxr prompts --codex            # human sessions with handles, counts and previews
+sxr prompts --codex @2         # read one session's human messages
+sxr prompts --codex --latest   # read the newest human conversation
 sxr cmds @6                    # every command a session ran, with ok/err
 sxr cmds --grep "git push"     # commands that did X, across all sessions
 sxr errors @6                  # records flagged is_error, with denial kinds
@@ -257,17 +259,22 @@ sxr errors @6 --json | jq .    # the original records, untouched
 sxr init --write               # teach agents sxr before their first call
 ```
 
-An explicit session ID, handle or `--file` is always used as requested, even if
-it has no human prompts. `prompts --all` expands the records in the selected
-session without changing which session the default selects.
-Text output identifies the selected `@N` handle and prints a `sessions:` command
-that lists the other sessions in the same scope. Use a handle from that list
-with `prompts` to choose another conversation.
+Bare `prompts` lists every human conversation in scope, newest first, skipping
+empty, subagent and review sessions. Each row has its existing `@N` handle,
+prompt count and first human message. Handles match `sxr list` in the same scope,
+so gaps are expected. `-n` limits session rows; `-n 0` shows all.
+
+Pass a listed handle, unique ID prefix or `--file` to read that session's messages.
+Explicit selections are honored even for empty or background sessions.
+`--latest` reads the newest human conversation without listing sessions first.
+`--all` requires a session selection or `--latest` and expands its user-role records.
+Bare `prompts --json` emits session metadata with handles and exact-file follow-up
+commands. With a selection or `--latest`, `--json` emits the original message records.
 
 `prompts --codex` uses explicit user-message events when present. Otherwise,
 it reads user-role text and uses recorded content labels to exclude injected
 instructions, environment context and internal reminders. Older transcripts
-without those labels retain the user-role text fallback. `prompts --all`
+without those labels retain the user-role text fallback. `prompts @N --all`
 includes every user-role record, including injected context and tool results.
 For Claude, the default also excludes records marked as metadata or compaction
 summaries.
