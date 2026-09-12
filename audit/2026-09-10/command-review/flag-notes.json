@@ -1,0 +1,573 @@
+{
+  "shared": {
+    "--help": {
+      "before": "Print help and exit 0. Typer exposes --help only. Direct argparse also accepts -h.",
+      "problem": "Help and aliases differ by entry parser. Root help mixes the command list with a long usage guide.",
+      "after": "Support -h and --help everywhere. Keep root help short and command help specific. Generate help from one option declaration.",
+      "example_after": "sxr prompts --help",
+      "priority": "P2",
+      "compatibility": "Add -h to Typer without removing --help.",
+      "acceptance": "Every command/action has accurate defaults, units and one working example."
+    },
+    "--version": {
+      "before": "Root-only boolean. Prints sxr version and exits 0 when the root callback runs.",
+      "problem": "Unavailable after a command. A package version alone does not identify an uncommitted source build.",
+      "after": "Keep root --version. Document its placement. Optionally include build revision in a separate machine-readable version result.",
+      "example_after": "sxr --version",
+      "priority": "Keep",
+      "compatibility": "No change to current version output in this pass.",
+      "acceptance": "Root --version exits 0 without reading transcripts or starting a worker."
+    },
+    "--codex": {
+      "before": "Restricts session discovery to Codex. Mutually exclusive with --claude. Inherited root/command flags are OR-merged.",
+      "problem": "Provider selection is ignored before non-session commands. Combined flags at different levels can conflict.",
+      "after": "Retain the switch and mutual exclusion. Reject it where irrelevant. State the provider on every scope-bearing command.",
+      "example_after": "sxr prompts --codex @2",
+      "priority": "P2",
+      "compatibility": "Do not change existing provider defaults in this review's first implementation pass.",
+      "acceptance": "Root/local placement selects the same provider and conflicts have the same error."
+    },
+    "--claude": {
+      "before": "Selects Claude. This is already the default for most session views, but find defaults to both providers.",
+      "problem": "Shared Typer help incorrectly calls Claude the default even for find.",
+      "after": "Retain the switch. Give find its correct Only Claude wording and make each command's default scope visible.",
+      "example_after": "sxr find retry --claude",
+      "priority": "P1",
+      "compatibility": "Help correction only for existing valid uses.",
+      "acceptance": "Both find help paths say both providers by default and Only Claude for this flag."
+    },
+    "--path": {
+      "before": "Selects recorded project cwd, resolving relative paths, ~ and symlinks. Defaults to actual process cwd. Command value overrides root value.",
+      "problem": "Path has a different meaning from --file and is silently ignored by some root-prefixed commands.",
+      "after": "Retain project matching semantics. Describe recorded cwd explicitly. Reject unsupported placement rather than ignoring it.",
+      "example_after": "sxr find retry --path /repo",
+      "priority": "P2",
+      "compatibility": "Retain exact matching by default and existing symlink normalization.",
+      "acceptance": "Relative, home-expanded and physical paths select the same recorded project."
+    },
+    "--file": {
+      "before": "Reads one verified JSONL transcript, detects provider and validates explicit provider/project/profile constraints. Avoids rediscovery.",
+      "problem": "Its exact-file behavior is not reflected consistently in every command's follow-up. Some irrelevant root uses are ignored.",
+      "after": "Keep --file as the stable exact-source selection. Preserve it in every generated follow-up and reject conflicting selectors.",
+      "example_after": "sxr prompts --file /path/session.jsonl",
+      "priority": "P1",
+      "compatibility": "Do not broaden explicit files into children or duplicate copies.",
+      "acceptance": "All relevant commands read only the named file and reject provider/path conflicts."
+    },
+    "--recursive": {
+      "before": "Includes descendant recorded project directories in addition to the selected exact cwd.",
+      "problem": "A positive-only toggle cannot disable an inherited true value. It is ineffective with some all-project/file combinations.",
+      "after": "Retain descendant matching. Document valid combinations and reject irrelevant scope modifiers. Keep child transcripts distinct from descendant project directories.",
+      "example_after": "sxr list --path /repo --recursive",
+      "priority": "P2",
+      "compatibility": "Preserve path matching boundaries so /repo-other is not a descendant.",
+      "acceptance": "Exercise root/local placement and --file/--all-projects combinations."
+    },
+    "--worktrees": {
+      "before": "Adds registered Git worktree paths for the selected repository. Combines with --recursive.",
+      "problem": "It can be accepted where --all-projects or an unrelated command makes it ineffective.",
+      "after": "Retain registered worktree discovery. Make no-repository behavior and irrelevant combinations explicit.",
+      "example_after": "sxr find retry --path /repo --worktrees",
+      "priority": "P2",
+      "compatibility": "Keep current registered-worktree interpretation.",
+      "acceptance": "Main repo and linked worktree yield matching declared scope without sibling-directory guessing."
+    },
+    "--claude-root": {
+      "before": "Repeatable Claude config root. Explicit roots replace CLAUDE_CONFIG_DIR/default ~/.claude. Root and command occurrences accumulate.",
+      "problem": "Cannot be used with --codex, including when the inherited flag was added elsewhere.",
+      "after": "Retain repeatable roots and provider validation. Show which profiles are included and preserve them in follow-ups.",
+      "example_after": "sxr find retry --claude-root ~/.claude --claude-root ~/.claude-work",
+      "priority": "Keep",
+      "compatibility": "Keep root/command accumulation and physical-path deduplication.",
+      "acceptance": "Both profiles are searched exactly once and copied follow-ups preserve their scope."
+    },
+    "--include-agents": {
+      "before": "Includes nested Claude transcripts in ordinary views. find already includes children, so the flag is redundant there. It is rejected with --codex.",
+      "problem": "Same flag is a scope change in one command and a no-op in another. find has no exclusion counterpart.",
+      "after": "Keep inclusion alias and add --no-agents to find. Document current per-command defaults. Validate provider-specific flags consistently.",
+      "example_after": "sxr find retry --no-agents",
+      "priority": "P2",
+      "compatibility": "Add exclusion without changing default discovery. Preserve --include-agents for scripts.",
+      "acceptance": "The default, explicit inclusion and explicit exclusion have clear fixture-backed membership."
+    },
+    "--archives": {
+      "before": "Adds Codex archived_sessions in ordinary Codex views. find includes the archive root when present; explicit flag also makes an absent archive root part of coverage.",
+      "problem": "find lacks an exclusion counterpart. Shared help conceals its broader default.",
+      "after": "Keep inclusion and add --no-archives to find. Explain present-root discovery versus explicit missing-root coverage.",
+      "example_after": "sxr find retry --codex --no-archives",
+      "priority": "P2",
+      "compatibility": "Do not remove the existing --archives spelling or alter missing-root completeness silently.",
+      "acceptance": "Active/archive fixtures and a missing explicitly requested root produce documented membership and coverage."
+    },
+    "--coverage": {
+      "before": "Reports discovered roots/sources on stderr. Ordinary discovery also reports coverage for no sessions or multiple roots. find JSON includes coverage regardless of this flag.",
+      "problem": "Coverage completeness semantics differ between read views and find. Displayed coverage need not imply a complete search.",
+      "after": "Keep stderr diagnostics and structured find coverage. Label unavailable roots and distinguish discovery counts from searched source counts.",
+      "example_after": "sxr find retry --coverage --json",
+      "priority": "P2",
+      "compatibility": "Keep machine-readable stdout free from notices.",
+      "acceptance": "Missing roots remain visible and no text notice breaks JSON stdout."
+    },
+    "--since": {
+      "before": "Keeps sessions whose start is on/after a date, ISO instant, today (UTC midnight), or @N start. Filters sessions, not events. Root scope is inherited.",
+      "problem": "Some session commands accept this only before the command. Handles are renumbered after filtering. Invalid/missing starts are excluded.",
+      "after": "Expose the same flag after every session command. Keep inclusive start-time semantics and explicitly document UTC and handle resolution.",
+      "example_after": "sxr prompts --codex --since today",
+      "priority": "P1",
+      "compatibility": "Add missing placements. Do not reinterpret this as an event timestamp or last-activity filter.",
+      "acceptance": "Before/after-command forms select identical sessions, including timezone-offset cases."
+    },
+    "--before": {
+      "before": "Keeps sessions started strictly before the bound. Dates/today mean UTC midnight. Bounds using handles are resolved before narrowing the scope.",
+      "problem": "Only root placement works on several views. Old sessions resumed today remain in --before today despite live-session hints.",
+      "after": "Expose the same flag after every session command and remove claims that it always excludes live/current sessions.",
+      "example_after": "sxr prompts --codex --before today",
+      "priority": "P1",
+      "compatibility": "Keep exclusive start-time semantics.",
+      "acceptance": "A resumed old session is retained, while a session started today is excluded. Both flag placements agree."
+    }
+  },
+  "specific": {
+    "show --around": {
+      "before": "Selects every event whose physical sequence lies within N plus/minus --context. Whole text. Integer has no minimum.",
+      "problem": "Zero/negative coordinates are accepted. --type silently overrides --around.",
+      "after": "Require a positive physical record coordinate. Intersect with --type. Reject combination with --range.",
+      "example_after": "sxr show @2 --around 100 --type text",
+      "priority": "P1",
+      "compatibility": "Invalid windows become usage errors instead of empty success/selection.",
+      "acceptance": "Negative/zero coordinates exit 2; the type-filtered window selects the expected source records."
+    },
+    "show --context": {
+      "before": "Half-width for --around, default 10 physical sequence positions. Ignored without --around.",
+      "problem": "Negative values are accepted and can make a window empty.",
+      "after": "Require a nonnegative half-width and require --around when explicitly supplied.",
+      "example_after": "sxr show @2 --around 100 --context 3",
+      "priority": "P1",
+      "compatibility": "Reject meaningless combinations that were previously ignored.",
+      "acceptance": "--context 0 selects the center record and -1 exits 2."
+    },
+    "show --range": {
+      "before": "Selects inclusive physical record coordinates A:B. Also accepts A-B. Reversed ranges return empty. It is overridden by --type or --around.",
+      "problem": "Invalid, reversed and conflicting selections are not handled consistently.",
+      "after": "Validate positive bounds with start <= end. Intersect a range with --type and reject simultaneous --around.",
+      "example_after": "sxr show @2 --range 10:50 --type tool",
+      "priority": "P1",
+      "compatibility": "Reversed ranges become usage errors. Keep A-B as an alias.",
+      "acceptance": "Invalid/reversed bounds exit 2; valid boundaries include both endpoints."
+    },
+    "show --type": {
+      "before": "Matches normalized event kind exactly or as a dot prefix. It takes precedence over all other base selectors and prints whole text.",
+      "problem": "Help says record type, which can be confused with raw provider type. Typos simply return empty.",
+      "after": "Name this normalized event kind in help, list known kinds and compose with time/sequence windows. Retain prefix matching for forward-compatible kinds.",
+      "example_after": "sxr show @2 --type result --around 100",
+      "priority": "P1",
+      "compatibility": "Combining existing flags will narrow the window rather than ignoring it.",
+      "acceptance": "Documented kinds match fixture events and unknown kinds get an informative empty-result notice."
+    },
+    "show --tail": {
+      "before": "Last N selected events, whole text. Zero means none and exits 1. Negative values fail. Applied after base selection.",
+      "problem": "With --json, N counts normalized events before physical-record deduplication, so one multi-event source line can give surprising counts.",
+      "after": "Keep zero/negative behavior. State the unit explicitly and make JSON selection limits count complete distinct source records.",
+      "example_after": "sxr show @2 --tail 5",
+      "priority": "P2",
+      "compatibility": "Preserve text event behavior unless a versioned source-record unit is adopted across show.",
+      "acceptance": "Tail boundaries and multi-block physical records are tested separately in text/raw JSON."
+    },
+    "show --thinking": {
+      "before": "Adds thinking events to the default skeleton. Ignored when --errors, --type or other zoom selection replaces the skeleton.",
+      "problem": "No option help explains what is added or when it is ignored.",
+      "after": "Retain inclusion but document combination rules and avoid silent overrides under the shared selection pipeline.",
+      "example_after": "sxr show @2 --thinking",
+      "priority": "P2",
+      "compatibility": "Keep default exclusion of thinking.",
+      "acceptance": "The flag adds the expected kinds and combination behavior is shown in help."
+    },
+    "show --tools": {
+      "before": "Adds tool result events. Tool call events already appear by default.",
+      "problem": "The name suggests all tools, not specifically their results. Help has no explanation.",
+      "after": "Add --tool-results as the primary name and keep --tools as a compatibility alias.",
+      "example_after": "sxr show @2 --tool-results",
+      "priority": "P2",
+      "compatibility": "Alias addition, no removal in the first migration.",
+      "acceptance": "Both spellings include the same result events."
+    },
+    "show --errors": {
+      "before": "Selects is_error or err-tagged events only when --full or a zoom/type branch has not taken precedence.",
+      "problem": "--full --errors includes non-error records. Different selectors silently override this filter.",
+      "after": "Apply error filtering within the selected window/full set. Explain inclusion of failed calls as well as error results.",
+      "example_after": "sxr show @2 --errors --full",
+      "priority": "P1",
+      "compatibility": "Fixes combined-flag semantics.",
+      "acceptance": "Every emitted event satisfies the error predicate and full text is preserved."
+    },
+    "show --full": {
+      "before": "Includes all event kinds and disables text trimming. Earlier type/around/range selection still wins. --full wins over --errors in skeleton selection.",
+      "problem": "Combines record selection and display completeness, and disables the error filter unexpectedly.",
+      "after": "Retain full all-kind/whole-text behavior when used alone. Make explicit filters constrain it and document that --limit still applies.",
+      "example_after": "sxr show @2 --full --errors",
+      "priority": "P1",
+      "compatibility": "Standalone --full remains compatible. Combined filter behavior changes.",
+      "acceptance": "Standalone full emits all events. Full plus errors emits only complete error events."
+    },
+    "show --budget": {
+      "before": "40000-character threshold by default, overridden by SXR_BUDGET. Crossing it switches to line trimming rather than enforcing a hard output maximum. Zero/negative disables. JSON, full and zooms bypass it.",
+      "problem": "The name looks like a strict budget. Negatives silently behave as unlimited.",
+      "after": "Describe it as a compact-display threshold, reject negatives and retain 0 as the explicit disabled value. State when full/zoom/JSON bypass it.",
+      "example_after": "sxr show @2 --budget 40000",
+      "priority": "P2",
+      "compatibility": "Keep existing positive threshold behavior and unlimited 0.",
+      "acceptance": "Positive budgets trigger documented trimming; negative input is a usage error."
+    },
+    "show --line-limit": {
+      "before": "Per-line cap while trimming, default SXR_LINE_LIMIT or 200. Zero/negative disables most line caps. Tool result middle trimming still uses fixed 200+120.",
+      "problem": "It is not a consistent cap across event kinds and has no minimum validation.",
+      "after": "Reject negatives, define 0 as no per-line trim and apply the same explicit cap policy to all displayed event kinds.",
+      "example_after": "sxr show @2 --budget 1 --line-limit 200",
+      "priority": "P2",
+      "compatibility": "May change compact result summaries. Preserve access to whole text.",
+      "acceptance": "Every event kind follows the selected cap, including tool results."
+    },
+    "prompts --all": {
+      "before": "Disables the human provenance predicate and includes every user-role event, including injected instructions and tool results. Does not lift explicit row/budget limits.",
+      "problem": "Users read all as all human prompts. It changes the meaning of the command.",
+      "after": "Make --all remove row and text presentation limits while retaining human selection. Move current selection expansion to --include-context.",
+      "example_after": "sxr prompts --codex @2 --all",
+      "priority": "P1",
+      "compatibility": "Breaking semantic change. Announce migration of old --all users to --include-context.",
+      "acceptance": "--all excludes injected/tool records even with -n 1 and --budget 1 supplied."
+    },
+    "prompts --budget": {
+      "before": "Uses explicit value, else SXR_BUDGET, else 40000 to decide whether prompt text is trimmed. Zero/negative disables.",
+      "problem": "Whole human input requires knowing --budget 0 and can be affected by environment settings.",
+      "after": "Default prompts to whole text independent of an implicit environment budget. Retain an explicitly supplied nonnegative budget as an opt-in compact threshold.",
+      "example_after": "sxr prompts --codex @2",
+      "priority": "P1",
+      "compatibility": "Default output can be larger. Preserve explicit positive budgets and 0.",
+      "acceptance": "A long human prompt is verbatim by default under SXR_BUDGET=1."
+    },
+    "prompts --line-limit": {
+      "before": "Caps prompt lines only after the budget activates trimming. Default SXR_LINE_LIMIT or 200. Zero/negative removes the cap.",
+      "problem": "It does not itself request a compact view and accepts negative input.",
+      "after": "Keep as an advanced compact-view control, reject negatives, and ensure it cannot silently truncate the default complete prompt view.",
+      "example_after": "sxr prompts @2 --budget 1 --line-limit 200",
+      "priority": "P2",
+      "compatibility": "Retain explicit compact requests.",
+      "acceptance": "No line limit applies in the plain default view; explicit compact output obeys the cap."
+    },
+    "grep --count": {
+      "before": "Ranks sessions by number of matching normalized events, with first matching sequence. Output becomes per-session aggregates. Not physical occurrences or shell grep line counts.",
+      "problem": "The short -c resembles line/occurrence counts. It overrides -l, context and budget without validation.",
+      "after": "Keep event-count semantics and explain the unit. Reject incompatible output-mode flags and make ignored display flags explicit.",
+      "example_after": "sxr grep -c -F retry --codex",
+      "priority": "P1",
+      "compatibility": "Preserve counts so existing retrieval decisions stay comparable.",
+      "acceptance": "Multiple hits in one event count once; multiple events in one record remain clearly documented."
+    },
+    "grep --fixed": {
+      "before": "Escapes the pattern as a literal substring. Smart-case still applies unless -i is set.",
+      "problem": "Some users expect literal to imply case-sensitive. Current help does not make their independence prominent.",
+      "after": "Retain behavior and document case handling beside literal matching.",
+      "example_after": "sxr grep -F -i 'literal.text'",
+      "priority": "Keep",
+      "compatibility": "No matching-semantic change.",
+      "acceptance": "Literal punctuation and explicit ignore-case produce expected results."
+    },
+    "grep --context": {
+      "before": "Prints N neighboring normalized events per match. Windows may overlap and repeat. --limit counts match windows. Negative N behaves like no context.",
+      "problem": "Not physical-line context despite familiar grep spelling. JSON/-c/-l ignore context.",
+      "after": "Require nonnegative N. Document event/window units, merge overlapping windows, and reject incompatible output modes.",
+      "example_after": "sxr grep retry -C 3 -n 5",
+      "priority": "P2",
+      "compatibility": "Merged windows reduce duplicates in text. Preserve hit identity and order.",
+      "acceptance": "Overlapping hits do not duplicate context unexpectedly. Invalid combinations fail clearly."
+    },
+    "grep --ignore-case": {
+      "before": "Forces case-insensitive matching. Otherwise lowercase patterns ignore case and any capital makes matching case-sensitive.",
+      "problem": "No material defect in this switch.",
+      "after": "Retain -i/--ignore-case and explain its interaction with -F in command help.",
+      "example_after": "sxr grep -F -i 'CloudKit'",
+      "priority": "Keep",
+      "compatibility": "No change.",
+      "acceptance": "Lowercase, capitalized and -i fixture queries have the advertised matching behavior."
+    },
+    "grep --files-with-matches": {
+      "before": "Prints matching session short IDs, not file paths. Takes precedence over JSON and context unless -c selected the count path.",
+      "problem": "The long name promises files. Combined --json output is not JSON.",
+      "after": "Add --ids as the clear primary alias. Keep -l/--files-with-matches for compatibility. Emit structured session identity when JSON is requested.",
+      "example_after": "sxr grep retry --ids --json",
+      "priority": "P1",
+      "compatibility": "Existing plain ID output stays available. JSON combination changes from invalid to valid.",
+      "acceptance": "Every JSON line parses and contains full ID/provider/path. No ambiguity from short-ID collisions."
+    },
+    "grep --regexp": {
+      "before": "Provides one pattern, including a leading dash. A single positional then becomes the session selector. Additional positionals fail.",
+      "problem": "Familiar grep -e often accepts repeated patterns, but this option accepts one.",
+      "after": "Retain one-pattern behavior and document it. Preserve the leading-dash escape hatch and targeted positional error.",
+      "example_after": "sxr grep -e '--flag' @2",
+      "priority": "Keep",
+      "compatibility": "Do not silently combine repeated patterns without a separately reviewed syntax.",
+      "acceptance": "A dash-leading literal/regex and session argument are unambiguous."
+    },
+    "grep --all": {
+      "before": "Only affects -c by retaining zero-match session rows, but if every session has zero matches the command returns empty and prints none. Has no effect in normal grep.",
+      "problem": "All has a different meaning from prompts and from unlimited output. The all-zero case contradicts inclusion.",
+      "after": "Add --include-zero for count-table selection. Redefine --all as uncapped complete output and make the all-zero count table printable with --include-zero.",
+      "example_after": "sxr grep -c retry --include-zero",
+      "priority": "P1",
+      "compatibility": "Breaking --all semantics need migration notes. Preserve zero-match exit 1 even when reporting zero rows as data.",
+      "acceptance": "--include-zero includes every scoped session, including when all counts are zero."
+    },
+    "grep --sort": {
+      "before": "String accepted then validated as matches or started. Controls only -c. started sorts timestamp strings oldest first.",
+      "problem": "Accepted on normal grep with no effect. Offset timestamps can sort incorrectly.",
+      "after": "Restrict to count mode, declare choices in parser and sort normalized UTC instants for started.",
+      "example_after": "sxr grep -c retry --sort started",
+      "priority": "P2",
+      "compatibility": "Corrected ordering can change rank but not counts.",
+      "acceptance": "Invalid choices or use outside count mode fail. Offset timestamps sort by actual start."
+    },
+    "grep --after-context": {
+      "before": "Hidden -A/--after-context is parsed then always rejected with a symmetric -C hint.",
+      "problem": "Common grep syntax is recognized only to produce an error.",
+      "after": "Support nonnegative asymmetric context, or retain the targeted error until implemented. Proposed end state supports -A with -B and clear -C conflict validation.",
+      "example_after": "sxr grep retry -A 3",
+      "priority": "P3",
+      "compatibility": "Additive capability. Keep current recovery hint until support ships.",
+      "acceptance": "Only following context appears for -A; ambiguous -A/-B/-C combinations fail."
+    },
+    "grep --before-context": {
+      "before": "Hidden -B/--before-context is parsed then always rejected with a symmetric -C hint.",
+      "problem": "A familiar flag exists in the parser but cannot perform its advertised conventional task.",
+      "after": "Support nonnegative preceding context with the same combination rules as -A.",
+      "example_after": "sxr grep retry -B 3",
+      "priority": "P3",
+      "compatibility": "Additive capability after a scoped implementation.",
+      "acceptance": "Only preceding context appears for -B; negative counts fail."
+    },
+    "grep --budget": {
+      "before": "Limits printed match blocks by total character size, default SXR_BUDGET or 40000. Always permits the first block. -n 0 and JSON disable it. -c ignores it.",
+      "problem": "The same name as show/prompts means output stopping instead of display trimming. -n changes two separate controls.",
+      "after": "Keep a documented search-output budget with omission metadata. Make -n count only results. --all disables row, character and per-match caps.",
+      "example_after": "sxr grep retry --budget 40000 -n 20",
+      "priority": "P1",
+      "compatibility": "-n 0 no longer silently changes an explicit budget. Provide --all as the direct migration.",
+      "acceptance": "Budget never splits a logical result. Omitted results are visible in text and structured metadata."
+    },
+    "cmds --grep": {
+      "before": "Smart-case regex over full command text/tool summaries. Nonempty filter with no selector changes scope from newest to all sessions. Empty string behaves as no filter.",
+      "problem": "A filter unexpectedly broadens selection. Literal matching requires manually escaping regex.",
+      "after": "Keep regex matching but make scope independent through --all-sessions. Add -F/--fixed for literal recorded-command search.",
+      "example_after": "sxr cmds --all-sessions --grep 'git push' -F",
+      "priority": "P2",
+      "compatibility": "Migrate current implicit all-scope searches. Keep pattern matching over full stored command text.",
+      "acceptance": "Filter changes only matching rows, not sessions. Literal punctuation can be searched directly."
+    },
+    "find --all-projects": {
+      "before": "Searches every project in selected provider stores, bypassing cwd/path filtering. Time/provider/exclusions still apply.",
+      "problem": "Can be combined with --path/--recursive/--worktrees whose intended effect becomes unclear or is ignored.",
+      "after": "Retain explicit broad scope and reject incompatible project modifiers.",
+      "example_after": "sxr find 'webhook retries' --all-projects",
+      "priority": "P2",
+      "compatibility": "Previously redundant combinations become targeted usage errors.",
+      "acceptance": "Unrelated projects are included only through explicit all-project scope."
+    },
+    "find --any": {
+      "before": "Uses OR across clues instead of requiring every clue somewhere in a session. Quoted phrase clues remain grouped.",
+      "problem": "No material defect in the flag.",
+      "after": "Retain behavior and explain all-clues default beside it.",
+      "example_after": "sxr find webhook retries --any",
+      "priority": "Keep",
+      "compatibility": "No change to matching.",
+      "acceptance": "AND/OR and phrase fixtures produce expected result sets."
+    },
+    "find --index": {
+      "before": "Without a query prepares ranked FTS/catalog data and exits 0 even with zero results. With a query performs a normal search and also makes an empty result exit 0.",
+      "problem": "An operational flag changes no-hit search exit behavior. Differs from sxr index preparation.",
+      "after": "Define this as preparation-only when no query is given. With a query, preserve ordinary search exit semantics or reject the combination explicitly. Share preparation with index.",
+      "example_after": "sxr find --index --all-projects",
+      "priority": "P2",
+      "compatibility": "Scripts using query plus --index need a migration note.",
+      "acceptance": "Query no-hit remains exit 1 regardless of index preparation. Preparation-only success is exit 0."
+    },
+    "find --paths": {
+      "before": "Returns matching source paths without ranking/excerpts. Default limit changes from 5 to all. --json returns a paths envelope with coverage.",
+      "problem": "Mode-specific default is easy to miss, but useful for pipelines.",
+      "after": "Keep all-path default and exact path projection. State limit unit and compatibility with --json in help.",
+      "example_after": "sxr find retry --paths --json",
+      "priority": "Keep",
+      "compatibility": "Preserve the current structured paths envelope.",
+      "acceptance": "Text and JSON contain the same paths with the same explicit -n cap."
+    },
+    "find --include-current": {
+      "before": "Disables automatic exclusion of the invoking Codex ID from CODEX_THREAD_ID or CODEX_SESSION_ID. --file already disables automatic exclusion.",
+      "problem": "Name sounds provider-neutral but automatic exclusion is Codex-only. Explicit --exclude-session still wins.",
+      "after": "Retain behavior. Describe environment-based Codex detection and precedence clearly.",
+      "example_after": "sxr find retry --include-current",
+      "priority": "P2",
+      "compatibility": "Do not introduce heuristic current-session guessing.",
+      "acceptance": "Known current Codex session is included, unless also explicitly excluded. Exact --file works as documented."
+    },
+    "find --exclude-session": {
+      "before": "Repeatable full-ID exclusion, exact and case-sensitive. Does not resolve @N or prefixes. Coverage records excluded counts.",
+      "problem": "Session argument forms accepted elsewhere do not work here and a typo can silently exclude nothing.",
+      "after": "Retain stable full-ID exclusion and document it. Report unmatched explicit exclusions in diagnostics without accidentally broadening search.",
+      "example_after": "sxr find retry --exclude-session FULL_ID",
+      "priority": "P2",
+      "compatibility": "Avoid rejecting valid exclusions outside the currently narrowed scope without explanation.",
+      "acceptance": "Full IDs are excluded, prefixes are not guessed and unmatched values are visible."
+    },
+    "skills --index": {
+      "before": "Forces discovery and hashing. With --root remembers new default roots. With no query, table rows are suppressed and only a discovery summary is printed.",
+      "problem": "It combines cache refresh and persistent discovery-scope configuration.",
+      "after": "Retain explicit refresh. Describe root persistence and print resolved roots before/with the completion summary.",
+      "example_after": "sxr skills --index --root ~/.agents/skills",
+      "priority": "P2",
+      "compatibility": "Do not change default roots through ordinary lookup.",
+      "acceptance": "A scoped --index updates the saved root selection and the following lookup uses it."
+    },
+    "skills --root": {
+      "before": "Repeatable discovery root. With --index replaces remembered default roots. Without --index uses a separate transient scoped map.",
+      "problem": "Same flag has persistent and temporary effects depending on --index.",
+      "after": "Keep both uses but explain the distinction directly in flag help and structured metadata.",
+      "example_after": "sxr skills notify --root ~/.agents/skills",
+      "priority": "P2",
+      "compatibility": "Preserve separate map keys and no accidental default-map mutation.",
+      "acceptance": "Transient lookups leave remembered roots unchanged; explicit indexing updates them."
+    },
+    "skills --defaults": {
+      "before": "Requires --index and cannot combine with --root. Restores HOME plus configured external profile roots.",
+      "problem": "The name does not reveal that it resets remembered discovery roots.",
+      "after": "Add --reset-roots as the clearer primary alias and retain --defaults.",
+      "example_after": "sxr skills --index --reset-roots",
+      "priority": "P3",
+      "compatibility": "Alias addition. Keep old spelling.",
+      "acceptance": "Reset restores the documented root set without removing unrelated cache files."
+    },
+    "skills --paths": {
+      "before": "Prints canonical SKILL.md paths, one per content group by default, with unlimited groups unless -n given. --json instead prints the full skills envelope.",
+      "problem": "Combined flags do not project the same paths in JSON. A content group can hide other installed copies.",
+      "after": "Keep text behavior. Make --paths --json project the same path list, with explicit copy/alias controls.",
+      "example_after": "sxr skills notify --paths --json",
+      "priority": "P2",
+      "compatibility": "Path-only JSON is a schema change. Preserve ordinary --json groups.",
+      "acceptance": "JSON paths equal text paths under the same copy/alias/limit settings."
+    },
+    "skills --aliases": {
+      "before": "Requires --paths. Adds symlink aliases from selected records. It can print more lines than -n because the limit applies before alias expansion.",
+      "problem": "-n looks like a path cap but actually caps groups/files before expansion.",
+      "after": "Document the selected-result unit or cap final emitted paths in path mode. Proposed path mode applies limits after deduplication/alias expansion.",
+      "example_after": "sxr skills notify --paths --aliases -n 5",
+      "priority": "P2",
+      "compatibility": "The selected path subset may change under a cap.",
+      "acceptance": "No more than N distinct paths are emitted and JSON/text agree."
+    },
+    "skills --copies": {
+      "before": "Shows every matching physical file instead of grouping identical content hashes. Does not itself request symlink aliases.",
+      "problem": "Copy files and aliases are easily conflated.",
+      "after": "Retain independent content-copy and symlink controls, with one compact example explaining both.",
+      "example_after": "sxr skills notify --paths --copies --aliases",
+      "priority": "Keep",
+      "compatibility": "No change to grouping.",
+      "acceptance": "Identical contents at two physical paths and one symlink produce the expected distinct locations."
+    },
+    "skills --exact": {
+      "before": "Matches the whole skill directory name or an alias directory name, case-insensitively. Requires a nonempty query.",
+      "problem": "Exact applies to directory names, not full path bytes or SKILL.md content.",
+      "after": "Retain behavior and clarify the matched field.",
+      "example_after": "sxr skills notify --exact",
+      "priority": "Keep",
+      "compatibility": "No matching-semantic change.",
+      "acceptance": "Whole directory names match and substring-only clues do not."
+    },
+    "skills --clear": {
+      "before": "Removes default skills.json and remembered roots. Rejects query, root, index and defaults, but accepts several irrelevant output/filter flags. Transient root maps remain.",
+      "problem": "Clear sounds like all skill caches, yet only the default map is removed. Ignored combinations hide mistakes.",
+      "after": "State the exact cleared extent and reject all meaningless combinations. Keep scoped-map removal as a separate explicit future operation if needed.",
+      "example_after": "sxr skills --clear",
+      "priority": "P2",
+      "compatibility": "Preserve existing default-map-only scope in the first pass.",
+      "acceptance": "Default map is removed, transient maps remain, and help states this precisely."
+    },
+    "index --clear": {
+      "before": "Removes the whole shared search.sqlite3 database and journal/WAL files if present. Early branch ignores scope/provider flags. Does not remove skill maps or salt.",
+      "problem": "Scope flags look like they might constrain clearing but do not.",
+      "after": "Keep explicit whole-session-cache clearing and reject scope/limit combinations. Report exact cache kinds removed and retained.",
+      "example_after": "sxr index --clear",
+      "priority": "P1",
+      "compatibility": "No transcript files are affected. Previously ignored scope flags become errors.",
+      "acceptance": "Cache clear extent matches documentation, including an absent database case."
+    },
+    "init --write": {
+      "before": "Writes/replaces the marked primer block in the selected target. Mutually exclusive with --check. Bare init is print-only.",
+      "problem": "Target inference can reach a parent AGENTS.md, which should be visible to the caller.",
+      "after": "Keep explicit writing and idempotence. Report the resolved target and preserve all text outside the block.",
+      "example_after": "sxr init ./AGENTS.md --write",
+      "priority": "Keep",
+      "compatibility": "No broader write authorization or target search introduced.",
+      "acceptance": "Repeated writes are unchanged and unrelated target text survives exactly."
+    },
+    "init --check": {
+      "before": "Exits 0 when a block exists with the current version tag, even if its body was edited. Missing/outdated is 1, invalid markers or IO failure is 2.",
+      "problem": "Version equality is not content equality.",
+      "after": "Compare the generated primer block's content as well as its version, while ignoring unrelated outside text.",
+      "example_after": "sxr init ./AGENTS.md --check",
+      "priority": "P2",
+      "compatibility": "Stricter checks may reveal manually altered blocks.",
+      "acceptance": "Changed current-version content returns 1 with an update explanation."
+    },
+    "init --global": {
+      "before": "Requires --write or --check and cannot combine with FILE. Chooses ~/.agents/AGENTS.md, else ~/.claude/CLAUDE.md, else ~/AGENTS.md.",
+      "problem": "Does not use CODEX_HOME or ~/.codex/AGENTS.md. The target name is not obvious from global.",
+      "after": "Document the exact fallback chain and resolved destination. Keep selection unchanged until a separate profile-target decision.",
+      "example_after": "sxr init --global --check",
+      "priority": "P3",
+      "compatibility": "No automatic change to existing instruction files.",
+      "acceptance": "The reported path matches the documented fallback under synthetic home directories."
+    },
+    "secrets --candidates": {
+      "before": "Adds entropy-tier candidates to the certain/probable masked worklist. Propagates through the group to audit. Accepted before clean but ignored by clean.",
+      "problem": "Audit-only selection is accepted with a rewriting action where it has no effect.",
+      "after": "Keep candidates audit-only. Reject it when clean is selected and state that clean never rewrites entropy candidates.",
+      "example_after": "sxr secrets audit --candidates",
+      "priority": "P1",
+      "compatibility": "Invalid clean combinations become explicit usage errors.",
+      "acceptance": "Candidates appear in audit only and never reach preview/apply rewriting."
+    },
+    "secrets audit --candidates": {
+      "before": "Includes noisy entropy candidates in the masked audit; combines with parent candidate flag using OR.",
+      "problem": "Parent and child flag placement is implicit.",
+      "after": "Keep inheritance within audit and show this option on the documented audit action.",
+      "example_after": "sxr secrets audit @2 --candidates",
+      "priority": "Keep",
+      "compatibility": "No findings changed.",
+      "acceptance": "Parent/local audit placement yields the same masked worklist."
+    },
+    "secrets clean --apply": {
+      "before": "Writes all selected certain/probable replacements atomically, skips live/changed files and clears session caches before/after. -n limits output only. No backup is retained.",
+      "problem": "The default preview's printed apply command drops provider/path/session/date/file selection.",
+      "after": "Keep explicit --apply. Print a correctly quoted exact follow-up preserving selection, including --file. Expose applied/skipped/failed totals.",
+      "example_after": "sxr secrets clean --file /path/session.jsonl --apply",
+      "priority": "P1",
+      "compatibility": "Retain atomic validation and current authorization boundary. Do not expand the write scope.",
+      "acceptance": "Preview follow-up selects exactly the previewed physical files. A report cap never limits validation or rewriting."
+    },
+    "serve --foreground": {
+      "before": "Hidden PATH argument selects a socket and starts a foreground worker instead of running status/stop. Available only through direct argparse.",
+      "problem": "Overrides action and has different parser availability depending on root flags.",
+      "after": "Keep private launcher compatibility and validate it only in a dedicated internal launch mode with consistent parsing.",
+      "example_after": "sxr serve --foreground /tmp/private-worker.sock --idle 300",
+      "priority": "P2",
+      "compatibility": "Native launcher contract must remain supported.",
+      "acceptance": "Invalid action/foreground combinations fail before starting a listener."
+    },
+    "serve --idle": {
+      "before": "Hidden float, default 300. Used only with --foreground. Values <=0 fail; NaN/Infinity pass that check. Otherwise ignored.",
+      "problem": "Non-finite and irrelevant values can pass parsing. Typer wrapper rejects the flag.",
+      "after": "Require a finite positive timeout in foreground mode and reject the option in status/stop mode. Share parsing.",
+      "example_after": "sxr serve --foreground /tmp/private-worker.sock --idle 300",
+      "priority": "P2",
+      "compatibility": "Preserve 300-second native default.",
+      "acceptance": "0, negative, NaN and Infinity fail before any worker side effect."
+    }
+  }
+}

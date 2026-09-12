@@ -1,0 +1,144 @@
+id,area,status,baseline_status,issue_ids,evidence
+CLI-HELP,cli,passed,passed,,pytest-permitted.xml; final-contracts.json
+CLI-VERSION,cli,passed,passed,,pytest-permitted.xml; final-contracts.json
+CLI-PARSERS,cli,passed,passed,,pytest-permitted.xml; final-contracts.json
+CLI-FLAG-POSITIONS,cli,passed,passed,,pytest-permitted.xml; final-contracts.json
+CLI-CONFLICTS,cli,passed,passed,,pytest-permitted.xml
+CLI-NEGATIVE-LIMIT,cli,passed,failed,SXR-AUD-012,pytest-permitted.xml; final-contracts.json; resolutions.json
+CLI-RECORD-ERROR,cli,passed,failed,SXR-AUD-015,pytest-permitted.xml; final-contracts.json; resolutions.json
+FORMAT-JSON,output,passed,passed,,pytest-permitted.xml; final-contracts.json
+FORMAT-CLEAN-JSON,output,passed,failed,SXR-AUD-013,pytest-permitted.xml; final-contracts.json; resolutions.json
+OUTPUT-LIMIT-JSON,output,passed,failed,SXR-AUD-005,pytest-permitted.xml; final-contracts.json; resolutions.json
+OUTPUT-LIMIT-AGGREGATES,output,passed,failed,SXR-AUD-007,pytest-permitted.xml; final-contracts.json; resolutions.json
+LIST-DEFAULT,list,passed,passed,,pytest-permitted.xml; final-contracts.json
+LIST-CODEX,list,passed,passed,,pytest-permitted.xml; final-contracts.json
+LIST-LIMIT,list,passed,passed,,pytest-permitted.xml
+LIST-LIVE,list,passed,passed,,pytest-permitted.xml
+LIST-EMPTY,list,passed,passed,,pytest-permitted.xml
+LIST-LAZY,list,passed,passed,,pytest-permitted.xml
+SELECT-DEFAULT,selection,passed,passed,,pytest-permitted.xml; final-contracts.json
+SELECT-HANDLES,selection,passed,passed,,pytest-permitted.xml; final-contracts.json
+SELECT-NAMES,selection,passed,passed,,pytest-permitted.xml; final-contracts.json
+SELECT-AMBIGUITY,selection,passed,passed,,pytest-permitted.xml
+SELECT-CHILD-ID,selection,passed,passed,,pytest-permitted.xml
+SCOPE-PATH,scope,passed,passed,,pytest-permitted.xml
+SCOPE-RECURSIVE,scope,passed,passed,,pytest-permitted.xml
+SCOPE-WORKTREES,scope,passed,passed,,pytest-permitted.xml
+SCOPE-PROFILES,scope,passed,passed,,pytest-permitted.xml
+SCOPE-CHILDREN,scope,passed,passed,,pytest-permitted.xml
+SCOPE-ARCHIVES,scope,passed,passed,,pytest-permitted.xml
+SCOPE-COPIES,scope,passed,passed,,pytest-permitted.xml
+SCOPE-COVERAGE,scope,passed,passed,,pytest-permitted.xml
+SCOPE-FILE,scope,passed,passed,,pytest-permitted.xml; final-contracts.json
+SCOPE-FILE-VALIDATION,scope,passed,passed,,pytest-permitted.xml
+SCOPE-LEGACY,scope,passed,passed,,pytest-permitted.xml
+TIME-WINDOW,scope,passed,failed,SXR-AUD-002,pytest-permitted.xml; final-contracts.json; resolutions.json
+TIME-HANDLES,scope,passed,passed,,pytest-permitted.xml
+TIME-VALIDATION,scope,passed,passed,,pytest-permitted.xml
+NAVIGATION-ROUNDTRIP,selection,passed,passed,,pytest-permitted.xml; final-contracts.json
+SHOW-SKELETON,show,passed,passed,,pytest-permitted.xml
+SHOW-FILTERS,show,passed,passed,,pytest-permitted.xml
+SHOW-AROUND,show,passed,passed,,pytest-permitted.xml; final-contracts.json
+SHOW-RANGE,show,passed,passed,,pytest-permitted.xml
+SHOW-TAIL,show,passed,passed,,pytest-permitted.xml
+SHOW-TAIL-ZERO,show,passed,failed,SXR-AUD-011,pytest-permitted.xml; final-contracts.json; resolutions.json
+SHOW-FULL,show,passed,failed,SXR-AUD-008,pytest-permitted.xml; final-contracts.json; resolutions.json
+SHOW-BUDGET,show,passed,passed,,pytest-permitted.xml
+SHOW-EMPTY,show,passed,failed,SXR-AUD-010,pytest-permitted.xml; final-contracts.json; resolutions.json
+PROMPTS-HUMAN,prompts,passed,passed,,pytest-permitted.xml; final-contracts.json
+PROMPTS-LEGACY,prompts,passed,passed,,pytest-permitted.xml
+PROMPTS-ALL,prompts,passed,passed,,pytest-permitted.xml; final-contracts.json
+CMDS-OUTCOMES,cmds,passed,passed,,pytest-permitted.xml; final-contracts.json
+CMDS-GREP,cmds,passed,passed,,pytest-permitted.xml
+CMDS-LIMIT,cmds,passed,passed,,pytest-permitted.xml; final-contracts.json
+CMDS-REGEX-ERROR,cmds,passed,passed,,pytest-permitted.xml
+ERRORS-RECORDS,errors,passed,passed,,pytest-permitted.xml; final-contracts.json
+ERRORS-API,errors,passed,failed,SXR-AUD-003,pytest-permitted.xml; final-contracts.json; resolutions.json
+ERRORS-LIMIT,errors,passed,failed,SXR-AUD-006,pytest-permitted.xml; final-contracts.json; resolutions.json
+TOOLS-COUNTS,tools,passed,passed,,pytest-permitted.xml; final-contracts.json
+TOOLS-SKILL-INPUTS,tools,passed,failed,SXR-AUD-009,pytest-permitted.xml; final-contracts.json; resolutions.json
+STATS-COUNTS,stats,passed,passed,,pytest-permitted.xml
+PATH-SOURCES,path,passed,passed,,pytest-permitted.xml; final-contracts.json
+GREP-MATCH,grep,passed,passed,,pytest-permitted.xml; final-contracts.json
+GREP-CONTEXT,grep,passed,passed,,pytest-permitted.xml
+GREP-COUNT,grep,passed,passed,,pytest-permitted.xml
+GREP-ORDER,grep,passed,passed,,pytest-permitted.xml
+GREP-IDS,grep,passed,passed,,pytest-permitted.xml
+GREP-LIMIT,grep,passed,passed,,pytest-permitted.xml
+GREP-ERRORS,grep,passed,passed,,pytest-permitted.xml
+FIND-DEFAULT,find,passed,passed,,pytest-permitted.xml; final-contracts.json
+FIND-CLUES,find,passed,passed,,pytest-permitted.xml
+FIND-TOKENIZATION,find,passed,passed,,pytest-permitted.xml; final-contracts.json
+FIND-EVIDENCE,find,passed,failed,SXR-AUD-004,pytest-permitted.xml; final-contracts.json; resolutions.json
+FIND-LIMIT,find,passed,passed,,pytest-permitted.xml
+FIND-PATHS,find,passed,passed,,pytest-permitted.xml; final-contracts.json
+FIND-CURRENT,find,passed,passed,,pytest-permitted.xml; final-contracts.json
+FIND-EXCLUDE,find,passed,passed,,pytest-permitted.xml
+FIND-FRESHNESS,find,passed,passed,,pytest-permitted.xml; final-contracts.json
+FIND-COMPLETENESS,find,passed,passed,,pytest-permitted.xml
+FIND-INDEX,find,passed,passed,,pytest-permitted.xml
+FIND-WARM,find,passed,passed,,pytest-permitted.xml
+INDEX-PREPARE,index,passed,passed,,pytest-permitted.xml; final-contracts.json
+INDEX-LOCATION,index,passed,passed,,pytest-permitted.xml
+INDEX-LITERAL,index,passed,passed,,pytest-permitted.xml; final-contracts.json
+INDEX-UNICODE,index,passed,passed,,pytest-permitted.xml
+INDEX-INCREMENTAL,index,passed,passed,,pytest-permitted.xml
+INDEX-FALLBACK,index,passed,passed,,pytest-permitted.xml
+INDEX-CATALOG,index,passed,passed,,pytest-permitted.xml
+READ-CACHE,index,passed,passed,,pytest-permitted.xml
+READ-INVALIDATION,index,passed,passed,,pytest-permitted.xml
+PROVIDER-FRAMING,providers,passed,passed,,pytest-permitted.xml
+PROVIDER-CODEX-OUTCOMES,providers,passed,passed,,pytest-permitted.xml
+SECRETS-SCAN,secrets,passed,failed,SXR-AUD-001,pytest-permitted.xml; final-contracts.json; resolutions.json
+SECRETS-DETECTORS,secrets,passed,passed,,pytest-permitted.xml
+SECRETS-CANDIDATES,secrets,passed,passed,,pytest-permitted.xml
+SECRETS-MASKING,secrets,passed,passed,,pytest-permitted.xml; final-contracts.json
+SECRETS-LIMIT,secrets,passed,failed,SXR-AUD-014,pytest-permitted.xml; final-contracts.json; resolutions.json
+SECRETS-ROUTING,secrets,passed,passed,,pytest-permitted.xml
+CLEAN-PREVIEW,clean,passed,passed,,pytest-permitted.xml; final-contracts.json
+CLEAN-APPLY,clean,passed,passed,,pytest-permitted.xml; final-contracts.json
+CLEAN-STRUCTURED,clean,passed,passed,,pytest-permitted.xml
+CLEAN-PRESERVATION,clean,passed,passed,,pytest-permitted.xml
+CLEAN-SCOPE,clean,passed,passed,,pytest-permitted.xml
+CLEAN-LIVE,clean,passed,passed,,pytest-permitted.xml
+CLEAN-ATOMIC,clean,passed,passed,,pytest-permitted.xml
+CLEAN-TEMP,clean,passed,passed,,pytest-permitted.xml
+CLEAN-SYMLINK,clean,passed,passed,,pytest-permitted.xml
+CLEAN-ERRORS,clean,passed,passed,,pytest-permitted.xml
+CLEAN-CACHE,clean,passed,passed,,pytest-permitted.xml
+CLEAN-RULE-COVERAGE,clean,passed,passed,,pytest-permitted.xml
+SKILLS-DISCOVERY,skills,passed,passed,,pytest-permitted.xml
+SKILLS-ROOTS,skills,passed,passed,,pytest-permitted.xml
+SKILLS-SYMLINKS,skills,passed,passed,,pytest-permitted.xml
+SKILLS-QUERY,skills,passed,passed,,pytest-permitted.xml
+SKILLS-GROUP,skills,passed,passed,,pytest-permitted.xml; final-contracts.json
+SKILLS-PATHS,skills,passed,passed,,pytest-permitted.xml; final-contracts.json
+SKILLS-LIMIT,skills,passed,passed,,pytest-permitted.xml
+SKILLS-JSON,skills,passed,passed,,pytest-permitted.xml
+SKILLS-FRESHNESS,skills,passed,passed,,pytest-permitted.xml; final-contracts.json
+SKILLS-VANISHED,skills,passed,passed,,pytest-permitted.xml
+SKILLS-ERRORS,skills,passed,passed,,pytest-permitted.xml
+SKILLS-HASH-RETRY,skills,passed,passed,,pytest-permitted.xml
+SKILLS-MAP,skills,passed,passed,,pytest-permitted.xml
+SKILLS-CLEAR,skills,passed,passed,,pytest-permitted.xml; final-contracts.json
+SKILLS-USAGE,skills,passed,passed,,pytest-permitted.xml
+INIT-PRINT,init,passed,passed,,pytest-permitted.xml
+INIT-TARGET,init,passed,passed,,pytest-permitted.xml
+INIT-GLOBAL,init,passed,passed,,pytest-permitted.xml
+INIT-IDEMPOTENT,init,passed,passed,,pytest-permitted.xml; final-contracts.json
+INIT-CHECK,init,passed,passed,,pytest-permitted.xml; final-contracts.json
+INIT-MARKERS,init,passed,passed,,pytest-permitted.xml
+INIT-USAGE,init,passed,passed,,pytest-permitted.xml
+INIT-IO-ERROR,init,passed,failed,SXR-AUD-016,pytest-permitted.xml; final-contracts.json; resolutions.json
+WORKER-REUSE,worker,passed,passed,,pytest-permitted.xml
+WORKER-CALLER,worker,passed,passed,,pytest-permitted.xml
+WORKER-FALLBACK,worker,passed,passed,,pytest-permitted.xml
+WORKER-CONTROL,worker,passed,passed,,pytest-permitted.xml
+WORKER-PROTOCOL,worker,passed,passed,,pytest-permitted.xml
+WORKER-SKILLS-INDEX,worker,passed,passed,,pytest-permitted.xml
+BUILD-MACOS-ARM64,distribution,passed,passed,,bundle-verify.log
+BUILD-OTHER-PLATFORMS,distribution,not_verified,not_verified,,
+INSTALL-HOMEBREW,distribution,not_verified,not_verified,,
+PERFORMANCE-RELEASE,performance,not_verified,not_verified,,
+DOC-EXIT-CODES,output,passed,failed,SXR-AUD-017,pytest-permitted.xml; resolutions.json
+FORMAT-PATH-JSON,output,passed,failed,SXR-AUD-013,pytest-permitted.xml; final-contracts.json; resolutions.json

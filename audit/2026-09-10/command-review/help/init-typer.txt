@@ -1,0 +1,18 @@
+Usage: -c init [OPTIONS] [file]
+
+  Print the primer that teaches agents sxr, or install it in a context file.
+
+  Bare init writes the block to stdout. --write inserts or replaces it between
+  <!-- sxr:primer vX.Y.Z --> markers in FILE (default: the nearest AGENTS.md
+  walking up from cwd; --global for the user file), so running it twice
+  changes nothing. --check exits 1 when the block is missing or stamped
+  another version. Unbalanced markers are never rewritten: exit 2.
+
+Arguments:
+  file  Target file; default: nearest AGENTS.md
+
+Options:
+  --write   Insert or replace the primer in FILE
+  --check   Is the installed primer this version?
+  --global  Target the user AGENTS.md/CLAUDE.md
+  --help    Show this message and exit.

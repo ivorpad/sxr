@@ -1,0 +1,749 @@
+{
+  "SXR-AUD-001": {
+    "disposition": "fixed",
+    "decision": "Audit the decoded stored values with the cleaner's structured detector, once per physical record. Tool display summaries no longer determine coverage.",
+    "changed_files": [
+      "src/sxr/views_secrets.py",
+      "src/sxr/secrets/records.py",
+      "src/sxr/secrets_commands.py"
+    ],
+    "check_ids": [
+      "SECRETS-write-input"
+    ],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_secret_audit_records.py::test_hidden_tool_values_agree_with_cleaner[value0]",
+      "tests/test_secret_audit_records.py::test_hidden_tool_values_agree_with_cleaner[value1]",
+      "tests/test_secret_audit_records.py::test_hidden_tool_values_agree_with_cleaner[value2]",
+      "tests/test_secret_audit_records.py::test_hidden_tool_values_agree_with_cleaner[value3]",
+      "tests/test_secret_rewrite.py::test_credential_value_does_not_rewrite_matching_protocol_metadata",
+      "tests/test_secret_rewrite.py::test_duplicate_members_and_nested_arrays_retain_all_values",
+      "tests/test_secret_rewrite.py::test_earlier_duplicate_member_cannot_hide_a_credential",
+      "tests/test_secret_rewrite.py::test_encoded_credentials_are_removed_without_reformatting_other_values[all]",
+      "tests/test_secret_rewrite.py::test_encoded_credentials_are_removed_without_reformatting_other_values[plain]",
+      "tests/test_secret_rewrite.py::test_encoded_credentials_are_removed_without_reformatting_other_values[prefix]",
+      "tests/test_secret_rewrite.py::test_entire_structured_password_is_redacted[abc\\ud800def]",
+      "tests/test_secret_rewrite.py::test_entire_structured_password_is_redacted[long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-]",
+      "tests/test_secret_rewrite.py::test_entire_structured_password_is_redacted[spaces and \"quotes\" / slashes]",
+      "tests/test_secret_rewrite.py::test_long_multiline_private_key_is_removed",
+      "tests/test_secret_rewrite.py::test_output_containing_several_json_fragments_and_plain_credentials",
+      "tests/test_secret_rewrite.py::test_overlapping_values_are_replaced_once_longest_first",
+      "tests/test_secret_rewrite.py::test_plain_private_key_enclosing_json_is_redacted_in_full",
+      "tests/test_secret_rewrite.py::test_replacements_do_not_change_property_names",
+      "tests/test_secret_rewrite.py::test_serialized_json_redacts_entire_password_through_string_wrappers[0]",
+      "tests/test_secret_rewrite.py::test_serialized_json_redacts_entire_password_through_string_wrappers[1]",
+      "tests/test_secret_rewrite.py::test_serialized_json_redacts_entire_password_through_string_wrappers[2]",
+      "tests/test_secret_rewrite.py::test_serialized_json_redacts_entire_password_through_string_wrappers[3]",
+      "tests/test_secret_rewrite.py::test_structured_credential_fields[PGPASSWORD]",
+      "tests/test_secret_rewrite.py::test_structured_credential_fields[api_key]",
+      "tests/test_secret_rewrite.py::test_structured_credential_fields[password]",
+      "tests/test_secret_rewrite.py::test_structured_placeholders_stay_unchanged[${DB_PASSWORD}]",
+      "tests/test_secret_rewrite.py::test_structured_placeholders_stay_unchanged[<password>]",
+      "tests/test_secret_rewrite.py::test_structured_placeholders_stay_unchanged[[sxr:redacted:kind:12345678]]",
+      "tests/test_secret_rewrite.py::test_unicode_context_does_not_hide_or_shift_credential_spans[-\\u4e2d\\u6587]",
+      "tests/test_secret_rewrite.py::test_unicode_context_does_not_hide_or_shift_credential_spans[\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130\\u0130-]",
+      "tests/test_secret_rewrite.py::test_unicode_context_does_not_hide_or_shift_credential_spans[\\xe9-]",
+      "tests/test_secrets.py::test_secrets_view_clean_scope_exits_1",
+      "tests/test_secrets.py::test_secrets_view_json_is_masked_too",
+      "tests/test_secrets.py::test_secrets_view_masks_values_and_aggregates"
+    ],
+    "title": "Secret audit misses credentials in Write tool contents",
+    "priority": "P1",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {
+      "SECRETS-write-input": "failed"
+    },
+    "after_results": {
+      "SECRETS-write-input": "passed"
+    }
+  },
+  "SXR-AUD-002": {
+    "disposition": "fixed",
+    "decision": "Compare UTC datetime values, including offset and fractional boundaries. A missing or invalid session start cannot establish membership in a bounded window.",
+    "changed_files": [
+      "src/sxr/handles.py"
+    ],
+    "check_ids": [
+      "TIME-fraction",
+      "TIME-offset"
+    ],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_audit_retrieval.py::test_unknown_start_is_excluded_from_bounded_windows",
+      "tests/test_audit_retrieval.py::test_windows_compare_instants[2026-08-01T12:00:00-2026-08-01T12:00:00.000001Z]",
+      "tests/test_audit_retrieval.py::test_windows_compare_instants[2026-08-01T12:00:00.123Z-2026-08-01T12:00:00.123001Z]",
+      "tests/test_audit_retrieval.py::test_windows_compare_instants[2026-08-01T13:00:00+02:00-2026-08-01T12:00:00Z]",
+      "tests/test_scope.py::test_a_bad_handle_still_exits_2",
+      "tests/test_scope.py::test_a_handle_bounds_by_that_sessions_start",
+      "tests/test_scope.py::test_an_empty_scope_stays_quiet",
+      "tests/test_scope.py::test_an_empty_window_says_what_it_dropped",
+      "tests/test_scope.py::test_bad_dates_exit_2_with_the_accepted_forms[07/26/2026]",
+      "tests/test_scope.py::test_bad_dates_exit_2_with_the_accepted_forms[2026-13-45]",
+      "tests/test_scope.py::test_bad_dates_exit_2_with_the_accepted_forms[20260726]",
+      "tests/test_scope.py::test_bad_dates_exit_2_with_the_accepted_forms[last week]",
+      "tests/test_scope.py::test_bad_dates_exit_2_with_the_accepted_forms[yesterday]",
+      "tests/test_scope.py::test_bad_since_exits_2_through_the_cli",
+      "tests/test_scope.py::test_bare_list_labels_the_live_session",
+      "tests/test_scope.py::test_before_excludes_the_whole_named_day",
+      "tests/test_scope.py::test_before_today_scopes_the_live_session_out",
+      "tests/test_scope.py::test_both_bounds_are_a_half_open_interval",
+      "tests/test_scope.py::test_cmds_grep_honors_the_window",
+      "tests/test_scope.py::test_count_json_keeps_the_title_clean",
+      "tests/test_scope.py::test_count_table_marks_the_live_row",
+      "tests/test_scope.py::test_grep_help_documents_the_window_flags",
+      "tests/test_scope.py::test_is_live_only_inside_the_window",
+      "tests/test_scope.py::test_iso_datetimes_cut_inside_a_day",
+      "tests/test_scope.py::test_list_json_carries_a_live_boolean",
+      "tests/test_scope.py::test_list_view_marks_live_rows_and_names_the_fix",
+      "tests/test_scope.py::test_list_view_says_nothing_when_no_row_is_live",
+      "tests/test_scope.py::test_no_bounds_returns_the_scope_untouched",
+      "tests/test_scope.py::test_since_includes_the_whole_named_day",
+      "tests/test_scope.py::test_since_narrows_grep_and_renumbers_handles",
+      "tests/test_scope.py::test_today_reads_the_frozen_clock",
+      "tests/test_scope.py::test_window_edges_are_ten_minutes"
+    ],
+    "title": "Time filters compare timestamp strings instead of instants",
+    "priority": "P2",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {
+      "TIME-fraction": "failed",
+      "TIME-offset": "failed"
+    },
+    "after_results": {
+      "TIME-fraction": "passed",
+      "TIME-offset": "passed"
+    }
+  },
+  "SXR-AUD-003": {
+    "disposition": "fixed",
+    "decision": "Preserve isApiErrorMessage on error-bearing events without assigning a tool call a false outcome. Multiple text blocks emit their original JSON record once. Invalidate older read-position snapshots.",
+    "changed_files": [
+      "src/sxr/providers/claude_code.py",
+      "src/sxr/read_cache.py",
+      "src/sxr/views_read.py"
+    ],
+    "check_ids": [
+      "ERRORS-api-error"
+    ],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_audit_retrieval.py::test_api_errors_preserve_raw_record_and_do_not_mark_tool_calls",
+      "tests/test_read_cache.py::test_appended_claude_result_changes_earlier_call",
+      "tests/test_read_cache.py::test_blank_torn_and_invalid_utf8_preserve_source_coordinates[_write_claude]",
+      "tests/test_read_cache.py::test_blank_torn_and_invalid_utf8_preserve_source_coordinates[_write_codex]",
+      "tests/test_read_cache.py::test_cache_failures_fall_back[_write_claude-corrupt]",
+      "tests/test_read_cache.py::test_cache_failures_fall_back[_write_claude-disabled]",
+      "tests/test_read_cache.py::test_cache_failures_fall_back[_write_claude-locked]",
+      "tests/test_read_cache.py::test_cache_failures_fall_back[_write_claude-missing_row]",
+      "tests/test_read_cache.py::test_cache_failures_fall_back[_write_claude-patch]",
+      "tests/test_read_cache.py::test_cache_failures_fall_back[_write_claude-unavailable]",
+      "tests/test_read_cache.py::test_cache_failures_fall_back[_write_codex-corrupt]",
+      "tests/test_read_cache.py::test_cache_failures_fall_back[_write_codex-disabled]",
+      "tests/test_read_cache.py::test_cache_failures_fall_back[_write_codex-locked]",
+      "tests/test_read_cache.py::test_cache_failures_fall_back[_write_codex-missing_row]",
+      "tests/test_read_cache.py::test_cache_failures_fall_back[_write_codex-patch]",
+      "tests/test_read_cache.py::test_cache_failures_fall_back[_write_codex-unavailable]",
+      "tests/test_read_cache.py::test_codex_aliases_and_distant_results",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_claude-opts0]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_claude-opts10]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_claude-opts11]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_claude-opts12]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_claude-opts1]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_claude-opts2]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_claude-opts3]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_claude-opts4]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_claude-opts5]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_claude-opts6]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_claude-opts7]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_claude-opts8]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_claude-opts9]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_codex-opts0]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_codex-opts10]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_codex-opts11]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_codex-opts12]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_codex-opts1]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_codex-opts2]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_codex-opts3]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_codex-opts4]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_codex-opts5]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_codex-opts6]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_codex-opts7]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_codex-opts8]",
+      "tests/test_read_cache.py::test_cold_and_warm_match_full_parser[_write_codex-opts9]",
+      "tests/test_read_cache.py::test_mutation_during_build_does_not_publish_snapshot[_write_claude]",
+      "tests/test_read_cache.py::test_mutation_during_build_does_not_publish_snapshot[_write_codex]",
+      "tests/test_read_cache.py::test_mutation_during_seek_falls_back[_write_claude]",
+      "tests/test_read_cache.py::test_mutation_during_seek_falls_back[_write_codex]",
+      "tests/test_read_cache.py::test_newline_framing_and_clear[_write_claude-\\n]",
+      "tests/test_read_cache.py::test_newline_framing_and_clear[_write_claude-\\r\\n]",
+      "tests/test_read_cache.py::test_newline_framing_and_clear[_write_claude-\\r]",
+      "tests/test_read_cache.py::test_newline_framing_and_clear[_write_codex-\\n]",
+      "tests/test_read_cache.py::test_newline_framing_and_clear[_write_codex-\\r\\n]",
+      "tests/test_read_cache.py::test_newline_framing_and_clear[_write_codex-\\r]",
+      "tests/test_read_cache.py::test_source_mutation_invalidates_old_annotations[_write_claude-append]",
+      "tests/test_read_cache.py::test_source_mutation_invalidates_old_annotations[_write_claude-replace]",
+      "tests/test_read_cache.py::test_source_mutation_invalidates_old_annotations[_write_claude-same_mtime]",
+      "tests/test_read_cache.py::test_source_mutation_invalidates_old_annotations[_write_claude-torn]",
+      "tests/test_read_cache.py::test_source_mutation_invalidates_old_annotations[_write_claude-truncate]",
+      "tests/test_read_cache.py::test_source_mutation_invalidates_old_annotations[_write_codex-append]",
+      "tests/test_read_cache.py::test_source_mutation_invalidates_old_annotations[_write_codex-replace]",
+      "tests/test_read_cache.py::test_source_mutation_invalidates_old_annotations[_write_codex-same_mtime]",
+      "tests/test_read_cache.py::test_source_mutation_invalidates_old_annotations[_write_codex-torn]",
+      "tests/test_read_cache.py::test_source_mutation_invalidates_old_annotations[_write_codex-truncate]",
+      "tests/test_read_cache.py::test_warm_zoom_decodes_only_selected_physical_records[_write_claude]",
+      "tests/test_read_cache.py::test_warm_zoom_decodes_only_selected_physical_records[_write_codex]"
+    ],
+    "title": "Counted Claude API errors disappear from the errors view",
+    "priority": "P2",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {
+      "ERRORS-api-error": "failed"
+    },
+    "after_results": {
+      "ERRORS-api-error": "passed"
+    }
+  },
+  "SXR-AUD-004": {
+    "disposition": "fixed",
+    "decision": "Use the same SQLite unicode61 tokenizer for finding the excerpt location as for retrieval. Cut the original string at source offsets.",
+    "changed_files": [
+      "src/sxr/find_query.py"
+    ],
+    "check_ids": [
+      "FIND-unicode-evidence"
+    ],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_audit_retrieval.py::test_normalized_excerpt_uses_source_offsets[alpha_beta-alpha-beta]",
+      "tests/test_audit_retrieval.py::test_normalized_excerpt_uses_source_offsets[cafe rendezvous-caf\\xe9 rendezvous]",
+      "tests/test_audit_retrieval.py::test_normalized_excerpt_uses_source_offsets[cafe-caf\\xe9]",
+      "tests/test_audit_retrieval.py::test_normalized_excerpt_uses_source_offsets[cafe-cafe\\u0301]",
+      "tests/test_audit_retrieval.py::test_normalized_excerpt_uses_source_offsets[strasse-STRASSE]",
+      "tests/test_find.py::test_actual_source_coordinates_and_multiblock_text",
+      "tests/test_find.py::test_both_providers_and_clues_across_events",
+      "tests/test_find.py::test_cache_clear_removes_catalogue_and_passages",
+      "tests/test_find.py::test_cache_rebuild_preserves_late_tool_outcomes",
+      "tests/test_find.py::test_child_archive_profile_and_duplicate_copy_coverage",
+      "tests/test_find.py::test_exact_phrases_and_query_syntax_are_data",
+      "tests/test_find.py::test_fast_cli_matches_typer_results",
+      "tests/test_find.py::test_file_selection_applies_to_ranked_search",
+      "tests/test_find.py::test_new_files_appends_rewrites_and_deleted_files",
+      "tests/test_find.py::test_only_displayed_results_load_passage_bodies",
+      "tests/test_find.py::test_partial_coverage_is_not_reported_as_complete",
+      "tests/test_find.py::test_project_and_provider_filters",
+      "tests/test_find.py::test_warm_inventory_and_retrieval_do_not_parse_transcripts"
+    ],
+    "title": "Normalized find matches can produce excerpts with no matching text",
+    "priority": "P2",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {
+      "FIND-unicode-evidence": "failed"
+    },
+    "after_results": {
+      "FIND-unicode-evidence": "passed"
+    }
+  },
+  "SXR-AUD-005": {
+    "disposition": "fixed",
+    "decision": "Limit complete distinct physical JSON records in show, prompts and errors. Omission counts go to stderr.",
+    "changed_files": [
+      "src/sxr/output.py",
+      "src/sxr/views_read.py"
+    ],
+    "check_ids": [
+      "LIMIT-json-show",
+      "LIMIT-json-prompts",
+      "LIMIT-json-errors"
+    ],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_output_contracts.py::test_json_limits_complete_distinct_records[command-errors-2-2]",
+      "tests/test_output_contracts.py::test_json_limits_complete_distinct_records[command-prompts-0-2]",
+      "tests/test_output_contracts.py::test_json_limits_complete_distinct_records[command-show-0-4]",
+      "tests/test_output_contracts.py::test_json_limits_complete_distinct_records[root-errors-2-2]",
+      "tests/test_output_contracts.py::test_json_limits_complete_distinct_records[root-prompts-0-2]",
+      "tests/test_output_contracts.py::test_json_limits_complete_distinct_records[root-show-0-4]"
+    ],
+    "title": "show, prompts and errors ignore row limits in JSON mode",
+    "priority": "P2",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {
+      "LIMIT-json-show": "failed",
+      "LIMIT-json-prompts": "failed",
+      "LIMIT-json-errors": "failed"
+    },
+    "after_results": {
+      "LIMIT-json-show": "passed",
+      "LIMIT-json-prompts": "passed",
+      "LIMIT-json-errors": "passed"
+    }
+  },
+  "SXR-AUD-006": {
+    "disposition": "fixed",
+    "decision": "Share the errors row allowance across selected sessions and report the full omitted count in both formats.",
+    "changed_files": [
+      "src/sxr/output.py",
+      "src/sxr/views_read.py"
+    ],
+    "check_ids": [
+      "LIMIT-errors-scope",
+      "LIMIT-errors-notice"
+    ],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_output_contracts.py::test_limits_span_selected_sessions[False-errors]",
+      "tests/test_output_contracts.py::test_limits_span_selected_sessions[True-errors]"
+    ],
+    "title": "errors applies text limits per session and hides omissions",
+    "priority": "P2",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {
+      "LIMIT-errors-scope": "failed",
+      "LIMIT-errors-notice": "failed"
+    },
+    "after_results": {
+      "LIMIT-errors-scope": "passed",
+      "LIMIT-errors-notice": "passed"
+    }
+  },
+  "SXR-AUD-007": {
+    "disposition": "fixed",
+    "decision": "Apply -n to tool rows, stat rows, paths and cleaning report rows. JSON aggregate objects retain all fields. A cleaning report limit never changes which selected files are scanned or rewritten.",
+    "changed_files": [
+      "src/sxr/cli.py",
+      "src/sxr/views_info.py",
+      "src/sxr/output.py",
+      "src/sxr/secrets_commands.py",
+      "src/sxr/secrets/clean.py"
+    ],
+    "check_ids": [
+      "LIMIT-tools",
+      "LIMIT-stats",
+      "LIMIT-path",
+      "LIMIT-clean"
+    ],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_output_contracts.py::test_clean_limit_caps_reporting_without_narrowing_apply[command]",
+      "tests/test_output_contracts.py::test_clean_limit_caps_reporting_without_narrowing_apply[group]",
+      "tests/test_output_contracts.py::test_clean_limit_caps_reporting_without_narrowing_apply[root]",
+      "tests/test_output_contracts.py::test_limits_span_selected_sessions[False-errors]",
+      "tests/test_output_contracts.py::test_limits_span_selected_sessions[False-path]",
+      "tests/test_output_contracts.py::test_limits_span_selected_sessions[False-stats]",
+      "tests/test_output_contracts.py::test_limits_span_selected_sessions[True-errors]",
+      "tests/test_output_contracts.py::test_limits_span_selected_sessions[True-path]",
+      "tests/test_output_contracts.py::test_limits_span_selected_sessions[True-stats]",
+      "tests/test_output_contracts.py::test_tool_row_limit_keeps_full_json_aggregate"
+    ],
+    "title": "tools, stats, path and clean accept but ignore -n",
+    "priority": "P2",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {
+      "LIMIT-tools": "failed",
+      "LIMIT-stats": "failed",
+      "LIMIT-path": "failed",
+      "LIMIT-clean": "failed"
+    },
+    "after_results": {
+      "LIMIT-tools": "passed",
+      "LIMIT-stats": "passed",
+      "LIMIT-path": "passed",
+      "LIMIT-clean": "passed"
+    }
+  },
+  "SXR-AUD-008": {
+    "disposition": "fixed",
+    "decision": "Full views bypass the character budget while retaining row limits and complete selected text.",
+    "changed_files": [
+      "src/sxr/views_read.py"
+    ],
+    "check_ids": [
+      "SHOW-full"
+    ],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_show_boundaries.py::test_full_bypasses_budget_but_honors_row_limit"
+    ],
+    "title": "--full still trims long transcript text",
+    "priority": "P2",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {
+      "SHOW-full": "failed"
+    },
+    "after_results": {
+      "SHOW-full": "passed"
+    }
+  },
+  "SXR-AUD-009": {
+    "disposition": "fixed",
+    "decision": "Attach each Claude tool input to its own event and count only that Skill call, excluding unrelated tools.",
+    "changed_files": [
+      "src/sxr/providers/claude_code.py",
+      "src/sxr/views_info.py"
+    ],
+    "check_ids": [
+      "TOOLS-skill-count"
+    ],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_audit_retrieval.py::test_skill_counts_use_the_owning_block"
+    ],
+    "title": "Skill input counts multiply when calls share a record",
+    "priority": "P2",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {
+      "TOOLS-skill-count": "failed"
+    },
+    "after_results": {
+      "TOOLS-skill-count": "passed"
+    }
+  },
+  "SXR-AUD-010": {
+    "disposition": "fixed",
+    "decision": "Empty show selections return 1 in both text and JSON, with and without the read cache.",
+    "changed_files": [
+      "src/sxr/views_read.py"
+    ],
+    "check_ids": [
+      "SHOW-empty"
+    ],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-False-selection0]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-False-selection1]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-False-selection2]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-False-selection3]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-False-selection4]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-True-selection0]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-True-selection1]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-True-selection2]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-True-selection3]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-True-selection4]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-False-selection0]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-False-selection1]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-False-selection2]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-False-selection3]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-False-selection4]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-True-selection0]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-True-selection1]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-True-selection2]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-True-selection3]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-True-selection4]"
+    ],
+    "title": "Empty show selections exit successfully only in text mode",
+    "priority": "P2",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {
+      "SHOW-empty": "failed"
+    },
+    "after_results": {
+      "SHOW-empty": "passed"
+    }
+  },
+  "SXR-AUD-011": {
+    "disposition": "fixed",
+    "decision": "Choose zero selected events for --tail 0, with empty-result exit 1. Negative tails are usage errors. This is distinct from the documented unlimited -n 0.",
+    "changed_files": [
+      "src/sxr/views_read.py",
+      "src/sxr/show_command.py",
+      "README.md"
+    ],
+    "check_ids": [
+      "SHOW-tail-zero"
+    ],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-False-selection0]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-False-selection1]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-False-selection2]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-False-selection3]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-False-selection4]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-True-selection0]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-True-selection1]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-True-selection2]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-True-selection3]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[False-True-selection4]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-False-selection0]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-False-selection1]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-False-selection2]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-False-selection3]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-False-selection4]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-True-selection0]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-True-selection1]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-True-selection2]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-True-selection3]",
+      "tests/test_show_boundaries.py::test_empty_selection_exit_is_consistent[True-True-selection4]",
+      "tests/test_show_boundaries.py::test_negative_tail_is_usage_error"
+    ],
+    "title": "--tail 0 returns the entire selected transcript",
+    "priority": "P3",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {
+      "SHOW-tail-zero": "failed"
+    },
+    "after_results": {
+      "SHOW-tail-zero": "passed"
+    }
+  },
+  "SXR-AUD-012": {
+    "disposition": "fixed",
+    "decision": "Reject negative row limits before discovery in the shared Typer option. Existing fast find and skills validation agrees. Root, group and command flag positions retain the same rule.",
+    "changed_files": [
+      "src/sxr/flags.py",
+      "README.md"
+    ],
+    "check_ids": [
+      "USAGE-negative-limit-list",
+      "USAGE-negative-limit-show",
+      "USAGE-negative-limit-prompts",
+      "USAGE-negative-limit-errors",
+      "USAGE-negative-limit-tools",
+      "USAGE-negative-limit-stats",
+      "USAGE-negative-limit-cmds"
+    ],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_output_contracts.py::test_fast_entry_points_reject_negative_limits[main0]",
+      "tests/test_output_contracts.py::test_fast_entry_points_reject_negative_limits[main1]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[command-command0]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[command-command10]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[command-command11]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[command-command12]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[command-command1]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[command-command2]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[command-command3]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[command-command4]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[command-command5]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[command-command6]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[command-command7]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[command-command8]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[command-command9]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[root-command0]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[root-command10]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[root-command11]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[root-command12]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[root-command1]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[root-command2]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[root-command3]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[root-command4]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[root-command5]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[root-command6]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[root-command7]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[root-command8]",
+      "tests/test_output_contracts.py::test_negative_limits_rejected_before_discovery[root-command9]"
+    ],
+    "title": "Negative row limits are accepted inconsistently",
+    "priority": "P3",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {
+      "USAGE-negative-limit-list": "failed",
+      "USAGE-negative-limit-show": "failed",
+      "USAGE-negative-limit-prompts": "failed",
+      "USAGE-negative-limit-errors": "failed",
+      "USAGE-negative-limit-tools": "failed",
+      "USAGE-negative-limit-stats": "failed",
+      "USAGE-negative-limit-cmds": "failed"
+    },
+    "after_results": {
+      "USAGE-negative-limit-list": "passed",
+      "USAGE-negative-limit-show": "passed",
+      "USAGE-negative-limit-prompts": "passed",
+      "USAGE-negative-limit-errors": "passed",
+      "USAGE-negative-limit-tools": "passed",
+      "USAGE-negative-limit-stats": "passed",
+      "USAGE-negative-limit-cmds": "passed"
+    }
+  },
+  "SXR-AUD-013": {
+    "disposition": "fixed",
+    "decision": "Path JSON emits path objects. Clean JSON emits masked file-result objects with applied state, counts and kinds. Diagnostics and totals remain on stderr.",
+    "changed_files": [
+      "src/sxr/views_info.py",
+      "src/sxr/cli.py",
+      "src/sxr/secrets_commands.py",
+      "src/sxr/secrets/clean.py",
+      "README.md"
+    ],
+    "check_ids": [
+      "FORMAT-clean-json",
+      "FORMAT-path-json"
+    ],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_output_contracts.py::test_clean_limit_caps_reporting_without_narrowing_apply[command]",
+      "tests/test_output_contracts.py::test_clean_limit_caps_reporting_without_narrowing_apply[group]",
+      "tests/test_output_contracts.py::test_clean_limit_caps_reporting_without_narrowing_apply[root]",
+      "tests/test_output_contracts.py::test_limits_span_selected_sessions[True-path]"
+    ],
+    "title": "path and secrets clean accept --json but emit plain text",
+    "priority": "P2",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {
+      "FORMAT-clean-json": "failed",
+      "FORMAT-path-json": "failed"
+    },
+    "after_results": {
+      "FORMAT-clean-json": "passed",
+      "FORMAT-path-json": "passed"
+    }
+  },
+  "SXR-AUD-014": {
+    "disposition": "fixed",
+    "decision": "Compute all distinct-secret and severity totals before slicing. Limited and unlimited output retain the same fingerprints.",
+    "changed_files": [
+      "src/sxr/views_secrets.py"
+    ],
+    "check_ids": [
+      "LIMIT-secrets-notice"
+    ],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_secret_audit_records.py::test_limited_worklist_preserves_totals_and_fingerprints[False]",
+      "tests/test_secret_audit_records.py::test_limited_worklist_preserves_totals_and_fingerprints[True]"
+    ],
+    "title": "Limited secret worklists understate the number of findings",
+    "priority": "P2",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {
+      "LIMIT-secrets-notice": "failed"
+    },
+    "after_results": {
+      "LIMIT-secrets-notice": "passed"
+    }
+  },
+  "SXR-AUD-015": {
+    "disposition": "fixed",
+    "decision": "Skip non-object JSONL records like malformed syntax, in both providers and index parsing. Later valid records retain physical line numbers. Files are not rewritten.",
+    "changed_files": [
+      "src/sxr/providers/claude_code.py",
+      "src/sxr/providers/codex.py",
+      "src/sxr/index_records.py"
+    ],
+    "check_ids": [
+      "USAGE-invalid-json-record"
+    ],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_record_shape.py::test_non_object_records_preserve_later_evidence[_write_claude]",
+      "tests/test_record_shape.py::test_non_object_records_preserve_later_evidence[_write_codex]"
+    ],
+    "title": "A non-object JSONL record crashes transcript reads",
+    "priority": "P2",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {
+      "USAGE-invalid-json-record": "failed"
+    },
+    "after_results": {
+      "USAGE-invalid-json-record": "passed"
+    }
+  },
+  "SXR-AUD-016": {
+    "disposition": "fixed",
+    "decision": "Catch filesystem and text-decoding failures at the init command boundary, name the destination and return 2. Preserve existing files on denied access.",
+    "changed_files": [
+      "src/sxr/onboard.py"
+    ],
+    "check_ids": [
+      "INIT-file-error"
+    ],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_init.py::test_a_file_argument_alone_refuses_to_guess",
+      "tests/test_init.py::test_check_corrupted_markers_exits_2",
+      "tests/test_init.py::test_check_exits_1_when_no_agents_md_is_above_cwd",
+      "tests/test_init.py::test_check_exits_1_when_the_block_is_missing",
+      "tests/test_init.py::test_check_exits_1_when_the_file_is_absent",
+      "tests/test_init.py::test_check_is_quiet_and_exits_0_when_current",
+      "tests/test_init.py::test_check_names_both_versions_on_drift",
+      "tests/test_init.py::test_explicit_file_beats_the_walk_up",
+      "tests/test_init.py::test_find_block_raises_on_a_lone_opening_marker",
+      "tests/test_init.py::test_find_block_reports_span_and_version",
+      "tests/test_init.py::test_global_and_an_explicit_file_are_mutually_exclusive",
+      "tests/test_init.py::test_global_target_prefers_agents_then_claude_then_home",
+      "tests/test_init.py::test_global_writes_the_user_file_not_the_project_one",
+      "tests/test_init.py::test_init_emits_the_block_with_the_runtime_version",
+      "tests/test_init.py::test_nearest_agents_md_stops_at_the_first_hit",
+      "tests/test_init.py::test_version_is_not_baked_into_the_text",
+      "tests/test_init.py::test_write_and_check_are_mutually_exclusive",
+      "tests/test_init.py::test_write_appends_a_newline_when_the_file_lacks_one",
+      "tests/test_init.py::test_write_appends_below_existing_prose",
+      "tests/test_init.py::test_write_creates_a_missing_file",
+      "tests/test_init.py::test_write_creates_agents_md_in_cwd_when_the_walk_finds_nothing",
+      "tests/test_init.py::test_write_on_a_created_file_is_also_idempotent",
+      "tests/test_init.py::test_write_refuses_corrupted_markers_and_leaves_the_file_alone[<!-- /sxr:primer -->\\nbody\\n<!-- sxr:primer v0.12.2 -->\\n]",
+      "tests/test_init.py::test_write_refuses_corrupted_markers_and_leaves_the_file_alone[<!-- sxr:primer v0.12.2 -->\\nbody\\n<!-- /sxr:primer -->\\n<!-- sxr:primer v0.12.2 -->\\nbody\\n<!-- /sxr:primer -->\\n]",
+      "tests/test_init.py::test_write_refuses_corrupted_markers_and_leaves_the_file_alone[prose\\n<!-- /sxr:primer -->\\n]",
+      "tests/test_init.py::test_write_refuses_corrupted_markers_and_leaves_the_file_alone[prose\\n<!-- sxr:primer v0.12.2 -->\\nbody\\n]",
+      "tests/test_init.py::test_write_replaces_an_older_block_and_keeps_its_neighbours",
+      "tests/test_init.py::test_write_twice_is_byte_identical",
+      "tests/test_init.py::test_write_walks_up_to_the_nearest_agents_md",
+      "tests/test_primer_errors.py::test_denied_io_is_reported_at_the_command_boundary[--check-read_text]",
+      "tests/test_primer_errors.py::test_denied_io_is_reported_at_the_command_boundary[--write-write_text]",
+      "tests/test_primer_errors.py::test_directory_is_not_a_primer_file[--check]",
+      "tests/test_primer_errors.py::test_directory_is_not_a_primer_file[--write]",
+      "tests/test_primer_errors.py::test_parent_is_a_file"
+    ],
+    "title": "Primer filesystem failures escape as Python tracebacks",
+    "priority": "P3",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {
+      "INIT-file-error": "failed"
+    },
+    "after_results": {
+      "INIT-file-error": "passed"
+    }
+  },
+  "SXR-AUD-017": {
+    "disposition": "fixed",
+    "decision": "Keep the deliberate successful empty listing for compatibility. State the exception in README, top-level help and generated primer.",
+    "changed_files": [
+      "README.md",
+      "src/sxr/onboard.py"
+    ],
+    "check_ids": [],
+    "remaining_limitation": "",
+    "regression_tests": [
+      "tests/test_discovery.py::test_empty_json_list_keeps_stdout_machine_readable"
+    ],
+    "title": "The documented empty-result exit code omits the list exception",
+    "priority": "P3",
+    "status": "resolved",
+    "test_evidence": "pytest-permitted.xml",
+    "reproduction_evidence": "final-contracts.json",
+    "before_results": {},
+    "after_results": {},
+    "documentation_evidence": "documentation-review.json"
+  }
+}

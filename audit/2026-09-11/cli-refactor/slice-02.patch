@@ -1,0 +1,743 @@
+diff -ruN -x .ruff_cache -x __pycache__ --co a/README.md b/README.md
+--- a/README.md	2026-09-11 06:08:03
++++ b/README.md	2026-09-11 13:42:25
+@@ -231,14 +231,22 @@
+ @6    1b1fbf4d  2026-07-24T15:52:49Z   691    13  690k    2.7M  some-name
+ ```
+ 
+-Address sessions by `@N` from the list, by any unique id prefix, by name,
+-or not at all: no id means the newest session. `--codex` switches provider.
++Address sessions by `@N` from the list, by an inclusive `@A:@B` range, by any
++unique id prefix, by name, or not at all: no id means the newest session.
++`--codex` switches provider.
+ 
++A range reads every session it names. Each session's output is preceded by
++`# session @N  <id>  <file>` so a block is always attributable — on stdout for
++text, on stderr under `--json`, where stdout stays raw JSONL. `-n` is one row
++allowance for the whole range, as it already is for `errors`, `cmds` and
++`stats`. A range naming one session prints no header and is identical to `@N`.
++
+ ```bash
+ sxr show @2                    # transcript skeleton, one line per event
+ sxr show @2 --around 1247      # zoom to event #1247, text untruncated
+ sxr show @2 --tail 5           # how a session ended, whole text
+ sxr show @2 --type ai-title    # select events by record type
++sxr show @1:@3                 # every session in the range, each one headed
+ sxr show --file /path/session.jsonl --around 1247 # skip discovery, either provider
+ sxr prompts                    # complete human prompts of the newest session
+ sxr cmds @6                    # every command a session ran, with ok/err
+diff -ruN -x .ruff_cache -x __pycache__ --co a/src/sxr/cli.py b/src/sxr/cli.py
+--- a/src/sxr/cli.py	2026-09-11 06:02:49
++++ b/src/sxr/cli.py	2026-09-11 13:36:43
+@@ -111,10 +111,10 @@
+ 
+     Text prints whole: no environment budget trims it. --budget/--line-limit ask
+     for compact text, --all lifts every limit, --include-context widens selection.
++    An @A:@B range prints every selected session, each named by a header.
+     """
+     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
+-    ref = resolve(arg, flags.sessions(ctx, provider, cwd))[0]
+-    events = provider.parse(ref.path)
++    refs = resolve(arg, flags.sessions(ctx, provider, cwd))
+     opts = views_prompts.PromptOpts(
+         include_all=include_all,
+         include_context=include_context,
+@@ -123,7 +123,7 @@
+         budget=budget,
+         line_cap=line_cap,
+     )
+-    raise typer.Exit(views_prompts.prompts(ref, events, opts))
++    raise typer.Exit(views_prompts.prompts_scope(refs, provider.parse, opts))
+ 
+ 
+ @app.command()
+@@ -154,10 +154,10 @@
+     json_out: flags.JsonF = False,
+     limit: flags.LimitF = None,
+ ) -> None:
+-    """Per-tool call and error counts."""
++    """Per-tool call and error counts; an @A:@B range identifies each session."""
+     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
+-    ref = resolve(arg, flags.sessions(ctx, provider, cwd))[0]
+-    raise typer.Exit(views_info.tools_view(provider.parse(ref.path), json_out, limit))
++    refs = resolve(arg, flags.sessions(ctx, provider, cwd))
++    raise typer.Exit(views_info.tools_scope(refs, provider.parse, json_out, limit))
+ 
+ 
+ @app.command()
+diff -ruN -x .ruff_cache -x __pycache__ --co a/src/sxr/flags.py b/src/sxr/flags.py
+--- a/src/sxr/flags.py	2026-09-11 06:02:33
++++ b/src/sxr/flags.py	2026-09-11 13:37:01
+@@ -135,7 +135,8 @@
+     refs = window(refs, since, before)
+     identities = Counter((ref.provider, ref.id.lower()) for ref in refs)
+     for index, ref in enumerate(refs, start=1):
++        handle = f"@{index}"
++        ref.extra["handle"] = handle  # The scope position a multi-session view names.
+         if identities[ref.provider, ref.id.lower()] > 1:
+-            handle = f"@{index}"
+             ref.extra.update(display_id=handle, navigation_arg=handle)
+     return refs
+diff -ruN -x .ruff_cache -x __pycache__ --co a/src/sxr/onboard.py b/src/sxr/onboard.py
+--- a/src/sxr/onboard.py	2026-09-11 06:07:34
++++ b/src/sxr/onboard.py	2026-09-11 13:42:04
+@@ -11,7 +11,9 @@
+ 
+ EPILOG = """\b
+ ids: @N from the list; @A:@B names a range; any unique id prefix; a session
+-name (set via /rename); no id at all means the newest session.
++name (set via /rename); no id at all means the newest session. A range renders
++every session it names, each headed by "# session @N <id> <file>" (on stderr
++under --json), and -n is one row allowance for the whole range.
+ \b
+ output: tab-separated rows with a # header line; data on stdout, notices on
+ stderr; exit 0 = content (list also succeeds when empty), 1 = empty result,
+diff -ruN -x .ruff_cache -x __pycache__ --co a/src/sxr/output.py b/src/sxr/output.py
+--- a/src/sxr/output.py	2026-09-10 12:59:37
++++ b/src/sxr/output.py	2026-09-11 13:34:04
+@@ -40,9 +40,16 @@
+             yield event
+ 
+ 
+-def print_records(events, limit):
+-    """Print complete raw JSONL records, once each, with a bounded row count."""
+-    budget = RowBudget(limit)
++def print_records(events, limit, budget=None):
++    """Print complete raw JSONL records, once each, with a bounded row count.
++
++    Deduplication is per transcript, so a shared budget still counts every
++    session's physical records exactly once. An inherited budget reports its
++    omissions once for the whole scope instead of once per session.
++    """
++    own = budget is None
++    budget = budget or RowBudget(limit)
+     for event in budget.take(record_events(events)):
+         print(json.dumps(event.raw.get("line", {}), ensure_ascii=False))
+-    budget.notice("records", stderr=True)
++    if own:
++        budget.notice("records", stderr=True)
+diff -ruN -x .ruff_cache -x __pycache__ --co a/src/sxr/session_scope.py b/src/sxr/session_scope.py
+--- a/src/sxr/session_scope.py	1970-01-01 01:00:00
++++ b/src/sxr/session_scope.py	2026-09-11 13:37:08
+@@ -0,0 +1,55 @@
++"""Render every session an argument selected, not just the first one.
++
++`@A:@B` resolves to several sessions, so `show`, `prompts` and `tools` render a
++list. Two rules keep that readable and backward compatible:
++
++Identity. When a selection holds more than one session, each session's output is
++preceded by the same banner, `# session @N  <short id>  <path>`. Text views put
++it on stdout with the data it labels; `--json` views put it on stderr, because
++raw JSONL records are a fixed contract and stdout must stay parseable.
++
++One allowance. `-n` is a single row allowance for the whole invocation, matching
++`errors`, `cmds`, `stats` and `path`. A selection of exactly one session takes
++the unchanged single-session path, so existing output stays byte-identical.
++"""
++
++import sys
++from collections.abc import Callable
++
++from sxr.model import SessionRef
++from sxr.output import RowBudget
++
++
++def banner(ref: SessionRef, *, stderr: bool = False) -> None:
++    """Name the session whose output follows: scope handle, id, and file.
++
++    Colliding ids already display as their handle, so a field is printed once.
++    """
++    fields = [ref.extra.get("handle", ""), ref.short_id, str(ref.path)]
++    named = [value for index, value in enumerate(fields) if value and value not in fields[:index]]
++    print("# session " + "  ".join(named), file=sys.stderr if stderr else sys.stdout)
++
++
++def render(
++    refs: list[SessionRef],
++    render_one: Callable[[SessionRef, RowBudget | None], int],
++    limit: int | None,
++    label: str,
++    *,
++    json_out: bool = False,
++) -> int:
++    """Render each selected session in scope order; exit 1 only when all are empty.
++
++    render_one receives the shared row allowance, or None when it owns its own.
++    """
++    if len(refs) == 1:
++        return render_one(refs[0], None)
++    budget = RowBudget(limit)
++    codes = []
++    for index, ref in enumerate(refs):
++        if index and not json_out:
++            print()
++        banner(ref, stderr=json_out)
++        codes.append(render_one(ref, budget))
++    budget.notice(label, stderr=json_out)
++    return 0 if 0 in codes else 1
+diff -ruN -x .ruff_cache -x __pycache__ --co a/src/sxr/show_command.py b/src/sxr/show_command.py
+--- a/src/sxr/show_command.py	2026-09-10 13:02:20
++++ b/src/sxr/show_command.py	2026-09-11 13:44:41
+@@ -7,6 +7,7 @@
+ from sxr import flags, views_read
+ from sxr.handles import resolve
+ from sxr.read_cache import read_window
++from sxr.session_scope import render as render_scope
+ from sxr.views_read import ShowOpts
+ 
+ 
+@@ -33,9 +34,12 @@
+     json_out: flags.JsonF = False,
+     limit: flags.LimitF = None,
+ ) -> None:
+-    """Transcript skeleton; zooms (--around/--range/--type) print whole text."""
++    """Transcript skeleton; zooms (--around/--range/--type) print whole text.
++
++    An @A:@B range renders every selected session under one -n allowance.
++    """
+     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
+-    ref = resolve(arg, flags.sessions(ctx, provider, cwd))[0]
++    refs = resolve(arg, flags.sessions(ctx, provider, cwd))
+     opts = ShowOpts(
+         thinking=thinking,
+         tools=tools,
+@@ -51,5 +55,9 @@
+         budget=budget,
+         line_limit=line_cap,
+     )
+-    events, total = read_window(ref, provider, opts)
+-    raise typer.Exit(views_read.show(ref, events, opts, total_events=total))
++
++    def render(ref, rows):
++        events, total = read_window(ref, provider, opts)
++        return views_read.show(ref, events, opts, total_events=total, rows=rows)
++
++    raise typer.Exit(render_scope(refs, render, limit, "events", json_out=json_out))
+diff -ruN -x .ruff_cache -x __pycache__ --co a/src/sxr/views_info.py b/src/sxr/views_info.py
+--- a/src/sxr/views_info.py	2026-09-10 12:59:36
++++ b/src/sxr/views_info.py	2026-09-11 13:36:21
+@@ -8,6 +8,7 @@
+ from sxr.navigation import command
+ from sxr.output import RowBudget
+ from sxr.providers.claude_code import INTERRUPT_MARKER
++from sxr.session_scope import render
+ from sxr.util import LIVE_NOTE, day, human_num, human_size, is_live, live_mark, tab_row
+ 
+ 
+@@ -91,7 +92,24 @@
+     return 0
+ 
+ 
+-def tools_view(events: list[Event], json_out: bool, limit: int | None = None) -> int:
++def tools_scope(refs: list[SessionRef], parse, json_out: bool, limit: int | None) -> int:
++    """One identified tool summary per selected session, under one row allowance.
++
++    The `--json` aggregate keeps its existing shape, so a range identifies its
++    sessions on stderr rather than adding fields a single `@N` run never had.
++    """
++    return render(
++        refs,
++        lambda ref, rows: tools_view(parse(ref.path), json_out, limit, budget=rows),
++        limit,
++        "tools",
++        json_out=json_out,
++    )
++
++
++def tools_view(
++    events: list[Event], json_out: bool, limit: int | None = None, budget: RowBudget | None = None
++) -> int:
+     """Per-tool call and error counts; Skill inputs come from input.skill."""
+     calls: Counter[str] = Counter()
+     fails: Counter[str] = Counter()
+@@ -114,10 +132,12 @@
+         print(json.dumps(rows, ensure_ascii=False))
+         return 0 if calls else 1
+     print(tab_row("# tool", "calls", "errors"))
+-    budget = RowBudget(limit)
++    own = budget is None
++    budget = budget or RowBudget(limit)
+     for tool, count in budget.take(calls.most_common()):
+         print(tab_row(tool, count, fails.get(tool, 0)))
+-    budget.notice("tools")
++    if own:
++        budget.notice("tools")
+     if skills:
+         inputs = ", ".join(f"{name} ({n})" for name, n in skills.most_common())
+         print(f"# Skill inputs: {inputs}")
+diff -ruN -x .ruff_cache -x __pycache__ --co a/src/sxr/views_prompts.py b/src/sxr/views_prompts.py
+--- a/src/sxr/views_prompts.py	2026-09-11 06:20:02
++++ b/src/sxr/views_prompts.py	2026-09-11 13:39:00
+@@ -10,7 +10,8 @@
+ from dataclasses import dataclass
+ 
+ from sxr.model import Event, SessionRef
+-from sxr.output import print_records
++from sxr.output import RowBudget, print_records
++from sxr.session_scope import render
+ from sxr.util import human_num, line_limit, scan_budget
+ from sxr.views_read import print_events
+ 
+@@ -29,10 +30,10 @@
+ 
+ @dataclass
+ class Display:
+-    """The resolved presentation: how many rows, and whether text is trimmed."""
++    """The resolved presentation: row cap, compact threshold, per-line cap."""
+ 
+     limit: int | None = None
+-    trim: bool = False
++    compact: bool = False
+     budget: int = 0
+     cap: int = 0
+ 
+@@ -101,7 +102,7 @@
+     return picked, excluded
+ 
+ 
+-def display(opts: PromptOpts, picked: list[Event]) -> Display:
++def display(opts: PromptOpts) -> Display:
+     """Resolve row and character limits; complete output unless asked otherwise.
+ 
+     `--all` lifts every limit. Otherwise a positive `--budget` or `--line-limit`
+@@ -117,32 +118,57 @@
+     if not compact:
+         return Display(limit=limit)
+     budget = opts.budget if opts.budget is not None else scan_budget(None)
+-    shown = picked if limit is None else picked[:limit]
++    return Display(limit=limit, compact=True, budget=budget, cap=line_limit(opts.line_cap))
++
++
++def trims(view: Display, shown: list[Event]) -> tuple[bool, int]:
++    """(trim these rows?, their total chars) for an already resolved view."""
+     total = sum(len(event.text) for event in shown)
+-    return Display(limit=limit, trim=total > budget, budget=budget, cap=line_limit(opts.line_cap))
++    return (view.compact and total > view.budget), total
+ 
+ 
+-def prompts(ref: SessionRef, events: list[Event], opts: PromptOpts) -> int:
+-    """Print the session's human prompts in order; exit 1 when there are none."""
++def prompts(
++    ref: SessionRef, events: list[Event], opts: PromptOpts, rows: RowBudget | None = None
++) -> int:
++    """Print the session's human prompts in order; exit 1 when there are none.
++
++    rows is the allowance a session range shares; None means this session owns
++    it, which is what a single `@N` selection always does.
++    """
+     picked, excluded = _selected(events, opts.include_context)
+-    view = display(opts, picked)
++    view = display(opts)
+     if opts.json_out:
+-        print_records(picked, view.limit)
++        print_records(picked, view.limit, budget=rows)
+         return 0 if picked else 1
+     if not picked:
+         print(f"no user text records in {ref.short_id}", file=sys.stderr)
+         return 1
+-    shown = picked if view.limit is None else picked[: view.limit]
+-    print_events(shown, trim=view.trim, limit=None, cap=view.cap)
++    shown = list((rows or RowBudget(view.limit)).take(picked))
++    trim, total = trims(view, shown)
++    print_events(shown, trim=trim, limit=None, cap=view.cap)
+     _summary(len(shown), picked, excluded, opts)
+-    if view.trim:
+-        total = sum(len(event.text) for event in shown)
++    if trim:
+         print(
+             f"# trimmed to {view.cap}-char lines ({human_num(total)} chars > "
+             f"{human_num(view.budget)} requested budget); whole text: "
+             f"--all, --budget 0, or --json"
+         )
+     return 0
++
++
++def prompts_scope(refs: list[SessionRef], parse, opts: PromptOpts) -> int:
++    """Human prompts of every selected session under one shared row allowance.
++
++    The allowance is the resolved one, so `--all` lifts it for a range exactly
++    as it does for a single session.
++    """
++    return render(
++        refs,
++        lambda ref, rows: prompts(ref, parse(ref.path), opts, rows),
++        display(opts).limit,
++        "human prompts",
++        json_out=opts.json_out,
++    )
+ 
+ 
+ def _summary(shown: int, picked: list[Event], excluded: int, opts: PromptOpts) -> None:
+diff -ruN -x .ruff_cache -x __pycache__ --co a/src/sxr/views_read.py b/src/sxr/views_read.py
+--- a/src/sxr/views_read.py	2026-09-11 06:02:24
++++ b/src/sxr/views_read.py	2026-09-11 13:34:51
+@@ -97,21 +97,39 @@
+     return one_line(body, cap) if trim else event.text
+ 
+ 
+-def print_events(events: list[Event], trim: bool, limit: int | None, cap: int = 0) -> None:
+-    """Print event lines with the shared #seq/time/role/kind prefix; -n 0 = all."""
+-    shown = events if not limit else events[:limit]
+-    for event in shown:
+-        kind = {"text": "text", "thinking": "think", "tool": "tool", "result": "result"}.get(
+-            event.kind, event.kind
+-        )
+-        print(
+-            f"#{event.seq:04d}  {clock(event.ts)}  {event.role:<6} {kind:<7} "
+-            f"{event_line(event, trim, cap)}"
+-        )
++def print_events(
++    events: list[Event],
++    trim: bool,
++    limit: int | None,
++    cap: int = 0,
++    budget: RowBudget | None = None,
++) -> None:
++    """Print event lines with the shared #seq/time/role/kind prefix; -n 0 = all.
++
++    An inherited budget spends one allowance across a whole session range and
++    reports its own omissions; without one, the note stays as it always was.
++    """
++    if budget is not None:
++        for event in budget.take(events):
++            _print_event(event, trim, cap)
++        return
++    for event in events if not limit else events[:limit]:
++        _print_event(event, trim, cap)
+     if limit and len(events) > limit:
+         print(f"# +{len(events) - limit} more events (raise -n, -n 0 for all)")
+ 
+ 
++def _print_event(event: Event, trim: bool, cap: int) -> None:
++    """One event row: #seq, clock, role, kind, then the rendered body."""
++    kind = {"text": "text", "thinking": "think", "tool": "tool", "result": "result"}.get(
++        event.kind, event.kind
++    )
++    print(
++        f"#{event.seq:04d}  {clock(event.ts)}  {event.role:<6} {kind:<7} "
++        f"{event_line(event, trim, cap)}"
++    )
++
++
+ def _trim_decision(events: list[Event], limit: int | None, budget_flag: int | None) -> tuple:
+     """(trim?, total chars, effective budget) for a scan view."""
+     from sxr.util import scan_budget
+@@ -140,24 +158,30 @@
+ 
+ 
+ def show(
+-    ref: SessionRef, events: list[Event], opts: ShowOpts, *, total_events: int | None = None
++    ref: SessionRef,
++    events: list[Event],
++    opts: ShowOpts,
++    *,
++    total_events: int | None = None,
++    rows: RowBudget | None = None,
+ ) -> int:
+     """Render a transcript skeleton or an explicit zoom; exit 1 when empty.
+ 
+     Text prints whole whenever the view fits the char budget; only
+-    over-budget scans trim, and they say so with the recovery commands.
++    over-budget scans trim, and they say so with the recovery commands. rows is
++    the allowance a session range shares; None means this session owns it.
+     """
+     from sxr.util import human_num, line_limit
+ 
+     selected, zoom = _selected(events, opts)
+     if opts.json_out:
+-        print_records(selected, opts.limit)
++        print_records(selected, opts.limit, budget=rows)
+         return 0 if selected else 1
+     trim, total, budget = _trim_decision(selected, opts.limit, opts.budget)
+     trim = trim and not (zoom or opts.full)
+     _header(ref, len(events) if total_events is None else total_events)
+     cap = line_limit(opts.line_limit)
+-    print_events(selected, trim=trim, limit=opts.limit, cap=cap)
++    print_events(selected, trim=trim, limit=opts.limit, cap=cap, budget=rows)
+     if trim:
+         print(
+             f"# trimmed to {cap}-char lines ({human_num(total)} chars > "
+diff -ruN -x .ruff_cache -x __pycache__ --co a/tests/test_session_range.py b/tests/test_session_range.py
+--- a/tests/test_session_range.py	1970-01-01 01:00:00
++++ b/tests/test_session_range.py	2026-09-11 13:44:41
+@@ -0,0 +1,280 @@
++"""An @A:@B range renders every selected session, not only the first one.
++
++Each session in a range is named by one `# session @N  <id>  <path>` banner --
++on stdout for text, on stderr for --json, where stdout is a raw record contract.
++A selection of one session must stay byte-identical to what it printed before.
++"""
++
++import json
++
++import pytest
++from typer.testing import CliRunner
++
++from sxr.cli import app
++
++runner = CliRunner()
++BANNER = "# session "
++LONG = "long human request " * 3000 + "unique ending"
++OLDER = ("older ask", "ToolAlpha")
++NEWER = ("newer ask", "ToolBeta")
++
++
++def _claude(root, name, started, prompt, tool):
++    """One Claude transcript: a human prompt, a tool call, and its result."""
++    stamp = f"{started}T10:00:00.000Z"
++    records = [
++        {
++            "type": "user",
++            "cwd": "/w",
++            "timestamp": stamp,
++            "message": {"role": "user", "content": prompt},
++        },
++        {
++            "type": "user",
++            "cwd": "/w",
++            "timestamp": stamp,
++            "isMeta": True,
++            "message": {"role": "user", "content": "injected context"},
++        },
++        {
++            "type": "assistant",
++            "timestamp": stamp,
++            "message": {
++                "content": [
++                    {"type": "tool_use", "id": "t1", "name": tool, "input": {"command": "just"}}
++                ]
++            },
++        },
++    ]
++    path = root / f"{name}.jsonl"
++    path.write_text("\n".join(map(json.dumps, records)))
++    return path
++
++
++def _codex(root, session_id, started, prompt, tool):
++    """One Codex rollout with a labelled human prompt and a labelled context item."""
++    day = root / "sessions" / "2026" / "09" / started[-2:]
++    day.mkdir(parents=True, exist_ok=True)
++    stamp = f"{started}T10:00:00.000Z"
++
++    def item(text, kinds):
++        return {
++            "timestamp": stamp,
++            "type": "response_item",
++            "payload": {
++                "type": "message",
++                "role": "user",
++                "content": [{"type": "text", "text": text}],
++                "internal_chat_message_metadata_passthrough": {"content_item_kinds": kinds},
++            },
++        }
++
++    records = [
++        {
++            "timestamp": stamp,
++            "type": "session_meta",
++            "payload": {"session_id": session_id, "cwd": "/w", "originator": "codex_exec"},
++        },
++        item(prompt, ["user.text"]),
++        item("injected context", ["agents_md.instructions"]),
++        {
++            "timestamp": stamp,
++            "type": "response_item",
++            "payload": {"type": "function_call", "name": tool, "arguments": "{}", "call_id": "c1"},
++        },
++    ]
++    path = day / f"rollout-2026-09-{started[-2:]}T10-00-00-{session_id[:8]}.jsonl"
++    path.write_text("\n".join(map(json.dumps, records)))
++    return path
++
++
++@pytest.fixture(params=["claude", "codex"])
++def scope(request, tmp_path, monkeypatch):
++    """Two sessions of one provider in one cwd, newest first, plus its CLI flag."""
++    monkeypatch.setenv("SXR_CACHE_DIR", str(tmp_path / "cache"))
++    if request.param == "claude":
++        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / ".claude"))
++        root = tmp_path / ".claude" / "projects" / "-w"
++        root.mkdir(parents=True)
++        older = _claude(root, "aaaa1111-2222-3333-4444-555566667777", "2026-09-01", *OLDER)
++        newer = _claude(root, "bbbb2222-3333-4444-5555-666677778888", "2026-09-02", *NEWER)
++        return ["--claude"], newer, older
++    monkeypatch.setenv("CODEX_HOME", str(tmp_path / ".codex"))
++    root = tmp_path / ".codex"
++    older = _codex(root, "019f9510-5499-72a0-80b1-782880a12e01", "2026-09-01", *OLDER)
++    newer = _codex(root, "019f9520-5499-72a0-80b1-782880a12e02", "2026-09-02", *NEWER)
++    return ["--codex"], newer, older
++
++
++def _run(scope, command, *args):
++    provider, _, _ = scope
++    return runner.invoke(app, [command, *provider, "--path", "/w", *args])
++
++
++def _rows(command, stdout):
++    """The data rows of a view: event lines for show/prompts, tool rows for tools."""
++    lines = stdout.splitlines()
++    if command == "tools":
++        return [line for line in lines if line and not line.startswith("#")]
++    return [line for line in lines if line.startswith("#0")]
++
++
++@pytest.mark.parametrize("command", ["show", "prompts", "tools"])
++def test_range_renders_every_selected_session(scope, command):
++    _, newer, older = scope
++    result = _run(scope, command, "@1:@2")
++    assert result.exit_code == 0, result.output
++    banners = [line for line in result.stdout.splitlines() if line.startswith(BANNER)]
++    assert len(banners) == 2
++    assert str(newer) in banners[0] and str(older) in banners[1]
++    assert "@1" in banners[0] and "@2" in banners[1]
++
++
++@pytest.mark.parametrize("command", ["show", "prompts", "tools"])
++def test_range_carries_content_from_both_sessions(scope, command):
++    result = _run(scope, command, "@1:@2")
++    assert result.exit_code == 0, result.output
++    wanted = ("ToolAlpha", "ToolBeta") if command == "tools" else ("newer ask", "older ask")
++    for text in wanted:
++        assert text in result.stdout
++
++
++@pytest.mark.parametrize("command", ["show", "prompts", "tools"])
++@pytest.mark.parametrize("selector", ["@1", "@1:@1"])
++def test_single_session_output_is_unchanged(scope, command, selector):
++    """One selected session takes the pre-range path: no banner, same rows."""
++    plain = _run(scope, command)
++    result = _run(scope, command, selector)
++    assert result.exit_code == 0, result.output
++    assert result.stdout == plain.stdout
++    assert BANNER not in result.stdout and BANNER not in result.stderr
++
++
++@pytest.mark.parametrize("command", ["show", "prompts", "tools"])
++def test_inverted_range_matches_its_normal_form(scope, command):
++    forward = _run(scope, command, "@1:@2")
++    inverted = _run(scope, command, "@2:@1")
++    assert inverted.exit_code == 0, inverted.output
++    assert inverted.stdout == forward.stdout
++
++
++@pytest.mark.parametrize("command", ["show", "prompts", "tools"])
++def test_range_beyond_the_scope_is_a_usage_error(scope, command):
++    result = _run(scope, command, "@1:@9")
++    assert result.exit_code == 2, result.output
++    assert "out of range" in result.output and "Traceback" not in result.output
++
++
++@pytest.mark.parametrize("command", ["show", "prompts", "tools"])
++def test_row_limit_is_one_allowance_across_the_range(scope, command):
++    """-n caps rows for the whole invocation, as it already does for errors."""
++    result = _run(scope, command, "@1:@2", "-n", "1")
++    assert result.exit_code == 0, result.output
++    assert len(_rows(command, result.stdout)) == 1
++    assert "more" in result.stdout
++    unlimited = _rows(command, _run(scope, command, "@1:@2", "-n", "0").stdout)
++    each = [len(_rows(command, _run(scope, command, handle).stdout)) for handle in ("@1", "@2")]
++    assert len(unlimited) == sum(each) > 1
++
++
++@pytest.mark.parametrize("command", ["show", "prompts", "tools"])
++def test_json_keeps_stdout_parseable_and_identifies_on_stderr(scope, command):
++    _, newer, older = scope
++    result = _run(scope, command, "@1:@2", "--json")
++    assert result.exit_code == 0, result.output
++    for line in result.stdout.splitlines():
++        assert isinstance(json.loads(line), dict)
++    banners = [line for line in result.stderr.splitlines() if line.startswith(BANNER)]
++    assert len(banners) == 2
++    assert str(newer) in banners[0] and str(older) in banners[1]
++
++
++@pytest.mark.parametrize("command", ["show", "prompts"])
++def test_json_emits_every_session_record_exactly_once(scope, command):
++    """Dedup stays per transcript, so a range neither drops nor repeats a record."""
++    result = _run(scope, command, "@1:@2", "--json", "-n", "0")
++    assert result.exit_code == 0, result.output
++    each = [
++        len(_run(scope, command, handle, "--json", "-n", "0").stdout.splitlines())
++        for handle in ("@1", "@2")
++    ]
++    assert len(result.stdout.splitlines()) == sum(each) > 1
++
++
++def test_json_row_limit_spans_the_range(scope):
++    result = _run(scope, "prompts", "@1:@2", "--json", "-n", "1")
++    assert result.exit_code == 0, result.output
++    assert len(result.stdout.splitlines()) == 1
++    assert "shown 1 of 2" in result.stderr
++
++
++def test_all_lifts_the_shared_limit_across_the_range(scope):
++    limited = _run(scope, "prompts", "@1:@2", "-n", "1")
++    lifted = _run(scope, "prompts", "@1:@2", "-n", "1", "--all")
++    assert lifted.exit_code == 0, lifted.output
++    assert len(_rows("prompts", lifted.stdout)) == 2 and "more" not in lifted.stdout
++    assert len(_rows("prompts", limited.stdout)) == 1
++
++
++def test_include_context_widens_every_session_in_the_range(scope):
++    result = _run(scope, "prompts", "@1:@2", "--include-context")
++    assert result.exit_code == 0, result.output
++    assert result.stdout.count("injected context") == 2
++    assert result.stdout.count("2 of 2 user records shown") == 2
++
++
++def test_budget_requests_compact_text_per_session(scope):
++    """A range still trims only when asked, and says so for each session."""
++    _, newer, _ = scope
++    newer.write_text(newer.read_text().replace("newer ask", LONG, 1))
++    plain = _run(scope, "prompts", "@1:@2")
++    assert "unique ending" in plain.stdout and "chars]" not in plain.stdout
++    result = _run(scope, "prompts", "@1:@2", "--budget", "1", "--line-limit", "20")
++    assert result.exit_code == 0, result.output
++    assert "chars]" in result.stdout and "unique ending" not in result.stdout
++    assert "older ask" in result.stdout
++
++
++def test_empty_selection_exits_one_only_when_no_session_produced_output(scope):
++    result = _run(scope, "show", "@1:@2", "--type", "missing")
++    assert result.exit_code == 1, result.output
++    partial = _run(scope, "show", "@1:@2", "--type", "text")
++    assert partial.exit_code == 0, partial.output
++
++
++def test_tools_json_keeps_one_complete_aggregate_per_session(scope):
++    """SXR-AUD-007 holds across a range: -n never prunes keys from an aggregate."""
++    result = _run(scope, "tools", "@1:@2", "--json", "-n", "1")
++    assert result.exit_code == 0, result.output
++    objects = [json.loads(line) for line in result.stdout.splitlines()]
++    assert len(objects) == 2
++    assert [set(o) for o in objects] == [{"type", "calls", "errors", "skill_inputs"}] * 2
++    assert {tool for o in objects for tool in o["calls"]} == {"ToolAlpha", "ToolBeta"}
++
++
++def test_cached_and_uncached_range_reads_agree(scope, monkeypatch):
++    """show reads each transcript through its own cache entry, so a range is stable."""
++    cold = _run(scope, "show", "@1:@2")
++    warm = _run(scope, "show", "@1:@2")
++    monkeypatch.setenv("SXR_NO_CACHE", "1")
++    direct = _run(scope, "show", "@1:@2")
++    assert cold.exit_code == 0 and warm.stdout == cold.stdout == direct.stdout
++
++
++def test_a_session_without_prompts_does_not_sink_the_range(scope):
++    """One empty session reports itself on stderr; the range still exits 0."""
++    _, _, older = scope
++    older.write_text(
++        "\n".join(line for line in older.read_text().splitlines() if "older ask" not in line)
++    )
++    result = _run(scope, "prompts", "@1:@2")
++    assert result.exit_code == 0, result.output
++    assert "newer ask" in result.stdout
++    assert "no user text records" in result.stderr
++
++
++def test_providers_cannot_be_mixed_in_one_range():
++    """A scope is one provider, so no range can span Claude and Codex."""
++    result = runner.invoke(app, ["prompts", "--claude", "--codex", "@1:@2"])
++    assert result.exit_code == 2, result.output
++    assert "mutually exclusive" in result.output

@@ -1,0 +1,45 @@
+Usage: -c grep [OPTIONS] [pattern] [arg]
+
+  Search event text across all sessions in scope; -c ranks matches.
+
+  --since/--before narrow the sessions; -n 0 lifts row and budget limits.
+
+Arguments:
+  pattern  Regex (smart-case; -F for literal)
+  arg      Session: @N, @A:@B, id prefix, or name
+
+Options:
+  -c, --count               Rank sessions: matches, first seq, started, title
+  -F, --fixed               Fixed string, not a regex
+  -C, --context <int>       Events around each match  [default: 0]
+  -i, --ignore-case         Match any case (default: smart-case)
+  -l, --files-with-matches  Print only ids of matching sessions
+  -e, --regexp <str>        Pattern (allows a leading dash)
+  --all                     -c: keep zero-match rows
+  --sort <str>              -c order: matches (default) or started (oldest
+                            first)  [default: matches]
+  --since <str>             Sessions started on/after DATE (YYYY-MM-DD, ISO,
+                            today, @N)
+  --before <str>            Sessions started before DATE; --before today skips
+                            today's
+  --budget <int>            Chars of match rows before grep stops (0 = all;
+                            env SXR_BUDGET)
+  --codex                   Read Codex sessions
+  --claude                  Read Claude Code sessions (default)
+  --path <path>             Inspect DIR instead of cwd
+  --json                    Raw JSONL records, never truncated
+  -n, --limit <int range>   Cap printed rows (0 = all)  [x>=0]
+  --file <path>             Read this JSONL file directly; detect Claude or
+                            Codex
+  --recursive               Include sessions recorded in descendant
+                            directories
+  --worktrees               Include registered Git worktrees of the selected
+                            repository
+  --claude-root <path>      Claude config root to search; repeat for multiple
+                            profiles
+  --include-agents          Include nested Claude agent transcripts
+  --archives                Include Codex archived_sessions alongside active
+                            sessions
+  --coverage                Report searched/unavailable roots and discovered
+                            sources on stderr
+  --help                    Show this message and exit.

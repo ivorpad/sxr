@@ -1,0 +1,10 @@
+Usage: -c serve [OPTIONS] [action]
+
+  Show status or stop the local find worker (bundled installs start it
+  automatically).
+
+Arguments:
+  action  [default: status]
+
+Options:
+  --help  Show this message and exit.

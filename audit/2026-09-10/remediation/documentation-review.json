@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "observations": [
+    {
+      "surface": "README.md",
+      "excerpt": "Listing is the exception: bare `sxr` and `sxr list`\n  return 0 even when the scope is empty, in text and JSON modes. A bad regex\n  returns 2. JSON stdout contains data only; diagnostics go to stderr.\n- Table rows are tab-separated with a `#` header line; `find"
+    },
+    {
+      "surface": "src/sxr/onboard.py:EPILOG",
+      "excerpt": "exit 0 = content (list also succeeds when empty), 1 = empty result,\n2 = usage, bad id or an operation failure. --json\nemits original JSONL in read views; find emits ranked evidence and coverage. ...[+N chars] marks a\ndisplay trim; zooms (--around, --range, --t"
+    },
+    {
+      "surface": "src/sxr/onboard.py:PRIMER_BODY",
+      "excerpt": "Exit codes: 0 content (also an empty list),\n1 empty result, 2 error.\n"
+    }
+  ]
+}

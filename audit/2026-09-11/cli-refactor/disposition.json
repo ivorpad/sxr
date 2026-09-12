@@ -1,0 +1,1823 @@
+{
+  "checked_complete": true,
+  "csv_sha256": "c24d00ed08a09caed659c8ab3298db0b2b1166fa97f204742447f3662b1f63e4",
+  "dispositions": {
+    "CMD-cmds-typer": {
+      "disposition": "task:SXR-CLI-05",
+      "note": "--grep stops changing session scope"
+    },
+    "CMD-errors-typer": {
+      "disposition": "task:SXR-CLI-04",
+      "note": "source identity plus complete error text"
+    },
+    "CMD-find-argparse": {
+      "disposition": "task:SXR-CLI-17",
+      "note": "argparse find path shares the same contract"
+    },
+    "CMD-find-typer": {
+      "disposition": "task:SXR-CLI-17",
+      "note": "one find contract across both parsers"
+    },
+    "CMD-grep-typer": {
+      "disposition": "task:SXR-CLI-07",
+      "note": "independent count and character caps"
+    },
+    "CMD-index-typer": {
+      "disposition": "task:SXR-CLI-20",
+      "note": "clear reports extent; scope combinations rejected"
+    },
+    "CMD-init-typer": {
+      "disposition": "task:SXR-CLI-19",
+      "note": "content-aware --check and resolved-target reporting"
+    },
+    "CMD-list-typer": {
+      "disposition": "task:SXR-CLI-08",
+      "note": "normalize instants before sorting and formatting"
+    },
+    "CMD-path-typer": {
+      "disposition": "task:SXR-CLI-11",
+      "note": "path shares the audit/clean physical-file scope"
+    },
+    "CMD-prompts-typer": {
+      "disposition": "task:SXR-CLI-01",
+      "note": "complete human prompts by default. Correction 2026-09-12: this row's default_before and before cells describe 0.12.2, the base the audit pinned, not the published 0.13.0, where the default printed a catalog of human sessions instead of rows. D-08 keeps reading as the default, so the 'after' cell stands and the published default is deliberately reversed"
+    },
+    "CMD-root-typer": {
+      "disposition": "task:SXR-CLI-18",
+      "note": "root options rejected where meaningless; bare listing kept. Reviewed 2026-09-12 (findings audit) and left unchanged. Root help did change upstream, but this row asserts bare-listing behavior and that root help is long, both still true. The four changed regions are the prompts description line, the id paragraph, the --json sentence and three example lines -- all about prompts"
+    },
+    "CMD-secrets-audit-typer": {
+      "disposition": "task:SXR-CLI-13",
+      "note": "document audit as a first-class action"
+    },
+    "CMD-secrets-clean-typer": {
+      "disposition": "task:SXR-CLI-11",
+      "note": "preview/apply scope aligned with audit"
+    },
+    "CMD-secrets-typer": {
+      "disposition": "task:SXR-CLI-11",
+      "note": "audit uses the shared physical-file scope"
+    },
+    "CMD-serve-argparse": {
+      "disposition": "task:SXR-CLI-16",
+      "note": "argparse serve path shares the same contract"
+    },
+    "CMD-serve-typer": {
+      "disposition": "task:SXR-CLI-16",
+      "note": "one serve parser contract, both entry paths"
+    },
+    "CMD-show-typer": {
+      "disposition": "task:SXR-CLI-03",
+      "note": "one documented selection pipeline for show; delivered 2026-09-11 (order, --tool-results, range identity from SXR-CLI-02)"
+    },
+    "CMD-skills-argparse": {
+      "disposition": "task:SXR-CLI-15",
+      "note": "inherited flags honored; maintenance combinations validated"
+    },
+    "CMD-skills-typer": {
+      "disposition": "duplicate:CMD-skills-argparse",
+      "note": "same skills contract, Typer forwarding path"
+    },
+    "CMD-stats-typer": {
+      "disposition": "task:SXR-CLI-09",
+      "note": "whole-session limit unit and numeric JSON"
+    },
+    "CMD-tools-typer": {
+      "disposition": "task:SXR-CLI-10",
+      "note": "tool limits cover the Skill-input footer"
+    },
+    "EXTRA-001": {
+      "disposition": "task:SXR-CLI-18",
+      "note": "placement must not change accepted flags silently"
+    },
+    "EXTRA-002": {
+      "disposition": "deferred",
+      "note": "cross-command --all rollout; per-command units handled in 01/07/09"
+    },
+    "EXTRA-003": {
+      "disposition": "task:SXR-CLI-01",
+      "note": "provenance stays the authority for human prompts"
+    },
+    "EXTRA-004": {
+      "disposition": "task:SXR-CLI-02",
+      "note": "honor every resolved reference in a range; delivered by SXR-CLI-02 (2026-09-11). Verified against source: the three resolve(...)[0] truncation sites are gone; the surviving [0] in handles._stamp is a --since/--before bound, not a selector"
+    },
+    "EXTRA-005": {
+      "disposition": "task:SXR-CLI-23",
+      "note": "list JSON carries handle plus exact file follow-up"
+    },
+    "EXTRA-006": {
+      "disposition": "task:SXR-CLI-06",
+      "note": "raw JSON deduplicated; help corrected. Correction 2026-09-12 (findings audit): the before cell is partially wrong for published 0.13.0, whose bare `prompts --json` emits synthesized prompt_session objects rather than whole provider JSONL objects. The explicit form still emits raw records there. D-09 keeps raw records unconditionally here, so the after cell stands"
+    },
+    "EXTRA-007": {
+      "disposition": "task:SXR-CLI-06",
+      "note": "grep output-mode combinations validated"
+    },
+    "EXTRA-008": {
+      "disposition": "task:SXR-CLI-03",
+      "note": "documented window, filter, tail, format order"
+    },
+    "EXTRA-009": {
+      "disposition": "task:SXR-CLI-21",
+      "note": "central numeric validation for display and window units"
+    },
+    "EXTRA-010": {
+      "disposition": "task:SXR-CLI-17",
+      "note": "find exit statuses fixed; per-command exits documented"
+    },
+    "EXTRA-011": {
+      "disposition": "task:SXR-CLI-24",
+      "note": "results on stdout, notices and omissions on stderr"
+    },
+    "EXTRA-012": {
+      "disposition": "task:SXR-CLI-08",
+      "note": "one timestamp parser for sort, filter, format"
+    },
+    "EXTRA-013": {
+      "disposition": "deferred",
+      "note": "broad cache restructuring; clear-extent reporting lands in 20"
+    },
+    "EXTRA-014": {
+      "disposition": "task:SXR-CLI-11",
+      "note": "one physical-file selection for audit, clean, path"
+    },
+    "EXTRA-015": {
+      "disposition": "task:SXR-CLI-12",
+      "note": "apply suggestion rebuilt from the resolved selection"
+    },
+    "EXTRA-016": {
+      "disposition": "task:SXR-CLI-12",
+      "note": "masked follow-ups replace raw secret zoom hints"
+    },
+    "EXTRA-017": {
+      "disposition": "decision-needed",
+      "note": "May clean --json gain a summary record, and must skipped-live change its exit code?"
+    },
+    "EXTRA-018": {
+      "disposition": "task:SXR-CLI-18",
+      "note": "abbreviated long options rejected in every parser"
+    },
+    "EXTRA-019": {
+      "disposition": "retain",
+      "note": "-- terminator and -e retained; documentation only"
+    },
+    "EXTRA-020": {
+      "disposition": "retain",
+      "note": "verify against the source tree, not the installed binary"
+    },
+    "EXTRA-021": {
+      "disposition": "task:SXR-CLI-01",
+      "note": "draft prompt tests accounted for in the first slice"
+    },
+    "EXTRA-022": {
+      "disposition": "task:SXR-CLI-16",
+      "note": "status stays read-only with documented schema and exit 1"
+    },
+    "EXTRA-023": {
+      "disposition": "task:SXR-CLI-16",
+      "note": "stop rejects foreground/idle modifiers"
+    },
+    "EXTRA-024": {
+      "disposition": "retain",
+      "note": "print/write/check spellings kept as flags"
+    },
+    "EXTRA-025": {
+      "disposition": "task:SXR-CLI-17",
+      "note": "preparation separated from search result status"
+    },
+    "EXTRA-026": {
+      "disposition": "task:SXR-CLI-20",
+      "note": "clear reports its exact cache extent"
+    },
+    "EXTRA-027": {
+      "disposition": "task:SXR-CLI-15",
+      "note": "skill refresh/clear extent documented and validated"
+    },
+    "EXTRA-028": {
+      "disposition": "task:SXR-CLI-21",
+      "note": "SXR_BUDGET validated; implicit prompt trimming removed"
+    },
+    "EXTRA-029": {
+      "disposition": "task:SXR-CLI-21",
+      "note": "one compact-view cap; complete views independent"
+    },
+    "EXTRA-030": {
+      "disposition": "deferred",
+      "note": "SXR_NO_CACHE boolean parsing; no approved need yet"
+    },
+    "EXTRA-031": {
+      "disposition": "deferred",
+      "note": "SXR_NO_DAEMON is launcher-only; documentation deferred"
+    },
+    "EXTRA-032": {
+      "disposition": "retain",
+      "note": "cache override contract unchanged"
+    },
+    "EXTRA-033": {
+      "disposition": "retain",
+      "note": "standard XDG cache precedence unchanged"
+    },
+    "EXTRA-034": {
+      "disposition": "retain",
+      "note": "Claude profile precedence unchanged"
+    },
+    "EXTRA-035": {
+      "disposition": "retain",
+      "note": "Codex root selection unchanged"
+    },
+    "EXTRA-036": {
+      "disposition": "retain",
+      "note": "current-session detection ID unchanged"
+    },
+    "EXTRA-037": {
+      "disposition": "retain",
+      "note": "legacy current-session fallback unchanged"
+    },
+    "EXTRA-038": {
+      "disposition": "retain",
+      "note": "salt file seam unchanged and never printed"
+    },
+    "EXTRA-039": {
+      "disposition": "retain",
+      "note": "config/cache separation unchanged"
+    },
+    "EXTRA-040": {
+      "disposition": "task:SXR-CLI-01",
+      "note": "--include-context is the explicit context selector"
+    },
+    "EXTRA-041": {
+      "disposition": "task:SXR-CLI-04",
+      "note": "--compact needed once complete error text is default"
+    },
+    "EXTRA-042": {
+      "disposition": "deferred",
+      "note": "cmds text completeness not scoped; compact opt-in waits"
+    },
+    "EXTRA-043": {
+      "disposition": "deferred",
+      "note": "explicit --budget/--line-limit already give compact prompts"
+    },
+    "EXTRA-044": {
+      "disposition": "task:SXR-CLI-05",
+      "note": "--all-sessions replaces implicit --grep broadening"
+    },
+    "EXTRA-045": {
+      "disposition": "deferred",
+      "note": "cmds -F literal search; no approved need yet"
+    },
+    "EXTRA-046": {
+      "disposition": "task:SXR-CLI-07",
+      "note": "--include-zero takes over zero-count row selection"
+    },
+    "EXTRA-047": {
+      "disposition": "deferred",
+      "note": "--ids alias; no approved need yet"
+    },
+    "EXTRA-048": {
+      "disposition": "task:SXR-CLI-07",
+      "note": "--full gives complete match text after cap separation"
+    },
+    "EXTRA-049": {
+      "disposition": "task:SXR-CLI-03",
+      "note": "--tool-results alias; delivered 2026-09-11. Reading changed: this row and PAR-show-typer-tools both requested the alias that CMD-show-typer's 'after' cell carries, so all three closed together"
+    },
+    "EXTRA-050": {
+      "disposition": "deferred",
+      "note": "find --no-agents; no approved need yet"
+    },
+    "EXTRA-051": {
+      "disposition": "deferred",
+      "note": "find --no-archives; no approved need yet"
+    },
+    "EXTRA-052": {
+      "disposition": "deferred",
+      "note": "--reset-roots alias; no approved need yet"
+    },
+    "EXTRA-053": {
+      "disposition": "deferred",
+      "note": "index --json needs a reviewed operation schema first"
+    },
+    "EXTRA-054": {
+      "disposition": "deferred",
+      "note": "--events-json is a new output schema; design first"
+    },
+    "EXTRA-055": {
+      "disposition": "deferred",
+      "note": "--events-json is a new output schema; design first"
+    },
+    "EXTRA-056": {
+      "disposition": "deferred",
+      "note": "--events-json is a new output schema; design first"
+    },
+    "EXTRA-057": {
+      "disposition": "deferred",
+      "note": "--events-json is a new output schema; design first"
+    },
+    "EXTRA-058": {
+      "disposition": "deferred",
+      "note": "--events-json is a new output schema; design first"
+    },
+    "EXTRA-059": {
+      "disposition": "deferred",
+      "note": "broad --all rollout; only prompts and grep are scoped"
+    },
+    "EXTRA-060": {
+      "disposition": "deferred",
+      "note": "broad --all rollout; only prompts and grep are scoped"
+    },
+    "EXTRA-061": {
+      "disposition": "deferred",
+      "note": "broad --all rollout; only prompts and grep are scoped"
+    },
+    "EXTRA-062": {
+      "disposition": "deferred",
+      "note": "broad --all rollout; only prompts and grep are scoped"
+    },
+    "EXTRA-063": {
+      "disposition": "deferred",
+      "note": "broad --all rollout; only prompts and grep are scoped"
+    },
+    "EXTRA-064": {
+      "disposition": "deferred",
+      "note": "broad --all rollout; only prompts and grep are scoped"
+    },
+    "EXTRA-065": {
+      "disposition": "deferred",
+      "note": "broad --all rollout; only prompts and grep are scoped"
+    },
+    "EXTRA-066": {
+      "disposition": "deferred",
+      "note": "broad --all rollout; only prompts and grep are scoped"
+    },
+    "EXTRA-067": {
+      "disposition": "deferred",
+      "note": "broad --all rollout; only prompts and grep are scoped"
+    },
+    "EXTRA-068": {
+      "disposition": "deferred",
+      "note": "broad --all rollout; only prompts and grep are scoped"
+    },
+    "EXTRA-069": {
+      "disposition": "deferred",
+      "note": "broad --all rollout; only prompts and grep are scoped"
+    },
+    "EXTRA-070": {
+      "disposition": "deferred",
+      "note": "broad --all rollout; only prompts and grep are scoped"
+    },
+    "EXTRA-071": {
+      "disposition": "task:SXR-CLI-14",
+      "note": "expose root --since/--before after the command"
+    },
+    "EXTRA-072": {
+      "disposition": "task:SXR-CLI-14",
+      "note": "expose root --since/--before after the command"
+    },
+    "EXTRA-073": {
+      "disposition": "task:SXR-CLI-14",
+      "note": "expose root --since/--before after the command"
+    },
+    "EXTRA-074": {
+      "disposition": "task:SXR-CLI-14",
+      "note": "expose root --since/--before after the command"
+    },
+    "EXTRA-075": {
+      "disposition": "task:SXR-CLI-14",
+      "note": "expose root --since/--before after the command"
+    },
+    "EXTRA-076": {
+      "disposition": "task:SXR-CLI-14",
+      "note": "expose root --since/--before after the command"
+    },
+    "EXTRA-077": {
+      "disposition": "task:SXR-CLI-14",
+      "note": "expose root --since/--before after the command"
+    },
+    "EXTRA-078": {
+      "disposition": "task:SXR-CLI-14",
+      "note": "expose root --since/--before after the command"
+    },
+    "EXTRA-079": {
+      "disposition": "task:SXR-CLI-14",
+      "note": "expose root --since/--before after the command"
+    },
+    "EXTRA-080": {
+      "disposition": "task:SXR-CLI-14",
+      "note": "expose root --since/--before after the command"
+    },
+    "EXTRA-081": {
+      "disposition": "task:SXR-CLI-14",
+      "note": "expose root --since/--before after the command"
+    },
+    "EXTRA-082": {
+      "disposition": "task:SXR-CLI-14",
+      "note": "expose root --since/--before after the command"
+    },
+    "PAR-cmds-typer-archives": {
+      "disposition": "duplicate:PAR-root-typer-archives",
+      "note": "same --archives contract as the canonical row"
+    },
+    "PAR-cmds-typer-arg": {
+      "disposition": "task:SXR-CLI-05",
+      "note": "newest stays the default with any filter"
+    },
+    "PAR-cmds-typer-before": {
+      "disposition": "duplicate:PAR-root-typer-before",
+      "note": "same --before contract as the canonical row"
+    },
+    "PAR-cmds-typer-claude_roots": {
+      "disposition": "duplicate:PAR-root-typer-claude_roots",
+      "note": "same --claude-root contract as the canonical row"
+    },
+    "PAR-cmds-typer-coverage": {
+      "disposition": "duplicate:PAR-root-typer-coverage",
+      "note": "same --coverage contract as the canonical row"
+    },
+    "PAR-cmds-typer-file": {
+      "disposition": "duplicate:PAR-root-typer-file",
+      "note": "same --file contract as the canonical row"
+    },
+    "PAR-cmds-typer-grep_": {
+      "disposition": "task:SXR-CLI-05",
+      "note": "filter no longer broadens session scope"
+    },
+    "PAR-cmds-typer-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-cmds-typer-include_agents": {
+      "disposition": "duplicate:PAR-root-typer-include_agents",
+      "note": "same --include-agents contract as the canonical row"
+    },
+    "PAR-cmds-typer-json_out": {
+      "disposition": "task:SXR-CLI-06",
+      "note": "raw call records deduplicated before limits"
+    },
+    "PAR-cmds-typer-limit": {
+      "disposition": "task:SXR-CLI-06",
+      "note": "deduplicate whole records before applying raw JSON limits"
+    },
+    "PAR-cmds-typer-path": {
+      "disposition": "duplicate:PAR-root-typer-path",
+      "note": "same --path contract as the canonical row"
+    },
+    "PAR-cmds-typer-recursive": {
+      "disposition": "duplicate:PAR-root-typer-recursive",
+      "note": "same --recursive contract as the canonical row"
+    },
+    "PAR-cmds-typer-since": {
+      "disposition": "duplicate:PAR-root-typer-since",
+      "note": "same --since contract as the canonical row"
+    },
+    "PAR-cmds-typer-use_claude": {
+      "disposition": "duplicate:PAR-root-typer-use_claude",
+      "note": "same --claude contract as the canonical row"
+    },
+    "PAR-cmds-typer-use_codex": {
+      "disposition": "duplicate:PAR-root-typer-use_codex",
+      "note": "same --codex contract as the canonical row"
+    },
+    "PAR-cmds-typer-worktrees": {
+      "disposition": "duplicate:PAR-root-typer-worktrees",
+      "note": "same --worktrees contract as the canonical row"
+    },
+    "PAR-errors-typer-archives": {
+      "disposition": "duplicate:PAR-root-typer-archives",
+      "note": "same --archives contract as the canonical row"
+    },
+    "PAR-errors-typer-arg": {
+      "disposition": "task:SXR-CLI-04",
+      "note": "range kept; add source session/sequence per row"
+    },
+    "PAR-errors-typer-claude_roots": {
+      "disposition": "duplicate:PAR-root-typer-claude_roots",
+      "note": "same --claude-root contract as the canonical row"
+    },
+    "PAR-errors-typer-coverage": {
+      "disposition": "duplicate:PAR-root-typer-coverage",
+      "note": "same --coverage contract as the canonical row"
+    },
+    "PAR-errors-typer-file": {
+      "disposition": "duplicate:PAR-root-typer-file",
+      "note": "same --file contract as the canonical row"
+    },
+    "PAR-errors-typer-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-errors-typer-include_agents": {
+      "disposition": "duplicate:PAR-root-typer-include_agents",
+      "note": "same --include-agents contract as the canonical row"
+    },
+    "PAR-errors-typer-json_out": {
+      "disposition": "duplicate:PAR-list-typer-json_out",
+      "note": "same --json contract as the canonical row"
+    },
+    "PAR-errors-typer-limit": {
+      "disposition": "task:SXR-CLI-04",
+      "note": "global error cap kept; source identity in text"
+    },
+    "PAR-errors-typer-path": {
+      "disposition": "duplicate:PAR-root-typer-path",
+      "note": "same --path contract as the canonical row"
+    },
+    "PAR-errors-typer-recursive": {
+      "disposition": "duplicate:PAR-root-typer-recursive",
+      "note": "same --recursive contract as the canonical row"
+    },
+    "PAR-errors-typer-use_claude": {
+      "disposition": "duplicate:PAR-root-typer-use_claude",
+      "note": "same --claude contract as the canonical row"
+    },
+    "PAR-errors-typer-use_codex": {
+      "disposition": "duplicate:PAR-root-typer-use_codex",
+      "note": "same --codex contract as the canonical row"
+    },
+    "PAR-errors-typer-worktrees": {
+      "disposition": "duplicate:PAR-root-typer-worktrees",
+      "note": "same --worktrees contract as the canonical row"
+    },
+    "PAR-find-argparse-all_projects": {
+      "disposition": "task:SXR-CLI-18",
+      "note": "incompatible project modifiers rejected"
+    },
+    "PAR-find-argparse-any_term": {
+      "disposition": "retain",
+      "note": "OR-across-clues behavior retained"
+    },
+    "PAR-find-argparse-archives": {
+      "disposition": "duplicate:PAR-root-typer-archives",
+      "note": "same --archives contract as the canonical row"
+    },
+    "PAR-find-argparse-before": {
+      "disposition": "duplicate:PAR-root-typer-before",
+      "note": "same --before contract as the canonical row"
+    },
+    "PAR-find-argparse-claude_roots": {
+      "disposition": "duplicate:PAR-root-typer-claude_roots",
+      "note": "same --claude-root contract as the canonical row"
+    },
+    "PAR-find-argparse-coverage": {
+      "disposition": "duplicate:PAR-root-typer-coverage",
+      "note": "same --coverage contract as the canonical row"
+    },
+    "PAR-find-argparse-exclude_sessions": {
+      "disposition": "task:SXR-CLI-17",
+      "note": "unmatched exclusions reported in diagnostics"
+    },
+    "PAR-find-argparse-file": {
+      "disposition": "duplicate:PAR-root-typer-file",
+      "note": "same --file contract as the canonical row"
+    },
+    "PAR-find-argparse-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-find-argparse-include_agents": {
+      "disposition": "duplicate:PAR-root-typer-include_agents",
+      "note": "same --include-agents contract as the canonical row"
+    },
+    "PAR-find-argparse-include_current": {
+      "disposition": "retain",
+      "note": "Codex current-session exclusion override retained"
+    },
+    "PAR-find-argparse-index": {
+      "disposition": "task:SXR-CLI-17",
+      "note": "same index semantics on the argparse path"
+    },
+    "PAR-find-argparse-json_out": {
+      "disposition": "retain",
+      "note": "same find envelope on the argparse path"
+    },
+    "PAR-find-argparse-limit": {
+      "disposition": "retain",
+      "note": "same find defaults on the argparse path"
+    },
+    "PAR-find-argparse-path": {
+      "disposition": "duplicate:PAR-root-typer-path",
+      "note": "same --path contract as the canonical row"
+    },
+    "PAR-find-argparse-paths_only": {
+      "disposition": "retain",
+      "note": "all-path default and exact projection retained"
+    },
+    "PAR-find-argparse-query": {
+      "disposition": "deferred",
+      "note": "QUERY... positionals are additive; no approved need yet"
+    },
+    "PAR-find-argparse-recursive": {
+      "disposition": "duplicate:PAR-root-typer-recursive",
+      "note": "same --recursive contract as the canonical row"
+    },
+    "PAR-find-argparse-since": {
+      "disposition": "duplicate:PAR-root-typer-since",
+      "note": "same --since contract as the canonical row"
+    },
+    "PAR-find-argparse-use_claude": {
+      "disposition": "duplicate:PAR-root-typer-use_claude",
+      "note": "same --claude contract as the canonical row"
+    },
+    "PAR-find-argparse-use_codex": {
+      "disposition": "duplicate:PAR-root-typer-use_codex",
+      "note": "same --codex contract as the canonical row"
+    },
+    "PAR-find-argparse-worktrees": {
+      "disposition": "duplicate:PAR-root-typer-worktrees",
+      "note": "same --worktrees contract as the canonical row"
+    },
+    "PAR-find-typer-all_projects": {
+      "disposition": "task:SXR-CLI-18",
+      "note": "incompatible project modifiers rejected"
+    },
+    "PAR-find-typer-any_term": {
+      "disposition": "retain",
+      "note": "OR-across-clues behavior retained"
+    },
+    "PAR-find-typer-archives": {
+      "disposition": "duplicate:PAR-root-typer-archives",
+      "note": "same --archives contract as the canonical row"
+    },
+    "PAR-find-typer-before": {
+      "disposition": "duplicate:PAR-root-typer-before",
+      "note": "same --before contract as the canonical row"
+    },
+    "PAR-find-typer-claude_roots": {
+      "disposition": "duplicate:PAR-root-typer-claude_roots",
+      "note": "same --claude-root contract as the canonical row"
+    },
+    "PAR-find-typer-coverage": {
+      "disposition": "duplicate:PAR-root-typer-coverage",
+      "note": "same --coverage contract as the canonical row"
+    },
+    "PAR-find-typer-exclude_sessions": {
+      "disposition": "task:SXR-CLI-17",
+      "note": "unmatched exclusions reported in diagnostics"
+    },
+    "PAR-find-typer-file": {
+      "disposition": "duplicate:PAR-root-typer-file",
+      "note": "same --file contract as the canonical row"
+    },
+    "PAR-find-typer-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-find-typer-include_agents": {
+      "disposition": "duplicate:PAR-root-typer-include_agents",
+      "note": "same --include-agents contract as the canonical row"
+    },
+    "PAR-find-typer-include_current": {
+      "disposition": "retain",
+      "note": "Codex current-session exclusion override retained"
+    },
+    "PAR-find-typer-index": {
+      "disposition": "task:SXR-CLI-17",
+      "note": "preparation-only without query; search exits unchanged"
+    },
+    "PAR-find-typer-json_out": {
+      "disposition": "retain",
+      "note": "find envelope with coverage and bounded evidence kept"
+    },
+    "PAR-find-typer-limit": {
+      "disposition": "retain",
+      "note": "five ranked sessions and unlimited paths retained"
+    },
+    "PAR-find-typer-path": {
+      "disposition": "duplicate:PAR-root-typer-path",
+      "note": "same --path contract as the canonical row"
+    },
+    "PAR-find-typer-paths_only": {
+      "disposition": "retain",
+      "note": "all-path default and exact projection retained"
+    },
+    "PAR-find-typer-query": {
+      "disposition": "deferred",
+      "note": "QUERY... positionals are additive; no approved need yet"
+    },
+    "PAR-find-typer-recursive": {
+      "disposition": "duplicate:PAR-root-typer-recursive",
+      "note": "same --recursive contract as the canonical row"
+    },
+    "PAR-find-typer-since": {
+      "disposition": "duplicate:PAR-root-typer-since",
+      "note": "same --since contract as the canonical row"
+    },
+    "PAR-find-typer-use_claude": {
+      "disposition": "duplicate:PAR-root-typer-use_claude",
+      "note": "same --claude contract as the canonical row"
+    },
+    "PAR-find-typer-use_codex": {
+      "disposition": "duplicate:PAR-root-typer-use_codex",
+      "note": "same --codex contract as the canonical row"
+    },
+    "PAR-find-typer-worktrees": {
+      "disposition": "duplicate:PAR-root-typer-worktrees",
+      "note": "same --worktrees contract as the canonical row"
+    },
+    "PAR-grep-typer-after_ctx": {
+      "disposition": "deferred",
+      "note": "asymmetric -A context; targeted error stays for now"
+    },
+    "PAR-grep-typer-archives": {
+      "disposition": "duplicate:PAR-root-typer-archives",
+      "note": "same --archives contract as the canonical row"
+    },
+    "PAR-grep-typer-arg": {
+      "disposition": "retain",
+      "note": "retains optional session positional and -e shift"
+    },
+    "PAR-grep-typer-before": {
+      "disposition": "duplicate:PAR-root-typer-before",
+      "note": "same --before contract as the canonical row"
+    },
+    "PAR-grep-typer-before_ctx": {
+      "disposition": "deferred",
+      "note": "asymmetric -B context; targeted error stays for now"
+    },
+    "PAR-grep-typer-budget": {
+      "disposition": "task:SXR-CLI-07",
+      "note": "search budget separated from row cap"
+    },
+    "PAR-grep-typer-claude_roots": {
+      "disposition": "duplicate:PAR-root-typer-claude_roots",
+      "note": "same --claude-root contract as the canonical row"
+    },
+    "PAR-grep-typer-context": {
+      "disposition": "task:SXR-CLI-06",
+      "note": "nonnegative N; incompatible output modes rejected"
+    },
+    "PAR-grep-typer-count": {
+      "disposition": "task:SXR-CLI-06",
+      "note": "incompatible output-mode flags rejected"
+    },
+    "PAR-grep-typer-coverage": {
+      "disposition": "duplicate:PAR-root-typer-coverage",
+      "note": "same --coverage contract as the canonical row"
+    },
+    "PAR-grep-typer-expr": {
+      "disposition": "retain",
+      "note": "one -e pattern and leading-dash escape retained"
+    },
+    "PAR-grep-typer-file": {
+      "disposition": "duplicate:PAR-root-typer-file",
+      "note": "same --file contract as the canonical row"
+    },
+    "PAR-grep-typer-fixed": {
+      "disposition": "retain",
+      "note": "literal matching with independent smart-case retained"
+    },
+    "PAR-grep-typer-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-grep-typer-ids_only": {
+      "disposition": "task:SXR-CLI-06",
+      "note": "structured session identity when JSON is requested"
+    },
+    "PAR-grep-typer-ignore_case": {
+      "disposition": "retain",
+      "note": "-i override of smart-case retained"
+    },
+    "PAR-grep-typer-include_agents": {
+      "disposition": "duplicate:PAR-root-typer-include_agents",
+      "note": "same --include-agents contract as the canonical row"
+    },
+    "PAR-grep-typer-include_all": {
+      "disposition": "task:SXR-CLI-07",
+      "note": "--all becomes uncapped complete output"
+    },
+    "PAR-grep-typer-json_out": {
+      "disposition": "task:SXR-CLI-06",
+      "note": "valid JSON in every mode; raw records deduplicated"
+    },
+    "PAR-grep-typer-limit": {
+      "disposition": "task:SXR-CLI-07",
+      "note": "-n counts results only; --all uncaps output"
+    },
+    "PAR-grep-typer-path": {
+      "disposition": "duplicate:PAR-root-typer-path",
+      "note": "same --path contract as the canonical row"
+    },
+    "PAR-grep-typer-pattern": {
+      "disposition": "retain",
+      "note": "retains one-pattern grammar and targeted errors"
+    },
+    "PAR-grep-typer-recursive": {
+      "disposition": "duplicate:PAR-root-typer-recursive",
+      "note": "same --recursive contract as the canonical row"
+    },
+    "PAR-grep-typer-since": {
+      "disposition": "duplicate:PAR-root-typer-since",
+      "note": "same --since contract as the canonical row"
+    },
+    "PAR-grep-typer-sort": {
+      "disposition": "task:SXR-CLI-06",
+      "note": "count-mode only, declared choices, instant ordering"
+    },
+    "PAR-grep-typer-use_claude": {
+      "disposition": "duplicate:PAR-root-typer-use_claude",
+      "note": "same --claude contract as the canonical row"
+    },
+    "PAR-grep-typer-use_codex": {
+      "disposition": "duplicate:PAR-root-typer-use_codex",
+      "note": "same --codex contract as the canonical row"
+    },
+    "PAR-grep-typer-worktrees": {
+      "disposition": "duplicate:PAR-root-typer-worktrees",
+      "note": "same --worktrees contract as the canonical row"
+    },
+    "PAR-index-typer-archives": {
+      "disposition": "duplicate:PAR-root-typer-archives",
+      "note": "same --archives contract as the canonical row"
+    },
+    "PAR-index-typer-before": {
+      "disposition": "duplicate:PAR-root-typer-before",
+      "note": "same --before contract as the canonical row"
+    },
+    "PAR-index-typer-claude_roots": {
+      "disposition": "duplicate:PAR-root-typer-claude_roots",
+      "note": "same --claude-root contract as the canonical row"
+    },
+    "PAR-index-typer-clear_": {
+      "disposition": "task:SXR-CLI-20",
+      "note": "report cleared cache kinds; reject scope flags"
+    },
+    "PAR-index-typer-coverage": {
+      "disposition": "duplicate:PAR-root-typer-coverage",
+      "note": "same --coverage contract as the canonical row"
+    },
+    "PAR-index-typer-file": {
+      "disposition": "duplicate:PAR-root-typer-file",
+      "note": "same --file contract as the canonical row"
+    },
+    "PAR-index-typer-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-index-typer-include_agents": {
+      "disposition": "duplicate:PAR-root-typer-include_agents",
+      "note": "same --include-agents contract as the canonical row"
+    },
+    "PAR-index-typer-path": {
+      "disposition": "duplicate:PAR-root-typer-path",
+      "note": "same --path contract as the canonical row"
+    },
+    "PAR-index-typer-recursive": {
+      "disposition": "duplicate:PAR-root-typer-recursive",
+      "note": "same --recursive contract as the canonical row"
+    },
+    "PAR-index-typer-since": {
+      "disposition": "duplicate:PAR-root-typer-since",
+      "note": "same --since contract as the canonical row"
+    },
+    "PAR-index-typer-use_claude": {
+      "disposition": "duplicate:PAR-root-typer-use_claude",
+      "note": "same --claude contract as the canonical row"
+    },
+    "PAR-index-typer-use_codex": {
+      "disposition": "duplicate:PAR-root-typer-use_codex",
+      "note": "same --codex contract as the canonical row"
+    },
+    "PAR-index-typer-worktrees": {
+      "disposition": "duplicate:PAR-root-typer-worktrees",
+      "note": "same --worktrees contract as the canonical row"
+    },
+    "PAR-init-typer-check": {
+      "disposition": "task:SXR-CLI-19",
+      "note": "compare block content, not only version"
+    },
+    "PAR-init-typer-file": {
+      "disposition": "retain",
+      "note": "retains explicit target file and AGENTS.md fallback"
+    },
+    "PAR-init-typer-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-init-typer-use_global": {
+      "disposition": "task:SXR-CLI-19",
+      "note": "document exact global fallback chain and target"
+    },
+    "PAR-init-typer-write": {
+      "disposition": "task:SXR-CLI-19",
+      "note": "resolved target reported; idempotent write kept"
+    },
+    "PAR-list-typer-archives": {
+      "disposition": "duplicate:PAR-root-typer-archives",
+      "note": "same --archives contract as the canonical row"
+    },
+    "PAR-list-typer-before": {
+      "disposition": "duplicate:PAR-root-typer-before",
+      "note": "same --before contract as the canonical row"
+    },
+    "PAR-list-typer-claude_roots": {
+      "disposition": "duplicate:PAR-root-typer-claude_roots",
+      "note": "same --claude-root contract as the canonical row"
+    },
+    "PAR-list-typer-coverage": {
+      "disposition": "duplicate:PAR-root-typer-coverage",
+      "note": "same --coverage contract as the canonical row"
+    },
+    "PAR-list-typer-file": {
+      "disposition": "duplicate:PAR-root-typer-file",
+      "note": "same --file contract as the canonical row"
+    },
+    "PAR-list-typer-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-list-typer-include_agents": {
+      "disposition": "duplicate:PAR-root-typer-include_agents",
+      "note": "same --include-agents contract as the canonical row"
+    },
+    "PAR-list-typer-json_out": {
+      "disposition": "task:SXR-CLI-22",
+      "note": "help states this command's exact JSON schema"
+    },
+    "PAR-list-typer-limit": {
+      "disposition": "task:SXR-CLI-24",
+      "note": "list JSON reports omitted session counts"
+    },
+    "PAR-list-typer-path": {
+      "disposition": "duplicate:PAR-root-typer-path",
+      "note": "same --path contract as the canonical row"
+    },
+    "PAR-list-typer-recursive": {
+      "disposition": "duplicate:PAR-root-typer-recursive",
+      "note": "same --recursive contract as the canonical row"
+    },
+    "PAR-list-typer-since": {
+      "disposition": "duplicate:PAR-root-typer-since",
+      "note": "same --since contract as the canonical row"
+    },
+    "PAR-list-typer-use_claude": {
+      "disposition": "duplicate:PAR-root-typer-use_claude",
+      "note": "same --claude contract as the canonical row"
+    },
+    "PAR-list-typer-use_codex": {
+      "disposition": "duplicate:PAR-root-typer-use_codex",
+      "note": "same --codex contract as the canonical row"
+    },
+    "PAR-list-typer-worktrees": {
+      "disposition": "duplicate:PAR-root-typer-worktrees",
+      "note": "same --worktrees contract as the canonical row"
+    },
+    "PAR-path-typer-archives": {
+      "disposition": "duplicate:PAR-root-typer-archives",
+      "note": "same --archives contract as the canonical row"
+    },
+    "PAR-path-typer-arg": {
+      "disposition": "retain",
+      "note": "retains range support and deduplicated exact path output"
+    },
+    "PAR-path-typer-claude_roots": {
+      "disposition": "duplicate:PAR-root-typer-claude_roots",
+      "note": "same --claude-root contract as the canonical row"
+    },
+    "PAR-path-typer-coverage": {
+      "disposition": "duplicate:PAR-root-typer-coverage",
+      "note": "same --coverage contract as the canonical row"
+    },
+    "PAR-path-typer-file": {
+      "disposition": "duplicate:PAR-root-typer-file",
+      "note": "same --file contract as the canonical row"
+    },
+    "PAR-path-typer-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-path-typer-include_agents": {
+      "disposition": "duplicate:PAR-root-typer-include_agents",
+      "note": "same --include-agents contract as the canonical row"
+    },
+    "PAR-path-typer-json_out": {
+      "disposition": "duplicate:PAR-list-typer-json_out",
+      "note": "same --json contract as the canonical row"
+    },
+    "PAR-path-typer-limit": {
+      "disposition": "retain",
+      "note": "global cap after path deduplication retained"
+    },
+    "PAR-path-typer-path": {
+      "disposition": "duplicate:PAR-root-typer-path",
+      "note": "same --path contract as the canonical row"
+    },
+    "PAR-path-typer-recursive": {
+      "disposition": "duplicate:PAR-root-typer-recursive",
+      "note": "same --recursive contract as the canonical row"
+    },
+    "PAR-path-typer-use_claude": {
+      "disposition": "duplicate:PAR-root-typer-use_claude",
+      "note": "same --claude contract as the canonical row"
+    },
+    "PAR-path-typer-use_codex": {
+      "disposition": "duplicate:PAR-root-typer-use_codex",
+      "note": "same --codex contract as the canonical row"
+    },
+    "PAR-path-typer-worktrees": {
+      "disposition": "duplicate:PAR-root-typer-worktrees",
+      "note": "same --worktrees contract as the canonical row"
+    },
+    "PAR-prompts-typer-archives": {
+      "disposition": "duplicate:PAR-root-typer-archives",
+      "note": "same --archives contract as the canonical row. Qualification 2026-09-12 (findings audit): the scope contract holds on every ref, but this row's example_before prints a session listing on published 0.13.0 rather than prompts, because the bare form listed there. The flag's meaning is unaffected"
+    },
+    "PAR-prompts-typer-arg": {
+      "disposition": "task:SXR-CLI-02",
+      "note": "prompts must honor every reference in a range; delivered by SXR-CLI-02 (2026-09-11). The --all/budget clauses of the same row were delivered by SXR-CLI-01. Correction 2026-09-12: 'Newest session by default' is now 'newest session that has human prompts', per the reconciliation"
+    },
+    "PAR-prompts-typer-budget": {
+      "disposition": "task:SXR-CLI-01",
+      "note": "no implicit budget on the default prompt view. Correction 2026-09-12 (findings audit): the before cell is also wrong for published 0.13.0, which never passes --budget to its catalog path -- bare `prompts`, `--budget 0` and `--budget 50` produce byte-identical output there. Recorded as an upstream defect below; measured in evidence-M/upstream-defects.json, evidence-M/limit-unit.json"
+    },
+    "PAR-prompts-typer-claude_roots": {
+      "disposition": "duplicate:PAR-root-typer-claude_roots",
+      "note": "same --claude-root contract as the canonical row. Qualification 2026-09-12 (findings audit): the scope contract holds on every ref, but this row's example_before prints a session listing on published 0.13.0 rather than prompts, because the bare form listed there. The flag's meaning is unaffected"
+    },
+    "PAR-prompts-typer-coverage": {
+      "disposition": "duplicate:PAR-root-typer-coverage",
+      "note": "same --coverage contract as the canonical row. Qualification 2026-09-12 (findings audit): the scope contract holds on every ref, but this row's example_before prints a session listing on published 0.13.0 rather than prompts, because the bare form listed there. The flag's meaning is unaffected"
+    },
+    "PAR-prompts-typer-file": {
+      "disposition": "duplicate:PAR-root-typer-file",
+      "note": "same --file contract as the canonical row. Correction 2026-09-12: published 0.13.0 had to append an id to prompts --file follow-ups because its bare form listed. Not needed here; --file reads the named transcript directly and is rejected together with --latest. Qualification 2026-09-12 (findings audit): the scope contract holds on every ref, but this row's example_before prints a session listing on published 0.13.0 rather than prompts, because the bare form listed there. The flag's meaning is unaffected"
+    },
+    "PAR-prompts-typer-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row. Reviewed 2026-09-12 (findings audit) and left unchanged. A second opinion classified this row as factually wrong upstream. It is not: the cell asserts exit 0, --help only under Typer, and -h under argparse, and all three hold on 8f93114 (measured). Published 0.13.0 did rewrite the help text of this surface, but no cell here quotes that text"
+    },
+    "PAR-prompts-typer-include_agents": {
+      "disposition": "duplicate:PAR-root-typer-include_agents",
+      "note": "same --include-agents contract as the canonical row. Qualification 2026-09-12 (findings audit): the scope contract holds on every ref, but this row's example_before prints a session listing on published 0.13.0 rather than prompts, because the bare form listed there. The flag's meaning is unaffected"
+    },
+    "PAR-prompts-typer-include_all": {
+      "disposition": "task:SXR-CLI-01",
+      "note": "--all lifts limits, keeps human selection. Correction 2026-09-12: published 0.13.0 additionally requires --all to carry a selection, because its bare form listed. Not adopted: under D-08 the bare form reads, so --all needs no selection here"
+    },
+    "PAR-prompts-typer-json_out": {
+      "disposition": "duplicate:PAR-list-typer-json_out",
+      "note": "same --json contract as the canonical row. Correction 2026-09-12: the before cell is true of 0.12.2 and of this tree but not of published 0.13.0, whose bare form emitted synthesized prompt_session objects. D-09 keeps raw records, so this row remains a duplicate of the canonical one"
+    },
+    "PAR-prompts-typer-limit": {
+      "disposition": "duplicate:CMD-prompts-typer",
+      "note": "prompts -n/--all precedence owned by that row. Correction 2026-09-12: -n caps prompt rows here, and in published 0.13.0 it also capped catalog session rows. The catalog is not adopted, so only the prompt-row unit applies. Correction 2026-09-12 (findings audit): the before cell's JSON half was already wrong at the audited base, not just upstream. `prompts @N --json -n 1` returns all 3 records on 48b11c6c and on 8f93114, and 1 record here, so SXR-CLI-01 fixed a defect neither the CSV nor any upstream release records. Measured in evidence-M/upstream-defects.json, evidence-M/limit-unit.json"
+    },
+    "PAR-prompts-typer-line_cap": {
+      "disposition": "task:SXR-CLI-01",
+      "note": "cannot silently truncate the default view. Correction 2026-09-12 (findings audit): the before cell is also wrong for published 0.13.0. There --line-limit is honored but means something else: it caps the listing's first-prompt preview column unconditionally, with no budget involved (measured at 10, 40 and 200 against 8f93114). This tree keeps the documented meaning"
+    },
+    "PAR-prompts-typer-path": {
+      "disposition": "duplicate:PAR-root-typer-path",
+      "note": "same --path contract as the canonical row. Qualification 2026-09-12 (findings audit): the scope contract holds on every ref, but this row's example_before prints a session listing on published 0.13.0 rather than prompts, because the bare form listed there. The flag's meaning is unaffected"
+    },
+    "PAR-prompts-typer-recursive": {
+      "disposition": "duplicate:PAR-root-typer-recursive",
+      "note": "same --recursive contract as the canonical row. Qualification 2026-09-12 (findings audit): the scope contract holds on every ref, but this row's example_before prints a session listing on published 0.13.0 rather than prompts, because the bare form listed there. The flag's meaning is unaffected"
+    },
+    "PAR-prompts-typer-use_claude": {
+      "disposition": "duplicate:PAR-root-typer-use_claude",
+      "note": "same --claude contract as the canonical row. Qualification 2026-09-12 (findings audit): the scope contract holds on every ref, but this row's example_before prints a session listing on published 0.13.0 rather than prompts, because the bare form listed there. The flag's meaning is unaffected"
+    },
+    "PAR-prompts-typer-use_codex": {
+      "disposition": "duplicate:PAR-root-typer-use_codex",
+      "note": "same --codex contract as the canonical row. Qualification 2026-09-12 (findings audit): the scope contract holds on every ref, but this row's example_before prints a session listing on published 0.13.0 rather than prompts, because the bare form listed there. The flag's meaning is unaffected"
+    },
+    "PAR-prompts-typer-worktrees": {
+      "disposition": "duplicate:PAR-root-typer-worktrees",
+      "note": "same --worktrees contract as the canonical row. Qualification 2026-09-12 (findings audit): the scope contract holds on every ref, but this row's example_before prints a session listing on published 0.13.0 rather than prompts, because the bare form listed there. The flag's meaning is unaffected"
+    },
+    "PAR-root-typer-archives": {
+      "disposition": "task:SXR-CLI-22",
+      "note": "document archive inclusion defaults per command"
+    },
+    "PAR-root-typer-before": {
+      "disposition": "task:SXR-CLI-14",
+      "note": "same flag after every session command"
+    },
+    "PAR-root-typer-claude_roots": {
+      "disposition": "retain",
+      "note": "retains repeatable profile roots and provider validation"
+    },
+    "PAR-root-typer-coverage": {
+      "disposition": "task:SXR-CLI-24",
+      "note": "label unavailable roots in stderr diagnostics"
+    },
+    "PAR-root-typer-file": {
+      "disposition": "task:SXR-CLI-23",
+      "note": "exact file preserved in every generated follow-up"
+    },
+    "PAR-root-typer-help": {
+      "disposition": "task:SXR-CLI-22",
+      "note": "-h and --help everywhere; short root help. Reviewed 2026-09-12 (findings audit) and left unchanged, for the same reason as PAR-prompts-typer-help. Root --help is the only other surface whose text changed upstream, and all four changed regions describe prompts' new listing default, which the prompts rows already cover. Exactly 2 of 18 --help surfaces differ between the refs; the other 16 are byte-identical"
+    },
+    "PAR-root-typer-include_agents": {
+      "disposition": "task:SXR-CLI-22",
+      "note": "document per-command child-transcript defaults"
+    },
+    "PAR-root-typer-json_out": {
+      "disposition": "task:SXR-CLI-18",
+      "note": "inherited JSON honored or rejected, never ignored"
+    },
+    "PAR-root-typer-limit": {
+      "disposition": "task:SXR-CLI-18",
+      "note": "-n passed only to commands that can use it"
+    },
+    "PAR-root-typer-path": {
+      "disposition": "task:SXR-CLI-18",
+      "note": "unsupported placement rejected instead of ignored"
+    },
+    "PAR-root-typer-recursive": {
+      "disposition": "task:SXR-CLI-18",
+      "note": "irrelevant scope modifiers rejected"
+    },
+    "PAR-root-typer-since": {
+      "disposition": "task:SXR-CLI-14",
+      "note": "same flag after every session command"
+    },
+    "PAR-root-typer-use_claude": {
+      "disposition": "task:SXR-CLI-22",
+      "note": "help must state each command's own provider default"
+    },
+    "PAR-root-typer-use_codex": {
+      "disposition": "task:SXR-CLI-18",
+      "note": "provider switch rejected where it has no meaning"
+    },
+    "PAR-root-typer-version": {
+      "disposition": "retain",
+      "note": "root-only --version placement retained"
+    },
+    "PAR-root-typer-worktrees": {
+      "disposition": "task:SXR-CLI-18",
+      "note": "irrelevant worktree combinations rejected"
+    },
+    "PAR-secrets-audit-typer-archives": {
+      "disposition": "duplicate:PAR-root-typer-archives",
+      "note": "same --archives contract as the canonical row"
+    },
+    "PAR-secrets-audit-typer-arg": {
+      "disposition": "task:SXR-CLI-13",
+      "note": "shorthand kept; selector shown in help"
+    },
+    "PAR-secrets-audit-typer-before": {
+      "disposition": "duplicate:PAR-root-typer-before",
+      "note": "same --before contract as the canonical row"
+    },
+    "PAR-secrets-audit-typer-candidates": {
+      "disposition": "retain",
+      "note": "audit-level candidate inheritance retained"
+    },
+    "PAR-secrets-audit-typer-claude_roots": {
+      "disposition": "duplicate:PAR-root-typer-claude_roots",
+      "note": "same --claude-root contract as the canonical row"
+    },
+    "PAR-secrets-audit-typer-coverage": {
+      "disposition": "duplicate:PAR-root-typer-coverage",
+      "note": "same --coverage contract as the canonical row"
+    },
+    "PAR-secrets-audit-typer-file": {
+      "disposition": "duplicate:PAR-root-typer-file",
+      "note": "same --file contract as the canonical row"
+    },
+    "PAR-secrets-audit-typer-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-secrets-audit-typer-include_agents": {
+      "disposition": "duplicate:PAR-root-typer-include_agents",
+      "note": "same --include-agents contract as the canonical row"
+    },
+    "PAR-secrets-audit-typer-json_out": {
+      "disposition": "duplicate:PAR-list-typer-json_out",
+      "note": "same --json contract as the canonical row"
+    },
+    "PAR-secrets-audit-typer-limit": {
+      "disposition": "retain",
+      "note": "output-only cap over full-scope tallies retained"
+    },
+    "PAR-secrets-audit-typer-path": {
+      "disposition": "duplicate:PAR-root-typer-path",
+      "note": "same --path contract as the canonical row"
+    },
+    "PAR-secrets-audit-typer-recursive": {
+      "disposition": "duplicate:PAR-root-typer-recursive",
+      "note": "same --recursive contract as the canonical row"
+    },
+    "PAR-secrets-audit-typer-since": {
+      "disposition": "duplicate:PAR-root-typer-since",
+      "note": "same --since contract as the canonical row"
+    },
+    "PAR-secrets-audit-typer-use_claude": {
+      "disposition": "duplicate:PAR-root-typer-use_claude",
+      "note": "same --claude contract as the canonical row"
+    },
+    "PAR-secrets-audit-typer-use_codex": {
+      "disposition": "duplicate:PAR-root-typer-use_codex",
+      "note": "same --codex contract as the canonical row"
+    },
+    "PAR-secrets-audit-typer-worktrees": {
+      "disposition": "duplicate:PAR-root-typer-worktrees",
+      "note": "same --worktrees contract as the canonical row"
+    },
+    "PAR-secrets-clean-typer-apply": {
+      "disposition": "task:SXR-CLI-12",
+      "note": "print exact scope-preserving apply command"
+    },
+    "PAR-secrets-clean-typer-archives": {
+      "disposition": "duplicate:PAR-root-typer-archives",
+      "note": "same --archives contract as the canonical row"
+    },
+    "PAR-secrets-clean-typer-arg": {
+      "disposition": "task:SXR-CLI-11",
+      "note": "one physical expansion for preview and apply"
+    },
+    "PAR-secrets-clean-typer-before": {
+      "disposition": "duplicate:PAR-root-typer-before",
+      "note": "same --before contract as the canonical row"
+    },
+    "PAR-secrets-clean-typer-claude_roots": {
+      "disposition": "duplicate:PAR-root-typer-claude_roots",
+      "note": "same --claude-root contract as the canonical row"
+    },
+    "PAR-secrets-clean-typer-coverage": {
+      "disposition": "duplicate:PAR-root-typer-coverage",
+      "note": "same --coverage contract as the canonical row"
+    },
+    "PAR-secrets-clean-typer-file": {
+      "disposition": "duplicate:PAR-root-typer-file",
+      "note": "same --file contract as the canonical row"
+    },
+    "PAR-secrets-clean-typer-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-secrets-clean-typer-include_agents": {
+      "disposition": "duplicate:PAR-root-typer-include_agents",
+      "note": "same --include-agents contract as the canonical row"
+    },
+    "PAR-secrets-clean-typer-json_out": {
+      "disposition": "decision-needed",
+      "note": "May clean --json add a typed operation summary record alongside file results?"
+    },
+    "PAR-secrets-clean-typer-limit": {
+      "disposition": "retain",
+      "note": "display-only report cap retained per SXR-AUD-007"
+    },
+    "PAR-secrets-clean-typer-path": {
+      "disposition": "duplicate:PAR-root-typer-path",
+      "note": "same --path contract as the canonical row"
+    },
+    "PAR-secrets-clean-typer-recursive": {
+      "disposition": "duplicate:PAR-root-typer-recursive",
+      "note": "same --recursive contract as the canonical row"
+    },
+    "PAR-secrets-clean-typer-since": {
+      "disposition": "duplicate:PAR-root-typer-since",
+      "note": "same --since contract as the canonical row"
+    },
+    "PAR-secrets-clean-typer-use_claude": {
+      "disposition": "duplicate:PAR-root-typer-use_claude",
+      "note": "same --claude contract as the canonical row"
+    },
+    "PAR-secrets-clean-typer-use_codex": {
+      "disposition": "duplicate:PAR-root-typer-use_codex",
+      "note": "same --codex contract as the canonical row"
+    },
+    "PAR-secrets-clean-typer-worktrees": {
+      "disposition": "duplicate:PAR-root-typer-worktrees",
+      "note": "same --worktrees contract as the canonical row"
+    },
+    "PAR-secrets-typer-archives": {
+      "disposition": "duplicate:PAR-root-typer-archives",
+      "note": "same --archives contract as the canonical row"
+    },
+    "PAR-secrets-typer-before": {
+      "disposition": "duplicate:PAR-root-typer-before",
+      "note": "same --before contract as the canonical row"
+    },
+    "PAR-secrets-typer-candidates": {
+      "disposition": "task:SXR-CLI-12",
+      "note": "reject --candidates when clean is selected"
+    },
+    "PAR-secrets-typer-claude_roots": {
+      "disposition": "duplicate:PAR-root-typer-claude_roots",
+      "note": "same --claude-root contract as the canonical row"
+    },
+    "PAR-secrets-typer-coverage": {
+      "disposition": "duplicate:PAR-root-typer-coverage",
+      "note": "same --coverage contract as the canonical row"
+    },
+    "PAR-secrets-typer-file": {
+      "disposition": "duplicate:PAR-root-typer-file",
+      "note": "same --file contract as the canonical row"
+    },
+    "PAR-secrets-typer-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-secrets-typer-include_agents": {
+      "disposition": "duplicate:PAR-root-typer-include_agents",
+      "note": "same --include-agents contract as the canonical row"
+    },
+    "PAR-secrets-typer-json_out": {
+      "disposition": "duplicate:PAR-list-typer-json_out",
+      "note": "same --json contract as the canonical row"
+    },
+    "PAR-secrets-typer-limit": {
+      "disposition": "retain",
+      "note": "output-only cap over full-scope tallies retained"
+    },
+    "PAR-secrets-typer-path": {
+      "disposition": "duplicate:PAR-root-typer-path",
+      "note": "same --path contract as the canonical row"
+    },
+    "PAR-secrets-typer-recursive": {
+      "disposition": "duplicate:PAR-root-typer-recursive",
+      "note": "same --recursive contract as the canonical row"
+    },
+    "PAR-secrets-typer-since": {
+      "disposition": "duplicate:PAR-root-typer-since",
+      "note": "same --since contract as the canonical row"
+    },
+    "PAR-secrets-typer-use_claude": {
+      "disposition": "duplicate:PAR-root-typer-use_claude",
+      "note": "same --claude contract as the canonical row"
+    },
+    "PAR-secrets-typer-use_codex": {
+      "disposition": "duplicate:PAR-root-typer-use_codex",
+      "note": "same --codex contract as the canonical row"
+    },
+    "PAR-secrets-typer-worktrees": {
+      "disposition": "duplicate:PAR-root-typer-worktrees",
+      "note": "same --worktrees contract as the canonical row"
+    },
+    "PAR-serve-argparse-action": {
+      "disposition": "task:SXR-CLI-16",
+      "note": "same choices in both parsers"
+    },
+    "PAR-serve-argparse-foreground": {
+      "disposition": "task:SXR-CLI-16",
+      "note": "launcher flag validated only in internal launch mode"
+    },
+    "PAR-serve-argparse-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-serve-argparse-idle": {
+      "disposition": "task:SXR-CLI-16",
+      "note": "finite positive timeout; rejected outside foreground"
+    },
+    "PAR-serve-typer-action": {
+      "disposition": "task:SXR-CLI-16",
+      "note": "shared status/stop choice type"
+    },
+    "PAR-serve-typer-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-show-typer-archives": {
+      "disposition": "duplicate:PAR-root-typer-archives",
+      "note": "same --archives contract as the canonical row"
+    },
+    "PAR-show-typer-arg": {
+      "disposition": "task:SXR-CLI-02",
+      "note": "range must not silently drop sessions; the range clause was delivered by SXR-CLI-02 (2026-09-11) and the filter-precedence and --tools clauses by SXR-CLI-03 (2026-09-11), so the row is closed"
+    },
+    "PAR-show-typer-around": {
+      "disposition": "task:SXR-CLI-03",
+      "note": "positive coordinate; intersects --type; rejects --range; delivered 2026-09-11"
+    },
+    "PAR-show-typer-budget": {
+      "disposition": "task:SXR-CLI-21",
+      "note": "compact-display threshold; the 'reject negatives' clause was delivered early by SXR-CLI-03 (2026-09-11) because the reviewer assigned that decision to this slice (ledger open decision 1, inherited from D-02); 0 remains the explicit disabled value. The rest of the row stays with SXR-CLI-21"
+    },
+    "PAR-show-typer-claude_roots": {
+      "disposition": "duplicate:PAR-root-typer-claude_roots",
+      "note": "same --claude-root contract as the canonical row"
+    },
+    "PAR-show-typer-context": {
+      "disposition": "task:SXR-CLI-03",
+      "note": "nonnegative half-width; requires --around; delivered 2026-09-11"
+    },
+    "PAR-show-typer-coverage": {
+      "disposition": "duplicate:PAR-root-typer-coverage",
+      "note": "same --coverage contract as the canonical row"
+    },
+    "PAR-show-typer-errors": {
+      "disposition": "task:SXR-CLI-03",
+      "note": "error filter applies inside the selected window and inside --full; delivered 2026-09-11"
+    },
+    "PAR-show-typer-file": {
+      "disposition": "duplicate:PAR-root-typer-file",
+      "note": "same --file contract as the canonical row"
+    },
+    "PAR-show-typer-full": {
+      "disposition": "task:SXR-CLI-03",
+      "note": "explicit filters constrain --full; -n still applies; delivered 2026-09-11"
+    },
+    "PAR-show-typer-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-show-typer-include_agents": {
+      "disposition": "duplicate:PAR-root-typer-include_agents",
+      "note": "same --include-agents contract as the canonical row"
+    },
+    "PAR-show-typer-json_out": {
+      "disposition": "duplicate:PAR-list-typer-json_out",
+      "note": "same --json contract as the canonical row"
+    },
+    "PAR-show-typer-limit": {
+      "disposition": "task:SXR-CLI-22",
+      "note": "limit unit documented per output format"
+    },
+    "PAR-show-typer-line_cap": {
+      "disposition": "task:SXR-CLI-21",
+      "note": "the 'reject negatives' clause was delivered by SXR-CLI-03 (2026-09-11) and 0 means no per-line trim; NOT closed: 'apply the same explicit cap policy to all displayed event kinds' is unimplemented -- tool-result bodies still use util.middle_trim's fixed widths, which SXR-CLI-21 owns"
+    },
+    "PAR-show-typer-path": {
+      "disposition": "duplicate:PAR-root-typer-path",
+      "note": "same --path contract as the canonical row"
+    },
+    "PAR-show-typer-range_": {
+      "disposition": "task:SXR-CLI-03",
+      "note": "ordered positive bounds; intersects --type; A-B alias kept; delivered 2026-09-11"
+    },
+    "PAR-show-typer-recursive": {
+      "disposition": "duplicate:PAR-root-typer-recursive",
+      "note": "same --recursive contract as the canonical row"
+    },
+    "PAR-show-typer-tail": {
+      "disposition": "task:SXR-CLI-03",
+      "note": "unit stated in help and the last stage of the documented order; zero/negative behavior preserved (SXR-AUD-011). NOT closed: the CSV's 'JSON tail counts complete distinct source records' clause is unimplemented -- tail still counts normalized events before per-record dedup, and changing it interacts with SXR-AUD-005/007, so it needs its own decision"
+    },
+    "PAR-show-typer-thinking": {
+      "disposition": "task:SXR-CLI-03",
+      "note": "inclusion documented under the shared pipeline; delivered 2026-09-11 (a window/--full/--errors already admits thinking, so the flag is subsumed rather than overridden)"
+    },
+    "PAR-show-typer-tools": {
+      "disposition": "task:SXR-CLI-03",
+      "note": "--tool-results is the primary name, --tools the alias; delivered 2026-09-11. Reading changed: this row was deferred as 'no approved need yet', but CMD-show-typer (this slice's canonical row) carries the same clause in its 'after' cell, so delivering the command row delivered this one"
+    },
+    "PAR-show-typer-type_": {
+      "disposition": "task:SXR-CLI-03",
+      "note": "composes with sequence windows and --errors; kinds named in help; unknown kind reports an actionable empty notice; delivered 2026-09-11. show has no time window, so the CSV's 'time windows' clause has no surface to close"
+    },
+    "PAR-show-typer-use_claude": {
+      "disposition": "duplicate:PAR-root-typer-use_claude",
+      "note": "same --claude contract as the canonical row"
+    },
+    "PAR-show-typer-use_codex": {
+      "disposition": "duplicate:PAR-root-typer-use_codex",
+      "note": "same --codex contract as the canonical row"
+    },
+    "PAR-show-typer-worktrees": {
+      "disposition": "duplicate:PAR-root-typer-worktrees",
+      "note": "same --worktrees contract as the canonical row"
+    },
+    "PAR-skills-argparse-aliases": {
+      "disposition": "task:SXR-CLI-15",
+      "note": "limits applied after alias expansion in path mode"
+    },
+    "PAR-skills-argparse-clear": {
+      "disposition": "task:SXR-CLI-15",
+      "note": "exact cleared extent stated; combinations rejected"
+    },
+    "PAR-skills-argparse-copies": {
+      "disposition": "retain",
+      "note": "independent copy and alias controls retained"
+    },
+    "PAR-skills-argparse-defaults": {
+      "disposition": "deferred",
+      "note": "--reset-roots alias; no approved need yet"
+    },
+    "PAR-skills-argparse-exact": {
+      "disposition": "retain",
+      "note": "directory-name exact matching retained"
+    },
+    "PAR-skills-argparse-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-skills-argparse-index": {
+      "disposition": "task:SXR-CLI-15",
+      "note": "resolved roots printed with the refresh summary"
+    },
+    "PAR-skills-argparse-json": {
+      "disposition": "task:SXR-CLI-15",
+      "note": "inherited root --json honored; paths projected"
+    },
+    "PAR-skills-argparse-limit": {
+      "disposition": "task:SXR-CLI-15",
+      "note": "path mode caps distinct emitted paths"
+    },
+    "PAR-skills-argparse-paths": {
+      "disposition": "task:SXR-CLI-15",
+      "note": "--paths --json projects the same path list"
+    },
+    "PAR-skills-argparse-query": {
+      "disposition": "deferred",
+      "note": "multiple clue positionals additive; no approved need yet"
+    },
+    "PAR-skills-argparse-root": {
+      "disposition": "task:SXR-CLI-15",
+      "note": "persistent versus transient root use documented"
+    },
+    "PAR-stats-typer-archives": {
+      "disposition": "duplicate:PAR-root-typer-archives",
+      "note": "same --archives contract as the canonical row"
+    },
+    "PAR-stats-typer-arg": {
+      "disposition": "task:SXR-CLI-09",
+      "note": "selection kept; limit counts whole sessions"
+    },
+    "PAR-stats-typer-claude_roots": {
+      "disposition": "duplicate:PAR-root-typer-claude_roots",
+      "note": "same --claude-root contract as the canonical row"
+    },
+    "PAR-stats-typer-coverage": {
+      "disposition": "duplicate:PAR-root-typer-coverage",
+      "note": "same --coverage contract as the canonical row"
+    },
+    "PAR-stats-typer-file": {
+      "disposition": "duplicate:PAR-root-typer-file",
+      "note": "same --file contract as the canonical row"
+    },
+    "PAR-stats-typer-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-stats-typer-include_agents": {
+      "disposition": "duplicate:PAR-root-typer-include_agents",
+      "note": "same --include-agents contract as the canonical row"
+    },
+    "PAR-stats-typer-json_out": {
+      "disposition": "task:SXR-CLI-09",
+      "note": "numeric counts, byte sizes, real UTC instants"
+    },
+    "PAR-stats-typer-limit": {
+      "disposition": "task:SXR-CLI-09",
+      "note": "one session-summary unit in text and JSON"
+    },
+    "PAR-stats-typer-path": {
+      "disposition": "duplicate:PAR-root-typer-path",
+      "note": "same --path contract as the canonical row"
+    },
+    "PAR-stats-typer-recursive": {
+      "disposition": "duplicate:PAR-root-typer-recursive",
+      "note": "same --recursive contract as the canonical row"
+    },
+    "PAR-stats-typer-use_claude": {
+      "disposition": "duplicate:PAR-root-typer-use_claude",
+      "note": "same --claude contract as the canonical row"
+    },
+    "PAR-stats-typer-use_codex": {
+      "disposition": "duplicate:PAR-root-typer-use_codex",
+      "note": "same --codex contract as the canonical row"
+    },
+    "PAR-stats-typer-worktrees": {
+      "disposition": "duplicate:PAR-root-typer-worktrees",
+      "note": "same --worktrees contract as the canonical row"
+    },
+    "PAR-tools-typer-archives": {
+      "disposition": "duplicate:PAR-root-typer-archives",
+      "note": "same --archives contract as the canonical row"
+    },
+    "PAR-tools-typer-arg": {
+      "disposition": "task:SXR-CLI-02",
+      "note": "tools must summarize every selected session; the range clause is delivered by SXR-CLI-02 (2026-09-11). Two clauses of the same row stay open: the -n unit inside the --json aggregate (decision-needed row PAR-tools-typer-limit) and the uncapped '# Skill inputs' line, still verified uncapped in views_info.tools_view"
+    },
+    "PAR-tools-typer-claude_roots": {
+      "disposition": "duplicate:PAR-root-typer-claude_roots",
+      "note": "same --claude-root contract as the canonical row"
+    },
+    "PAR-tools-typer-coverage": {
+      "disposition": "duplicate:PAR-root-typer-coverage",
+      "note": "same --coverage contract as the canonical row"
+    },
+    "PAR-tools-typer-file": {
+      "disposition": "duplicate:PAR-root-typer-file",
+      "note": "same --file contract as the canonical row"
+    },
+    "PAR-tools-typer-help": {
+      "disposition": "duplicate:PAR-root-typer-help",
+      "note": "same --help contract as the canonical row"
+    },
+    "PAR-tools-typer-include_agents": {
+      "disposition": "duplicate:PAR-root-typer-include_agents",
+      "note": "same --include-agents contract as the canonical row"
+    },
+    "PAR-tools-typer-json_out": {
+      "disposition": "task:SXR-CLI-10",
+      "note": "tools JSON gains source session identity"
+    },
+    "PAR-tools-typer-limit": {
+      "disposition": "decision-needed",
+      "note": "May -n cap keys inside the tools JSON aggregate, given SXR-AUD-007 keeps all fields?"
+    },
+    "PAR-tools-typer-path": {
+      "disposition": "duplicate:PAR-root-typer-path",
+      "note": "same --path contract as the canonical row"
+    },
+    "PAR-tools-typer-recursive": {
+      "disposition": "duplicate:PAR-root-typer-recursive",
+      "note": "same --recursive contract as the canonical row"
+    },
+    "PAR-tools-typer-use_claude": {
+      "disposition": "duplicate:PAR-root-typer-use_claude",
+      "note": "same --claude contract as the canonical row"
+    },
+    "PAR-tools-typer-use_codex": {
+      "disposition": "duplicate:PAR-root-typer-use_codex",
+      "note": "same --codex contract as the canonical row"
+    },
+    "PAR-tools-typer-worktrees": {
+      "disposition": "duplicate:PAR-root-typer-worktrees",
+      "note": "same --worktrees contract as the canonical row"
+    }
+  },
+  "row_count": 408,
+  "upstream_defects": {
+    "defects": {
+      "UP-DEF-01-budget-ignored": {
+        "behavior": "--budget is accepted and silently ignored. cli.prompts calls prompt_catalog(refs, parse, json_out, limit, line_cap) and never passes budget, so bare `prompts`, `--budget 0` and `--budget 50` all print byte-identical output.",
+        "evidence": "evidence-M/upstream-defects.json cases bare, bare-budget-0, bare-budget-50",
+        "reaches_this_tree": "no. The catalog path is not adopted under D-08, and prompt_command.py passes budget into PromptOpts on both the explicit and the default path.",
+        "surface": "sxr prompts --budget N, with no session id, --file or --latest",
+        "verified": "confirmed, behaviorally and in source"
+      },
+      "UP-DEF-02-limit-changes-unit": {
+        "behavior": "-n silently changes unit from prompt records to session rows: with two human sessions in scope, -n 1 prints one session row and '# +1 more', -n 2 prints both. A negative -n prints zero rows and exits 0.",
+        "evidence": "evidence-M/limit-unit.json cases bare, bare-n1, bare-n2",
+        "reaches_this_tree": "no. -n counts prompt records on every path here, and PAR-tools-typer-limit's 'may a limit change unit' question stays open rather than answered by adoption.",
+        "surface": "sxr prompts -n N, with no session id, --file or --latest",
+        "verified": "confirmed"
+      }
+    },
+    "why": "Defects measured in the published v0.13.0 (8f93114) that Homebrew installs, recorded rather than fixed: the reviewer chose verify-and-record. Neither reaches this tree, and neither is fixed here."
+  },
+  "upstream_rows": {
+    "rows": [
+      {
+        "after": "Accepted as the explicit spelling of the default, which already reads that session. Byte-identical output to the bare form; rejected with exit 2 alongside an id, a range or --file.",
+        "before": "Absent. Published in v0.13.0, where it read the newest human conversation instead of listing sessions.",
+        "command": "sxr prompts",
+        "disposition": "task:SXR-CLI-RECONCILE",
+        "evidence": "tests/test_prompt_sessions.py::test_latest_is_the_default_spelled_out; evidence-B/pytest.log",
+        "id": "UP-prompts-typer-latest",
+        "item": "--latest",
+        "kind": "option",
+        "source": "src/sxr/prompt_command.py:prompts",
+        "status": "delivered 2026-09-12",
+        "value": "BOOL; optional"
+      },
+      {
+        "after": "Newest session that has human prompts, walking past empty sessions, subagent transcripts and guardian reviews. Adopted wholesale from upstream's human_sessions. An explicit selection still reads exactly what it names.",
+        "before": "Newest session in scope, whatever it was: a subagent transcript or a session with no human input was read and printed nothing useful.",
+        "command": "sxr prompts",
+        "disposition": "task:SXR-CLI-RECONCILE",
+        "evidence": "tests/test_prompt_sessions.py::test_the_default_reaches_the_latest_human_session",
+        "id": "UP-prompts-typer-default-session",
+        "item": "default session choice",
+        "kind": "behavior",
+        "source": "src/sxr/prompt_selection.py:human_sessions,prompt_session",
+        "status": "delivered 2026-09-12"
+      },
+      {
+        "after": "On stderr, for a discovered session only: which handle and id was read, how many newer sessions were skipped, and the scope-preserving command that lists them. Deviation from upstream: the notice points at `list` rather than `prompts`, since prompts reads here, and an explicit selection prints nothing.",
+        "before": "Absent. Published in v0.12.4 for the read path.",
+        "command": "sxr prompts",
+        "disposition": "task:SXR-CLI-RECONCILE",
+        "evidence": "tests/test_prompt_sessions.py::test_prompt_output_supplies_a_working_session_list",
+        "id": "UP-prompts-typer-navigation",
+        "item": "# prompts: / # sessions: notices",
+        "kind": "output",
+        "source": "src/sxr/prompt_selection.py:prompt_navigation",
+        "status": "delivered 2026-09-12"
+      },
+      {
+        "after": "Exit 1 with 'no human prompts in N sessions in scope' on stderr and nothing on stdout, naming the scope rather than an arbitrary session.",
+        "before": "Absent: the newest session was read regardless, so an empty result came from that one session.",
+        "command": "sxr prompts",
+        "disposition": "task:SXR-CLI-RECONCILE",
+        "evidence": "tests/test_prompt_sessions.py::test_no_human_session_reports_scope_not_an_arbitrary_child",
+        "id": "UP-prompts-typer-empty-scope",
+        "item": "no human conversation in scope",
+        "kind": "exit",
+        "source": "src/sxr/prompt_selection.py:prompt_session",
+        "status": "delivered 2026-09-12"
+      },
+      {
+        "after": "Not adopted. D-08: the recorded complaint was about reading complete prompts, and a conversation catalog duplicates sxr list. The reversal is documented in README.md, in prompts --help and in the primer.",
+        "before": "Published default in v0.13.0: a tab-separated catalog of human sessions with @N handles, prompt counts, first-prompt previews and a '# read:' follow-up.",
+        "command": "sxr prompts",
+        "disposition": "rejected:D-08",
+        "evidence": "tests/test_prompt_sessions.py::test_bare_prompts_reads_rather_than_listing_sessions",
+        "id": "UP-prompts-typer-catalog",
+        "item": "bare prompts lists human sessions",
+        "kind": "behavior",
+        "source": "origin/HEAD:src/sxr/prompt_catalog.py",
+        "status": "rejected 2026-09-12"
+      },
+      {
+        "after": "Not adopted. D-09: raw source records remain the --json contract. A catalog projection, if ever wanted, needs its own flag or command and its own documented schema, never replacing raw records.",
+        "before": "Published in v0.13.0: bare prompts --json emitted synthesized objects with type, handle, id, provider, cwd, started, path, prompts, first_prompt and follow_up.",
+        "command": "sxr prompts --json",
+        "disposition": "rejected:D-09",
+        "evidence": "tests/test_prompt_sessions.py::test_json_is_the_original_records_not_a_session_projection",
+        "id": "UP-prompts-typer-catalog-json",
+        "item": "prompt_session objects",
+        "kind": "schema",
+        "source": "origin/HEAD:src/sxr/prompt_catalog.py:prompt_catalog",
+        "status": "rejected 2026-09-12"
+      }
+    ],
+    "why": "Surfaces the 408-row CSV cannot contain, because they were published in 0.12.3 through 0.13.0 after the review was taken. Kept outside 'dispositions' so that map still matches the CSV id-for-id and its completeness assertion still holds."
+  },
+  "verified_against_source": {
+    "2026-09-11 SXR-CLI-02": {
+      "detail": "Every 'before' cell still described the code at the slice-02 baseline; the defect was reproduced by capture rather than by reading (evidence-02/before/). Notes were sharpened to record which clauses of each multi-clause row this slice closes.",
+      "reading_changed": false,
+      "rows": [
+        "EXTRA-004",
+        "PAR-prompts-typer-arg",
+        "PAR-show-typer-arg",
+        "PAR-tools-typer-arg"
+      ]
+    },
+    "2026-09-11 SXR-CLI-03": {
+      "detail": "Every 'before' cell was re-read against the slice-03 baseline source and still described it: views_read._base_selection branched --type, then --around, then --range, then the skeleton, and _default_pick checked --full before --errors. The defect was reproduced by capture (evidence-03/before/) rather than only by reading. Two dispositions changed: PAR-show-typer-tools and EXTRA-049 moved from deferred to task:SXR-CLI-03, because CMD-show-typer's 'after' cell carries the same --tool-results clause and that row is this slice's. Two rows kept their SXR-CLI-21 owner but had one clause closed early here (negative --budget/--line-limit), on the reviewer's assignment of that decision to this slice.",
+      "reading_changed": true,
+      "rows": [
+        "CMD-show-typer",
+        "EXTRA-049",
+        "PAR-show-typer-arg",
+        "PAR-show-typer-around",
+        "PAR-show-typer-budget",
+        "PAR-show-typer-context",
+        "PAR-show-typer-errors",
+        "PAR-show-typer-full",
+        "PAR-show-typer-line_cap",
+        "PAR-show-typer-range_",
+        "PAR-show-typer-tail",
+        "PAR-show-typer-thinking",
+        "PAR-show-typer-tools",
+        "PAR-show-typer-type_"
+      ]
+    },
+    "2026-09-11 SXR-CLI-04": {
+      "detail": "Every 'before' cell was re-read against the slice-04 baseline source and still described it: views_read.errors selected on event.is_error alone, deduplicated by tool_use_id per transcript, middle-trimmed every text row to 200+120 chars, printed '#seq  clock  tool[  tag]  \"body\"' with no source column, and emitted complete raw records under --json. No disposition class changed; all four rows already pointed at this task. Clauses closed here: source identity per result (CMD-errors-typer, PAR-errors-typer-arg, PAR-errors-typer-limit), complete error text by default (CMD-errors-typer), and --compact (EXTRA-041, CMD-errors-typer). Two latent defects found while reading were fixed as part of the same rows: the range zoom hint read the last ref's local 'picked' list, so it named the wrong session and would raise IndexError when the last selected session had no errors, and it was suppressed for ranges entirely.",
+      "reading_changed": false,
+      "rows": [
+        "CMD-errors-typer",
+        "EXTRA-041",
+        "PAR-errors-typer-arg",
+        "PAR-errors-typer-limit"
+      ]
+    },
+    "2026-09-11 SXR-CLI-05": {
+      "detail": "Every 'before' cell was re-read against the slice-05 baseline source and still described it: src/sxr/cli.py:277 read `sessions if arg is None and grep_ else resolve(arg, sessions)`, so a nonempty --grep with no selector searched every session in scope while `@1 --grep` searched one, an empty --grep string fell back to newest, and views_info.cmds_view trimmed command text at SXR_LINE_LIMIT (200). No disposition class changed; all four rows already pointed at this task. Clauses closed here: scope independent of the filter and --all-sessions as the explicit scope (CMD-cmds-typer, PAR-cmds-typer-arg, PAR-cmds-typer-grep_, EXTRA-044), plus the primer/help/README migration named in the compatibility cells. One unlisted facet of the same defect was found while reading and fixed with it: the filter also changed the exit contract, so an empty --since window exited 1 with --grep and 2 without; both are now 2, as for every other read command. Clauses left for later slices, unclosed and unweakened: complete call text by default and --events-json (CMD-cmds-typer), -F/--fixed for literal matching (PAR-cmds-typer-grep_), and the --json duplicate-record clause, which belongs to SXR-CLI-06.",
+      "reading_changed": false,
+      "rows": [
+        "CMD-cmds-typer",
+        "EXTRA-044",
+        "PAR-cmds-typer-arg",
+        "PAR-cmds-typer-grep_"
+      ]
+    },
+    "2026-09-12 SXR-CLI-RECONCILE": {
+      "detail": "The audit pinned 48b11c6c as current when it was three releases behind origin/HEAD (8f93114, v0.13.0). Six prompts rows therefore describe a 'before' that is real for the audited base but no longer the published surface; each note now says so and which decision governs. All 27 rows with a prompts surface were re-read; the other 21 are still accurate. Rows for every other command are unaffected: upstream's cli.py hunks all fall inside the prompts function's span and navigation.command is byte-identical between the two refs. Measured in upstream-reconciliation.md and evidence-06/.",
+      "reading_changed": true,
+      "rows": [
+        "CMD-prompts-typer",
+        "PAR-prompts-typer-arg",
+        "PAR-prompts-typer-file",
+        "PAR-prompts-typer-include_all",
+        "PAR-prompts-typer-json_out",
+        "PAR-prompts-typer-limit"
+      ]
+    },
+    "2026-09-12 findings audit": {
+      "detail": "A second opinion's six findings were checked against the tree after the merge. Four confirmed and applied: --budget and --line-limit rows are wrong for published 0.13.0 too; PAR-prompts-typer-limit's JSON claim was already wrong at the audited base, so SXR-CLI-01 fixed an unrecorded defect; EXTRA-006 is partially wrong upstream; and the ten prompts scope rows keep their contract but their example_before now lists. Three rejected with measurement: PAR-prompts-typer-help, PAR-root-typer-help and CMD-root-typer are not stale, because no cell of theirs quotes the help text that changed. The count is 25 rows whose command column is prompts, plus EXTRA-004 and EXTRA-006, which list prompts among several commands -- 27 in total, which is where both the earlier note and the second opinion got that number.",
+      "reading_changed": true,
+      "rows": [
+        "PAR-prompts-typer-budget",
+        "PAR-prompts-typer-line_cap",
+        "PAR-prompts-typer-limit",
+        "EXTRA-006",
+        "PAR-prompts-typer-help",
+        "PAR-root-typer-help",
+        "CMD-root-typer",
+        "PAR-prompts-typer-use_codex",
+        "PAR-prompts-typer-use_claude",
+        "PAR-prompts-typer-path",
+        "PAR-prompts-typer-file",
+        "PAR-prompts-typer-recursive",
+        "PAR-prompts-typer-worktrees",
+        "PAR-prompts-typer-claude_roots",
+        "PAR-prompts-typer-include_agents",
+        "PAR-prompts-typer-archives",
+        "PAR-prompts-typer-coverage"
+      ]
+    }
+  }
+}

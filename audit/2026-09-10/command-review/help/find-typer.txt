@@ -1,0 +1,41 @@
+Usage: -c find [OPTIONS] [query]
+
+  Find ranked sessions with evidence. Both providers, children and archives
+  are included.
+
+  Use a few distinctive clues. All must occur somewhere in the session; --any
+  broadens this. Quoted phrases stay together. Default scope is cwd.
+
+Arguments:
+  query  Words or quoted phrases identifying a session
+
+Options:
+  --all-projects           Search every project in selected stores
+  --any                    Match any clue instead of requiring all clues
+  --index                  Prepare the ranked index without a query
+  --codex                  Read Codex sessions
+  --claude                 Read Claude Code sessions (default)
+  --path <path>            Inspect DIR instead of cwd
+  --json                   Structured results and coverage
+  -n, --limit <int range>  Cap printed rows (0 = all)  [x>=0]
+  --since <str>            Sessions started on/after DATE (YYYY-MM-DD, ISO,
+                           today, @N)
+  --before <str>           Sessions started before DATE; --before today skips
+                           today's
+  --include-current        Include the invoking Codex session
+  --exclude-session <str>  Exclude a full session ID; repeat for several
+  --paths                  All matching source paths, without ranking or
+                           excerpts
+  --file <path>            Read this JSONL file directly; detect Claude or
+                           Codex
+  --recursive              Include sessions recorded in descendant directories
+  --worktrees              Include registered Git worktrees of the selected
+                           repository
+  --claude-root <path>     Claude config root to search; repeat for multiple
+                           profiles
+  --include-agents         Include nested Claude agent transcripts
+  --archives               Include Codex archived_sessions alongside active
+                           sessions
+  --coverage               Report searched/unavailable roots and discovered
+                           sources on stderr
+  --help                   Show this message and exit.

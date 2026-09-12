@@ -1,0 +1,17 @@
+{
+  "argv": [
+    ".venv/bin/pytest",
+    "tests/test_output_contracts.py",
+    "tests/test_views.py",
+    "tests/test_clean.py",
+    "tests/test_clean_files.py",
+    "tests/test_secrets_cli.py",
+    "tests/test_read_cache.py"
+  ],
+  "started": "2026-09-10T11:01:19.067860+00:00",
+  "ended": "2026-09-10T11:01:20.798677+00:00",
+  "exit_code": 0,
+  "source_identity": "source-b5818d6204dd6b72.json",
+  "source_unchanged": true,
+  "evidence": "output-tests.log"
+}

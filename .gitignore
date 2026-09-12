@@ -25,3 +25,13 @@ HANDOFF.md
 # Not published: internal planning and consult notes
 /PLAN.md
 /docs/
+
+# Audit trail: the documents and reproducers are tracked, the bulk is not.
+# Snapshots, captured runs and whole-tree hash manifests are all regenerable
+# from the scripts and the commits, and together they run to tens of megabytes.
+audit/**/baseline*/
+audit/**/evidence*/*
+!audit/**/evidence*/README.md
+audit/**/*.tar.gz
+audit/**/*-after-sha256.txt
+audit/**/pytest*.xml

@@ -1,0 +1,160 @@
+FFFFFFFF..                                                               [100%]
+=================================== FAILURES ===================================
+_______ test_plain_and_all_print_complete_human_prompts[claude-options0] _______
+
+prompt_file = (PosixPath('/private/var/folders/yp/7myn5z6j7sbbzgvtby4pxv6w0000gn/T/pytest-of-ivor/pytest-464/test_plain_and_all_prin...man request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman ending'}})
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10b14a520>
+options = []
+
+    @pytest.mark.parametrize("options", [[], ["--all"]])
+    def test_plain_and_all_print_complete_human_prompts(prompt_file, monkeypatch, options):
+        path, text, _ = prompt_file
+        monkeypatch.setenv("SXR_BUDGET", "1")
+        monkeypatch.setenv("SXR_LINE_LIMIT", "10")
+        result = runner.invoke(app, ["prompts", "--file", str(path), *options])
+        assert result.exit_code == 0, result.output
+>       assert result.stdout.count(text) == 2
+E       assert 0 == 2
+E        +  where 0 = <built-in method count of str object at 0x10b1f0760>('human request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman reques...nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman ending')
+E        +    where <built-in method count of str object at 0x10b1f0760> = '#0002  --:--:--  user   text    "human requ... [+56002 chars]"\n#0004  --:--:--  user   text    "human requ... [+5600...ed texts; --all includes them)\n# trimmed to 10-char lines (112k chars > 1 budget); whole text: --budget 0 or --json\n'.count
+E        +      where '#0002  --:--:--  user   text    "human requ... [+56002 chars]"\n#0004  --:--:--  user   text    "human requ... [+5600...ed texts; --all includes them)\n# trimmed to 10-char lines (112k chars > 1 budget); whole text: --budget 0 or --json\n' = <Result okay>.stdout
+
+tests/test_prompt_defaults.py:65: AssertionError
+_______ test_plain_and_all_print_complete_human_prompts[claude-options1] _______
+
+prompt_file = (PosixPath('/private/var/folders/yp/7myn5z6j7sbbzgvtby4pxv6w0000gn/T/pytest-of-ivor/pytest-464/test_plain_and_all_prin...man request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman ending'}})
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ad750f0>
+options = ['--all']
+
+    @pytest.mark.parametrize("options", [[], ["--all"]])
+    def test_plain_and_all_print_complete_human_prompts(prompt_file, monkeypatch, options):
+        path, text, _ = prompt_file
+        monkeypatch.setenv("SXR_BUDGET", "1")
+        monkeypatch.setenv("SXR_LINE_LIMIT", "10")
+        result = runner.invoke(app, ["prompts", "--file", str(path), *options])
+        assert result.exit_code == 0, result.output
+>       assert result.stdout.count(text) == 2
+E       assert 0 == 2
+E        +  where 0 = <built-in method count of str object at 0x10ac8e5b0>('human request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman reques...nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman ending')
+E        +    where <built-in method count of str object at 0x10ac8e5b0> = '#0001  --:--:--  user   text    (meta) "injected f... [+6 chars]"\n#0002  --:--:--  user   text    "human requ... [+5..."\n# 4 of 4 user records shown\n# trimmed to 10-char lines (112k chars > 1 budget); whole text: --budget 0 or --json\n'.count
+E        +      where '#0001  --:--:--  user   text    (meta) "injected f... [+6 chars]"\n#0002  --:--:--  user   text    "human requ... [+5..."\n# 4 of 4 user records shown\n# trimmed to 10-char lines (112k chars > 1 budget); whole text: --budget 0 or --json\n' = <Result okay>.stdout
+
+tests/test_prompt_defaults.py:65: AssertionError
+_______ test_plain_and_all_print_complete_human_prompts[codex-options0] ________
+
+prompt_file = (PosixPath('/private/var/folders/yp/7myn5z6j7sbbzgvtby4pxv6w0000gn/T/pytest-of-ivor/pytest-464/test_plain_and_all_prin...nhuman request\nhuman ending'}], 'internal_chat_message_metadata_passthrough': {'content_item_kinds': ['user.text']}}})
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ac51fd0>
+options = []
+
+    @pytest.mark.parametrize("options", [[], ["--all"]])
+    def test_plain_and_all_print_complete_human_prompts(prompt_file, monkeypatch, options):
+        path, text, _ = prompt_file
+        monkeypatch.setenv("SXR_BUDGET", "1")
+        monkeypatch.setenv("SXR_LINE_LIMIT", "10")
+        result = runner.invoke(app, ["prompts", "--file", str(path), *options])
+        assert result.exit_code == 0, result.output
+>       assert result.stdout.count(text) == 2
+E       assert 0 == 2
+E        +  where 0 = <built-in method count of str object at 0x10b1f08d0>('human request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman reques...nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman ending')
+E        +    where <built-in method count of str object at 0x10b1f08d0> = '#0003  --:--:--  user   text    "human requ... [+56002 chars]"\n#0005  --:--:--  user   text    "human requ... [+5600...ed texts; --all includes them)\n# trimmed to 10-char lines (112k chars > 1 budget); whole text: --budget 0 or --json\n'.count
+E        +      where '#0003  --:--:--  user   text    "human requ... [+56002 chars]"\n#0005  --:--:--  user   text    "human requ... [+5600...ed texts; --all includes them)\n# trimmed to 10-char lines (112k chars > 1 budget); whole text: --budget 0 or --json\n' = <Result okay>.stdout
+
+tests/test_prompt_defaults.py:65: AssertionError
+_______ test_plain_and_all_print_complete_human_prompts[codex-options1] ________
+
+prompt_file = (PosixPath('/private/var/folders/yp/7myn5z6j7sbbzgvtby4pxv6w0000gn/T/pytest-of-ivor/pytest-464/test_plain_and_all_prin...nhuman request\nhuman ending'}], 'internal_chat_message_metadata_passthrough': {'content_item_kinds': ['user.text']}}})
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10b17e250>
+options = ['--all']
+
+    @pytest.mark.parametrize("options", [[], ["--all"]])
+    def test_plain_and_all_print_complete_human_prompts(prompt_file, monkeypatch, options):
+        path, text, _ = prompt_file
+        monkeypatch.setenv("SXR_BUDGET", "1")
+        monkeypatch.setenv("SXR_LINE_LIMIT", "10")
+        result = runner.invoke(app, ["prompts", "--file", str(path), *options])
+        assert result.exit_code == 0, result.output
+>       assert result.stdout.count(text) == 2
+E       assert 0 == 2
+E        +  where 0 = <built-in method count of str object at 0x10b25a740>('human request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman reques...nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman ending')
+E        +    where <built-in method count of str object at 0x10b25a740> = '#0002  --:--:--  user   text    "injected f... [+6 chars]"\n#0003  --:--:--  user   text    "human requ... [+56002 ch..."\n# 4 of 4 user records shown\n# trimmed to 10-char lines (112k chars > 1 budget); whole text: --budget 0 or --json\n'.count
+E        +      where '#0002  --:--:--  user   text    "injected f... [+6 chars]"\n#0003  --:--:--  user   text    "human requ... [+56002 ch..."\n# 4 of 4 user records shown\n# trimmed to 10-char lines (112k chars > 1 budget); whole text: --budget 0 or --json\n' = <Result okay>.stdout
+
+tests/test_prompt_defaults.py:65: AssertionError
+________ test_all_lifts_explicit_limits_without_adding_context[claude] _________
+
+prompt_file = (PosixPath('/private/var/folders/yp/7myn5z6j7sbbzgvtby4pxv6w0000gn/T/pytest-of-ivor/pytest-464/test_all_lifts_explicit...man request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman ending'}})
+
+    def test_all_lifts_explicit_limits_without_adding_context(prompt_file):
+        path, text, _ = prompt_file
+        result = runner.invoke(
+            app, ["-n", "1", "prompts", "--file", str(path), "--budget", "1", "--all"]
+        )
+        assert result.exit_code == 0
+>       assert result.stdout.count(text) == 2
+E       assert 0 == 2
+E        +  where 0 = <built-in method count of str object at 0x10b247c30>('human request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman reques...nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman ending')
+E        +    where <built-in method count of str object at 0x10b247c30> = '#0001  --:--:--  user   text    (meta) "injected fixture"\n# +3 more events (raise -n, -n 0 for all)\n# 1 of 4 user records shown\n# trimmed to 200-char lines (16 chars > 1 budget); whole text: --budget 0 or --json\n'.count
+E        +      where '#0001  --:--:--  user   text    (meta) "injected fixture"\n# +3 more events (raise -n, -n 0 for all)\n# 1 of 4 user records shown\n# trimmed to 200-char lines (16 chars > 1 budget); whole text: --budget 0 or --json\n' = <Result okay>.stdout
+
+tests/test_prompt_defaults.py:76: AssertionError
+_________ test_all_lifts_explicit_limits_without_adding_context[codex] _________
+
+prompt_file = (PosixPath('/private/var/folders/yp/7myn5z6j7sbbzgvtby4pxv6w0000gn/T/pytest-of-ivor/pytest-464/test_all_lifts_explicit...nhuman request\nhuman ending'}], 'internal_chat_message_metadata_passthrough': {'content_item_kinds': ['user.text']}}})
+
+    def test_all_lifts_explicit_limits_without_adding_context(prompt_file):
+        path, text, _ = prompt_file
+        result = runner.invoke(
+            app, ["-n", "1", "prompts", "--file", str(path), "--budget", "1", "--all"]
+        )
+        assert result.exit_code == 0
+>       assert result.stdout.count(text) == 2
+E       assert 0 == 2
+E        +  where 0 = <built-in method count of str object at 0x10b2e9930>('human request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman reques...nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman ending')
+E        +    where <built-in method count of str object at 0x10b2e9930> = '#0002  --:--:--  user   text    "injected fixture"\n# +3 more events (raise -n, -n 0 for all)\n# 1 of 4 user records shown\n# trimmed to 200-char lines (16 chars > 1 budget); whole text: --budget 0 or --json\n'.count
+E        +      where '#0002  --:--:--  user   text    "injected fixture"\n# +3 more events (raise -n, -n 0 for all)\n# 1 of 4 user records shown\n# trimmed to 200-char lines (16 chars > 1 budget); whole text: --budget 0 or --json\n' = <Result okay>.stdout
+
+tests/test_prompt_defaults.py:76: AssertionError
+______________ test_explicit_context_is_separate_from_all[claude] ______________
+
+prompt_file = (PosixPath('/private/var/folders/yp/7myn5z6j7sbbzgvtby4pxv6w0000gn/T/pytest-of-ivor/pytest-464/test_explicit_context_i...man request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman request\nhuman ending'}})
+
+    def test_explicit_context_is_separate_from_all(prompt_file):
+        path, _, _ = prompt_file
+        result = runner.invoke(app, ["prompts", "--file", str(path), "--include-context", "--json"])
+>       assert result.exit_code == 0, result.output
+E       AssertionError: Usage: root prompts [OPTIONS] [arg]
+E         Try 'root prompts --help' for help.
+E         
+E         Error: No such option: --include-context (Possible options: --claude-root, --include-agents)
+E         
+E       assert 2 == 0
+E        +  where 2 = <Result SystemExit(2)>.exit_code
+
+tests/test_prompt_defaults.py:83: AssertionError
+______________ test_explicit_context_is_separate_from_all[codex] _______________
+
+prompt_file = (PosixPath('/private/var/folders/yp/7myn5z6j7sbbzgvtby4pxv6w0000gn/T/pytest-of-ivor/pytest-464/test_explicit_context_i...nhuman request\nhuman ending'}], 'internal_chat_message_metadata_passthrough': {'content_item_kinds': ['user.text']}}})
+
+    def test_explicit_context_is_separate_from_all(prompt_file):
+        path, _, _ = prompt_file
+        result = runner.invoke(app, ["prompts", "--file", str(path), "--include-context", "--json"])
+>       assert result.exit_code == 0, result.output
+E       AssertionError: Usage: root prompts [OPTIONS] [arg]
+E         Try 'root prompts --help' for help.
+E         
+E         Error: No such option: --include-context (Possible options: --claude-root, --include-agents)
+E         
+E       assert 2 == 0
+E        +  where 2 = <Result SystemExit(2)>.exit_code
+
+tests/test_prompt_defaults.py:83: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_prompt_defaults.py::test_plain_and_all_print_complete_human_prompts[claude-options0]
+FAILED tests/test_prompt_defaults.py::test_plain_and_all_print_complete_human_prompts[claude-options1]
+FAILED tests/test_prompt_defaults.py::test_plain_and_all_print_complete_human_prompts[codex-options0]
+FAILED tests/test_prompt_defaults.py::test_plain_and_all_print_complete_human_prompts[codex-options1]
+FAILED tests/test_prompt_defaults.py::test_all_lifts_explicit_limits_without_adding_context[claude]
+FAILED tests/test_prompt_defaults.py::test_all_lifts_explicit_limits_without_adding_context[codex]
+FAILED tests/test_prompt_defaults.py::test_explicit_context_is_separate_from_all[claude]
+FAILED tests/test_prompt_defaults.py::test_explicit_context_is_separate_from_all[codex]
+8 failed, 2 passed in 0.27s

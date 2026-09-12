@@ -1,0 +1,54 @@
+Maintenance changes made between SXR-CLI-03's acceptance and SXR-CLI-04's
+baseline, on the reviewer's approval. None of them touch src/ or tests/.
+
+These three hunks are RECONSTRUCTED rather than machine-generated, because none
+of the three files sits inside a per-slice snapshot: the two audit scripts live
+under audit/ (never snapshotted), and /docs/ is gitignored, so `git ls-files -o
+--exclude-standard docs` returned nothing and every earlier baseline silently
+contained no docs file. Each hunk is a single edit whose exact before-text is the
+line block shown, and the after-text is verbatim what is on disk now.
+
+D-06, hazard fix 1 of 2. A bare run can no longer write anywhere.
+
+diff a/audit/2026-09-10/verify_cli.py b/audit/2026-09-10/verify_cli.py
+--- a/audit/2026-09-10/verify_cli.py
++++ b/audit/2026-09-10/verify_cli.py
+@@ main() @@
+     parser.add_argument("--check", help="Run check IDs starting with this value")
+-    parser.add_argument(
+-        "--output", type=Path, default=Path(__file__).parent / "evidence/contracts.json"
+-    )
++    # Required on purpose. This used to default to evidence/contracts.json, so one bare
++    # run destroyed the preserved audit-time baseline there (see cli-refactor/ledger.md,
++    # "Known evidence gap"). Naming the destination is now the caller's job.
++    parser.add_argument(
++        "--output", type=Path, required=True, help="Write the JSON receipt here (required)"
++    )
+
+D-06, hazard fix 2 of 2. Same defect, milder consequence (see the ledger).
+
+diff a/audit/2026-09-11/cli-refactor/verify_prompts.py b/audit/2026-09-11/cli-refactor/verify_prompts.py
+--- a/audit/2026-09-11/cli-refactor/verify_prompts.py
++++ b/audit/2026-09-11/cli-refactor/verify_prompts.py
+@@ main() @@
+     parser = argparse.ArgumentParser(description=__doc__)
+-    parser.add_argument(
+-        "--output", type=Path, default=Path(__file__).parent / "evidence/migrated-contracts.json"
+-    )
++    # Required for the same reason as verify_cli.py: this used to default into evidence/,
++    # and a bare run during slice 3 rewrote slice 1's receipt there.
++    parser.add_argument(
++        "--output", type=Path, required=True, help="Write the JSON receipt here (required)"
++    )
+
+Approved annotation of a dated research report. Pure insertion after the
+paragraph that recommended what SXR-CLI-03 implemented; the analysis itself is
+left exactly as written.
+
+diff a/docs/session-search-hints-research.md b/docs/session-search-hints-research.md
+--- a/docs/session-search-hints-research.md
++++ b/docs/session-search-hints-research.md
+@@ after the "One interaction deserves attention" paragraph @@
+ One interaction deserves attention: `show --type text --around 1247` currently selects by type and ignores the around window. `_base_selection` checks type first. Use `--around` without `--type` when you want a physical event window. Making these filters intersect would be a separate behavior change with regression tests.
++
++> **Superseded 2026-09-11 (SXR-CLI-03).** The change this paragraph recommended was made, as its own reviewed slice with regression tests. `show --type text --around 1247` now intersects: the selection runs as one order — window (`--around` or `--range`, never both), then kind (`--type`), then `--errors`, then `--tail`, then `-n` — in `src/sxr/show_select.py`. `_base_selection` no longer exists. The analysis above is left as written because it describes version 0.6.0 and is dated evidence for that decision.

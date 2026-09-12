@@ -1,0 +1,29 @@
+{
+  "verified_at": "2026-09-10T12:32:35.908344+00:00",
+  "result": "passed",
+  "report": "audit/2026-09-10/command-review/commands-before-after.csv",
+  "sha256": "c24d00ed08a09caed659c8ab3298db0b2b1166fa97f204742447f3662b1f63e4",
+  "rows": 408,
+  "columns": 21,
+  "by_kind": {
+    "command": 21,
+    "option": 288,
+    "argument": 17,
+    "interaction": 20,
+    "work state": 1,
+    "action": 6,
+    "environment": 12,
+    "proposed option": 43
+  },
+  "command_entries": 18,
+  "parser_surfaces": 21,
+  "parameter_entries": 305,
+  "flag_spellings": 66,
+  "help_checks": 21,
+  "synthetic_observations": 39,
+  "csv_round_trip": true,
+  "all_parameters_and_aliases_covered": true,
+  "product_source_unchanged": true,
+  "prior_prompt_test_state": "8 failed, 2 passed. Proposal tests remain unimplemented and unchanged.",
+  "scope": "Report validation only. Does not claim the current full product test suite passes or that proposals have shipped."
+}

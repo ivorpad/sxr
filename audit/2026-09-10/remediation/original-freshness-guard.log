@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/path/to/sxr/audit/2026-09-10/build_report.py", line 286, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/path/to/sxr/audit/2026-09-10/build_report.py", line 235, in main
+    raise ValueError(f"Audited source changed; evidence needs refresh: {changed}")
+ValueError: Audited source changed; evidence needs refresh: ['README.md', 'src/sxr/cli.py', 'src/sxr/find_query.py', 'src/sxr/flags.py', 'src/sxr/handles.py', 'src/sxr/index_records.py', 'src/sxr/onboard.py', 'src/sxr/providers/claude_code.py', 'src/sxr/providers/codex.py', 'src/sxr/read_cache.py', 'src/sxr/secrets/clean.py', 'src/sxr/secrets/records.py', 'src/sxr/secrets_commands.py', 'src/sxr/show_command.py', 'src/sxr/views_info.py', 'src/sxr/views_read.py', 'src/sxr/views_secrets.py', 'tests/test_secrets.py']

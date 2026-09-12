@@ -1,0 +1,15 @@
+{
+  "argv": [
+    ".venv/bin/pytest",
+    "tests/test_prompt_defaults.py"
+  ],
+  "started": "2026-09-10T11:53:07.748137+00:00",
+  "ended": "2026-09-10T11:53:08.215445+00:00",
+  "exit_code": 1,
+  "source_identity": "source-391558f5f35f26ad.json",
+  "source_unchanged": true,
+  "evidence": "prompt-defaults-before.log",
+  "artifacts": {
+    "prompt-defaults-before.log": "f0674b6b837e44bfa9f2855b7137cebbf02413f60f536119451d2beb5e188cfe"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "argv": [
+    ".venv/bin/pytest",
+    "tests/test_audit_retrieval.py",
+    "tests/test_find.py",
+    "tests/test_read_cache.py",
+    "tests/test_providers.py",
+    "tests/test_scope.py",
+    "tests/test_secrets.py",
+    "tests/test_secret_audit_records.py",
+    "tests/test_secrets_cli.py",
+    "tests/test_secret_rewrite.py",
+    "tests/test_clean.py"
+  ],
+  "started": "2026-09-10T10:57:10.018023+00:00",
+  "ended": "2026-09-10T10:57:11.708914+00:00",
+  "exit_code": 0,
+  "source_identity": "source-e84d82af7f3bda20.json",
+  "source_unchanged": true,
+  "evidence": "retrieval-tests.log"
+}

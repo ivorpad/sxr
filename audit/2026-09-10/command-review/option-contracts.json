@@ -1,0 +1,203 @@
+{
+  "json": {
+    "root": "Sets JSON output for bare list and commands that merge root flags. Does not work for root-prefixed skills/init/index in the current implementation.",
+    "list": "One derived session metadata object per output line. Not original transcript JSONL. Timestamp strings are display-formatted.",
+    "show": "Complete original source JSONL objects for selected events, deduplicated by physical sequence. Selection still applies. Raw siblings within a selected record remain present.",
+    "prompts": "Complete original source JSONL objects for selected prompt events, deduplicated by physical sequence. A raw record can contain sibling non-prompt blocks.",
+    "errors": "Complete original source JSONL objects for selected errors, deduplicated by physical sequence after error selection.",
+    "tools": "One derived type=tools aggregate containing calls, errors and skill_inputs. No source session identity. -n does not trim its keys.",
+    "stats": "One derived type=stats object per selected session. Counts include human-formatted strings such as tokens and size.",
+    "path": "One type=path object per distinct selected path.",
+    "grep": "Without -c/-l, one original source JSONL object per matching normalized event, so one physical record can repeat. -c emits grep_count aggregates. -l overrides JSON and prints plain IDs.",
+    "cmds": "One original source JSONL object per tool call, potentially repeated when a source record contains multiple calls. Paired result state is not added to the raw record.",
+    "find": "One structured envelope with results (or paths), total, complete, coverage and errors. Evidence is bounded excerpts, not whole raw records.",
+    "skills": "One structured envelope with grouped skills, totals, completeness, errors, coverage and index metadata. Overrides text --paths rendering.",
+    "secrets": "One masked type=secret object per distinct fingerprint. Raw values never printed.",
+    "secrets audit": "One masked type=secret object per distinct fingerprint. Raw values never printed.",
+    "secrets clean": "One masked type=clean object per changed physical file, with counts and applied flag. Completion/skip/failure totals are printed on stderr, not as JSON records."
+  },
+  "limits": {
+    "root": [
+      "Session rows",
+      "all",
+      "Keep -n as session count for bare list and pass it only to compatible commands.",
+      "P2"
+    ],
+    "list": [
+      "Session rows in text and metadata objects in JSON",
+      "all",
+      "Keep the session unit and include explicit omitted counts in JSON mode.",
+      "P2"
+    ],
+    "show": [
+      "Normalized events in text, distinct physical source records in JSON",
+      "all",
+      "Make the limit unit explicit per format and keep complete raw records. Never drop sibling events from a selected raw record.",
+      "P2"
+    ],
+    "prompts": [
+      "Prompt events in text, distinct physical source records in JSON",
+      "all",
+      "Keep all human prompts by default. Explicit -n caps selected prompts only. Proposed --all lifts presentation limits without changing provenance selection.",
+      "P1"
+    ],
+    "errors": [
+      "Error events in text, distinct physical error source records in JSON, globally across sessions",
+      "all",
+      "Keep a global error-result cap and complete raw JSON records. Include source identity in text.",
+      "P2"
+    ],
+    "tools": [
+      "Tool-name rows in text. JSON always emits one complete aggregate",
+      "all",
+      "Count tool entries in either format and include total/omitted metadata if JSON is capped.",
+      "P2"
+    ],
+    "stats": [
+      "Field/value rows in text, complete session objects in JSON",
+      "all",
+      "Count complete session summaries consistently in text and JSON.",
+      "P2"
+    ],
+    "path": [
+      "Distinct file paths in either format",
+      "all",
+      "Keep a global cap after path deduplication and continue reporting omissions on stderr.",
+      "Keep"
+    ],
+    "grep": [
+      "Match rows, context windows, matching IDs or count-table sessions according to output mode. 0 also disables match budget",
+      "all rows, budget still applies unless -n 0",
+      "Define the unit for each mode. Make -n 0 remove only the count cap and use --all for wholly uncapped output.",
+      "P1"
+    ],
+    "cmds": [
+      "Tool call rows globally across sessions. JSON may duplicate a physical record",
+      "all",
+      "Keep a global call cap for text/events JSON. Deduplicate whole source records before applying raw JSON limits.",
+      "P2"
+    ],
+    "find": [
+      "Matching sessions, or source paths in --paths mode",
+      "5 ranked sessions; all paths",
+      "Retain 5 ranked sessions and unlimited path default. 0 explicitly means all results. Show the defaults in both parser help paths.",
+      "Keep"
+    ],
+    "skills": [
+      "Content groups, or physical files with --copies, before alias expansion",
+      "20 groups; all groups with --paths",
+      "Keep 20 normal results. In path mode cap distinct emitted paths after expansion, and honor inherited root limits.",
+      "P1"
+    ],
+    "secrets": [
+      "Distinct secret fingerprints after full-scope tally",
+      "all",
+      "Keep output-only cap with full-scope counts and explicit omitted count.",
+      "Keep"
+    ],
+    "secrets audit": [
+      "Distinct secret fingerprints after full-scope tally",
+      "all",
+      "Keep output-only cap with full-scope counts and explicit omitted count.",
+      "Keep"
+    ],
+    "secrets clean": [
+      "Changed-file report rows. All selected files are still scanned and, with --apply, rewritten",
+      "all",
+      "Retain display-only limit. Spell out that this is not a maximum number of files to rewrite.",
+      "P1"
+    ]
+  },
+  "arguments": {
+    "show arg": [
+      "Newest session by default. Accepts @N, inclusive @A:@B range, unique ID prefix or unique name. Implementation silently reads only the first resolved reference.",
+      "Honor all selected sessions and identify each in output.",
+      "sxr show @1:@2 --full",
+      "P1"
+    ],
+    "prompts arg": [
+      "Newest session by default. Accepts @N, inclusive range, unique ID prefix or unique name. Implementation silently reads only the first resolved reference.",
+      "Honor all selected sessions with source identity and complete human prompt text.",
+      "sxr prompts --codex @1:@2",
+      "P1"
+    ],
+    "tools arg": [
+      "Newest session by default. Accepts a range but silently reads only the first reference.",
+      "Honor each selected session and identify its tool summary.",
+      "sxr tools @1:@2",
+      "P1"
+    ],
+    "errors arg": [
+      "Newest session by default. Resolves all references in a range, preserving scope order.",
+      "Retain range support and put source session/sequence on every result.",
+      "sxr errors @1:@2",
+      "P1"
+    ],
+    "stats arg": [
+      "Newest session by default. A range yields separate session statistics.",
+      "Retain selection and use whole-session limit units.",
+      "sxr stats @1:@2 -n 1",
+      "P2"
+    ],
+    "path arg": [
+      "Newest session by default. A range yields all selected provider paths, deduplicated.",
+      "Retain range support and exact path output.",
+      "sxr path @1:@2",
+      "Keep"
+    ],
+    "grep arg": [
+      "Optional second positional selects sessions. Omitted means all in scope. -e makes the first positional the selector instead.",
+      "Retain explicit scope and the targeted unquoted-pattern error. Document the -e shift.",
+      "sxr grep -e '--flag' @2",
+      "Keep"
+    ],
+    "grep pattern": [
+      "One smart-case regex positional, optional only when --regexp/-e supplies it. Invalid regex exits 2. -F enables literal substring matching.",
+      "Retain one-pattern grammar and helpful errors. Do not guess whether a second word is a session.",
+      "sxr grep -F 'two words' @2",
+      "Keep"
+    ],
+    "cmds arg": [
+      "Newest session by default, except nonempty --grep with no selector scans every session. A range selects all its references.",
+      "Keep newest as the stable default and add explicit --all-sessions for cross-session command search.",
+      "sxr cmds --all-sessions --grep 'git push'",
+      "P2"
+    ],
+    "find query": [
+      "One optional shell argument containing up to 12 distinct word or quoted-phrase clues. Required unless --index. Inner parsing uses shell-style quoting and drops punctuation-only clues.",
+      "Accept QUERY... arguments while preserving the existing single-string and quoted-phrase grammar. Keep the 12-clue bound with a clear diagnostic.",
+      "sxr find webhook retries --any",
+      "P2"
+    ],
+    "skills query": [
+      "One optional query string, default empty. Path/name substring clues are case-insensitive. Colons are treated as clue separators. Exact directory names rank first.",
+      "Accept multiple clue arguments and preserve current name/path matching. Explain --exact applies to names.",
+      "sxr skills plugin notify --paths",
+      "P2"
+    ],
+    "init file": [
+      "Optional target file used only with --write/--check. Otherwise nearest AGENTS.md or --global fallback. Mutually exclusive with --global.",
+      "Keep explicit file targeting and current fallback. State the resolved destination in output.",
+      "sxr init ./AGENTS.md --check",
+      "Keep"
+    ],
+    "secrets audit arg": [
+      "Omitted audits every session in scope. Selectors support @N, ranges, unique prefixes and names. Shorthand secrets SESSION forwards here.",
+      "Retain whole-scope default and shorthand. Expose audit in help so reserved action names are clear.",
+      "sxr secrets audit @1:@2",
+      "P2"
+    ],
+    "secrets clean arg": [
+      "Omitted cleans/previews all references in scope, then expands physical copies and Claude children. A range selects references before expansion.",
+      "Define physical scope identically across audit/preview/apply and preserve that selection in follow-up commands.",
+      "sxr secrets clean @1:@2",
+      "P1"
+    ],
+    "serve action": [
+      "Optional status or stop, default status. Typer declares an unconstrained string and delegates validation. --foreground bypasses the action in the fast parser.",
+      "Declare one shared choice type and validate internal foreground launch separately.",
+      "sxr serve status",
+      "P2"
+    ]
+  }
+}

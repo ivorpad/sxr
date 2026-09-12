@@ -1,0 +1,641 @@
+diff --git a/README.md b/README.md
+index ec55130..2184cbd 100644
+--- a/README.md
++++ b/README.md
+@@ -251,7 +251,7 @@ sxr grep -c "timeout" @1:@5    # which sessions mention it, before reading any
+ sxr grep "release" @2 -C 3     # matches with surrounding events inline
+ sxr grep -c "x" --before today # history only, not your own (live) session
+ sxr secrets                    # leaked keys/passwords as kind+fingerprint, values never shown
+-sxr clean                      # preview replacing those with masked markers; --apply writes
++sxr secrets clean              # preview redaction; --apply writes changes
+ sxr errors @6 --json | jq .    # the original records, untouched
+ sxr init --write               # teach agents sxr before their first call
+ ```
+@@ -331,7 +331,7 @@ Claude or Codex from the records, retains parent-qualified Claude child IDs,
+ and checks an optional session ID and explicit provider/project/profile flags.
+ Follow-up commands printed by sxr include the file path automatically, so they
+ still select the same copy after changing directories. `--file` scopes every
+-session command to that one file, including `path` and `clean`.
++session command to that one file, including `path` and `secrets clean`.
+ 
+ The first `show --around`, `--range`, `--type` or `--tail` caches event positions
+ and annotations for the selected file. Repeated zooms seek to the selected
+@@ -362,11 +362,34 @@ Search, ranked retrieval, and read caches share
+ It contains derived transcript data and is created with owner-only access.
+ Verified appends index new records; edits, replacements and truncations rebuild
+ the affected file. An incomplete final line is revisited when more bytes arrive.
+-`clean --apply` clears the index before and after cleaning. Unavailable, locked
++`secrets clean --apply` clears the index before and after cleaning. Unavailable, locked
+ or corrupt caches fall back to direct reads for grep and read views; `find`
+ reports an error. `index --clear` removes a bad cache.
+ Indexing requires SQLite 3.43 or newer with FTS5, included by the Homebrew install.
+ 
++`sxr secrets` audits the selected sessions and prints masked fingerprints.
++`sxr secrets clean` previews redaction; add `--apply` to replace the files.
++The former top-level `sxr clean` command has moved under `secrets`. Both commands
++default to Claude sessions in the current project. Use `--codex` for Codex,
++repeat `--claude-root` for multiple Claude profiles, or use `--file` for one file.
++
++Cleaning detects credentials in decoded JSON string values, including escaped
++text, serialized JSON, multiline private keys and structured password fields. It preserves
++property names, unrelated values, untouched lines and line endings. Invalid
++UTF-8 or JSON lines remain unchanged. Only certain/probable findings are
++redacted; entropy-only candidates remain review material. Unsupported bundled
++rules stop the scan with an error instead of silently reducing coverage.
++
++Each run scans the selected files. Activity checks read timestamps from the
++end of each file, and files without findings need no temporary copy. Cleaning
++includes selected duplicate copies and Claude children, checks each file for
++recent activity, and skips sessions with a timestamp within ten minutes of now.
++An explicit `--file` includes no copies or children. Changed files are replaced
++atomically after checking their identity, size and timestamps; no backup is kept.
++These checks cannot exclude a write between the final check and replacement,
++so run `--apply` after the selected sessions have stopped. File errors return
++exit 2. Redaction removes local occurrences, but does not revoke credentials.
++
+ An agent searching history matches its own transcript: the search it just ran
+ is a record in the session it is running in, so counts drift between two
+ identical calls and the top-ranked "source" is itself. Sessions written in the
+diff --git a/packaging/verify.py b/packaging/verify.py
+index fb7df38..a549b44 100644
+--- a/packaging/verify.py
++++ b/packaging/verify.py
+@@ -147,12 +147,12 @@ def verify(executable, environment, sources):
+         "find",
+         "index",
+         "secrets",
+-        "clean",
+         "init",
+         "serve",
+         "skills",
+     ):
+         assert run(command, "--help")
++    assert run("secrets", "clean", "--help")
+     for provider in ("--claude", "--codex"):
+         assert run("list", provider, "--path", "/w", "--json")
+         for command in ("show", "prompts", "errors", "tools", "stats", "path"):
+@@ -161,7 +161,7 @@ def verify(executable, environment, sources):
+         assert "needle" in run("grep", "needle", provider, "--path", "/w")
+         assert "needle" in run("cmds", "--grep", "echo", provider, "--path", "/w")
+         run("secrets", provider, "--path", "/w", codes=(0, 1))
+-        run("clean", provider, "--path", "/w", codes=(0, 1))
++        run("secrets", "clean", provider, "--path", "/w", codes=(0, 1))
+     result = json.loads(run("find", "needle", "--all-projects", "--json"))
+     assert result["total"] == 2 and result["complete"]
+     status = json.loads(run("serve", "status"))
+diff --git a/src/sxr/cli.py b/src/sxr/cli.py
+index d9a1d2a..4203767 100644
+--- a/src/sxr/cli.py
++++ b/src/sxr/cli.py
+@@ -10,7 +10,7 @@ from sxr.handles import fail, resolve
+ from sxr.onboard import EPILOG
+ from sxr.scope_options import scope_options
+ from sxr.search_index import cmds_view, grep_view, index_cmd
+-from sxr.secrets_commands import clean_cmd, secrets_cmd
++from sxr.secrets_group import app as secrets_app
+ from sxr.show_command import show
+ from sxr.views_grep import GrepOpts
+ 
+@@ -262,10 +262,9 @@ def cmds(
+     raise typer.Exit(cmds_view(refs, provider, json_out, limit, grep_))
+ 
+ 
+-# init, secrets, and clean carry their own flags; their modules own them.
++# These commands carry their own flags; their modules own them.
+ app.command("init")(onboard.init_cmd)
+-app.command("secrets")(scope_options(secrets_cmd))
+-app.command("clean")(scope_options(clean_cmd))
++app.add_typer(secrets_app, name="secrets")
+ app.command("index")(scope_options(index_cmd))
+ app.command("find")(scope_options(find_cmd))
+ skills_command.register(app)
+diff --git a/src/sxr/onboard.py b/src/sxr/onboard.py
+index ae67d4d..a941b73 100644
+--- a/src/sxr/onboard.py
++++ b/src/sxr/onboard.py
+@@ -26,7 +26,7 @@ to --line-limit chars (default 200; env SXR_LINE_LIMIT) and say so.
+ secrets: sxr secrets audits the scope for leaked keys and passwords
+ (vendored gitleaks rules + structural checks). Rows are kind, severity,
+ and salted fingerprint; the value itself is never printed, --json included,
+-because sxr's own output lands in the corpus it audits. sxr clean previews
++because sxr's own output lands in the corpus it audits. sxr secrets clean previews
+ replacing those values with [sxr:redacted:<kind>:<fp>] markers; only
+ --apply writes, atomically, skipping (live) sessions and entropy-tier
+ candidates. Rotation is the fix; cleaning only stops re-propagation.
+diff --git a/src/sxr/secrets/clean.py b/src/sxr/secrets/clean.py
+index a1a6f46..d46f523 100644
+--- a/src/sxr/secrets/clean.py
++++ b/src/sxr/secrets/clean.py
+@@ -11,7 +11,6 @@ credential is the real remediation.
+ """
+ 
+ import contextlib
+-import json
+ import os
+ import sqlite3
+ import sys
+@@ -20,10 +19,12 @@ from collections import Counter
+ from dataclasses import dataclass, field
+ from pathlib import Path
+ 
++from sxr.file_stamp import signature
+ from sxr.index_store import clear
+ from sxr.model import SessionRef
+-from sxr.secrets.detect import scan_text
+-from sxr.secrets.fingerprint import marker
++from sxr.secrets.files import last_timestamp, physical_paths
++from sxr.secrets.patterns import load_rules
++from sxr.secrets.records import clean_line as _clean_line
+ from sxr.util import is_live, tab_row
+ 
+ 
+@@ -38,123 +39,115 @@ class FileResult:
+     error: str = ""
+ 
+ 
+-def _strings(node, out: list) -> None:
+-    """Collect every string value in a parsed record, nested included."""
+-    if isinstance(node, str):
+-        out.append(node)
+-    elif isinstance(node, dict):
+-        for value in node.values():
+-            _strings(value, out)
+-    elif isinstance(node, list):
+-        for value in node:
+-            _strings(value, out)
++def _copy_prefix(source, target, length):
++    """Copy the already scanned prefix in bounded chunks when the first secret is found."""
++    source.seek(0)
++    while length:
++        chunk = source.read(min(length, 1048576))
++        if not chunk:
++            raise OSError("changed while cleaning; skipped")
++        target.write(chunk)
++        length -= len(chunk)
+ 
+ 
+-def _replacements(line: str) -> dict[str, tuple[str, str]]:
+-    """value -> (marker, kind) for every certain/probable finding in one line."""
+-    try:
+-        rec = json.loads(line)
+-    except json.JSONDecodeError:
+-        return {}
+-    strings: list[str] = []
+-    _strings(rec, strings)
+-    found: dict[str, tuple[str, str]] = {}
+-    for text in strings:
+-        for f in scan_text(text):
+-            found[f.value] = (marker(f.kind, f.value), f.kind)
+-    return found
+-
+-
+-def _clean_line(raw: bytes) -> tuple[bytes, int, list[str]]:
+-    """(new bytes, replacement count, kinds) for one raw JSONL line.
+-
+-    A secret whose exact text is absent from the raw line (JSON escaping
+-    inside the value) is left alone rather than risk a mangling rewrite.
+-    """
+-    try:
+-        line = raw.decode("utf-8")
+-    except UnicodeDecodeError:
+-        return raw, 0, []
+-    found = _replacements(line)
+-    if not found:
+-        return raw, 0, []
+-    kinds: list[str] = []
+-    count = 0
+-    for value, (mark, kind) in found.items():
+-        hits = line.count(value)
+-        if hits:
+-            line = line.replace(value, mark)
+-            count += hits
+-            kinds.append(kind)
+-    if not count:
+-        return raw, 0, []
+-    try:
+-        json.loads(line)
+-    except json.JSONDecodeError:
+-        return raw, 0, []  # never write a line the readers cannot parse
+-    return line.encode("utf-8"), count, kinds
+-
+-
+-def _clean_file(path: Path, apply: bool) -> FileResult:
++def _clean_file(path: Path, apply: bool, expected=None) -> FileResult:
+     """Scan one file; with apply, rewrite via a validated atomic replace."""
+     result = FileResult(path.name)
+-    stat = path.stat()
+     tmp_name = ""
+     try:
++        path = path.resolve(strict=True)
+         with contextlib.ExitStack() as stack:
++            source = stack.enter_context(path.open("rb"))
++            stat = os.fstat(source.fileno())
++            stamp = signature(stat)
++            if (expected and stamp != expected) or signature(path.stat()) != stamp:
++                raise OSError("changed before cleaning; skipped")
+             tmp = None
+-            if apply:
+-                tmp = stack.enter_context(
+-                    tempfile.NamedTemporaryFile(dir=path.parent, delete=False)
+-                )
+-                tmp_name = tmp.name
+-            for raw in stack.enter_context(path.open("rb")):
++            offset = 0
++            for raw in source:
+                 new, count, kinds = _clean_line(raw)
+                 if count:
+                     result.lines += 1
+                     result.replacements += count
+                     result.kinds.update(kinds)
++                    if apply and tmp is None:
++                        tmp = stack.enter_context(
++                            tempfile.NamedTemporaryFile(dir=path.parent, delete=False)
++                        )
++                        tmp_name = tmp.name
++                        _copy_prefix(source, tmp, offset)
++                        source.seek(offset + len(raw))
+                 if tmp:
+                     tmp.write(new)
+-        if not apply:
+-            return result
+-        if not result.replacements:
+-            os.unlink(tmp_name)
+-            return result
+-        after = path.stat()
+-        if (after.st_mtime_ns, after.st_size) != (stat.st_mtime_ns, stat.st_size):
+-            os.unlink(tmp_name)
+-            result.error = "changed while cleaning; skipped"
+-            return result
+-        os.chmod(tmp_name, stat.st_mode & 0o777)
+-        os.replace(tmp_name, path)
+-        return result
+-    except OSError as exc:
++                offset += len(raw)
++            if signature(os.fstat(source.fileno())) != stamp:
++                raise OSError("changed while cleaning; skipped")
++            if tmp:
++                tmp.flush()
++                os.fsync(tmp.fileno())
+         if tmp_name:
+-            Path(tmp_name).unlink(missing_ok=True)
+-        result.error = str(exc)
+-        return result
++            os.chmod(tmp_name, stat.st_mode & 0o777)
++        if signature(path.stat()) != stamp:
++            raise OSError("changed while cleaning; skipped")
++        if tmp_name:
++            os.replace(tmp_name, path)
++    except (OSError, ValueError, UnicodeError, RecursionError) as exc:
++        # Scanner exceptions can contain input text; only filesystem messages are safe.
++        result.error = str(exc) if isinstance(exc, OSError) else type(exc).__name__
++    finally:
++        if tmp_name:
++            try:
++                Path(tmp_name).unlink(missing_ok=True)
++            except OSError as exc:
++                result.error = f"{result.error}; cannot remove temporary file: {exc}".lstrip("; ")
++    return result
++
++
++def _clear_cache(stage):
++    """Drop cached transcript data before and after apply, reporting incomplete work."""
++    try:
++        clear()
++    except (OSError, sqlite3.Error) as exc:
++        print(f"error: cannot clear search index {stage} cleaning: {exc}", file=sys.stderr)
++        return False
++    return True
+ 
+ 
+ def clean_view(refs: list[SessionRef], session_paths, apply: bool) -> int:
+     """Clean (or preview) every file of every session in scope; exit 1 if none."""
+-    if apply:
+-        try:
+-            clear()
+-        except (OSError, sqlite3.Error) as exc:
+-            print(f"error: cannot clear search index before cleaning: {exc}", file=sys.stderr)
+-            return 2
+-    total = files = 0
++    try:
++        load_rules()
++    except ValueError as exc:
++        print(f"error: {exc}", file=sys.stderr)
++        return 2
++    if apply and not _clear_cache("before"):
++        return 2
++    total = files = errors = 0
+     skipped_live = 0
++    seen = set()
+     print(tab_row("# session", "file", "lines", "replacements", "kinds"))
+     for ref in refs:
+-        ref.summarize()
+-        if is_live(ref.ended):
+-            skipped_live += 1
++        try:
++            paths = physical_paths(ref, session_paths)
++        except OSError as exc:
++            errors += 1
++            print(f"# {ref.short_id}: {exc}", file=sys.stderr)
+             continue
+-        for path in session_paths(ref):
+-            r = _clean_file(path, apply)
++        for path in paths:
++            if path in seen:
++                continue
++            seen.add(path)
++            try:
++                expected = signature(path.stat())
++                if (path == ref.path and is_live(ref.ended)) or is_live(last_timestamp(path)):
++                    skipped_live += 1
++                    continue
++                r = _clean_file(path, apply, expected=expected)
++            except (OSError, ValueError, RecursionError) as exc:
++                message = str(exc) if isinstance(exc, OSError) else type(exc).__name__
++                r = FileResult(path.name, error=message)
+             if r.error:
++                errors += 1
+                 print(f"# {ref.short_id}/{r.name}: {r.error}", file=sys.stderr)
+                 continue
+             if not r.replacements:
+@@ -165,18 +158,15 @@ def clean_view(refs: list[SessionRef], session_paths, apply: bool) -> int:
+             print(tab_row(ref.short_id, r.name, r.lines, r.replacements, kinds))
+     if skipped_live:
+         print(f"# skipped {skipped_live} (live) session(s) still being written")
++    if apply and not _clear_cache("after"):
++        return 2
++    if errors:
++        print(f"# cleaning incomplete: {errors} file(s) failed", file=sys.stderr)
++        return 2
+     if not total:
+         print("# nothing to clean in scope")
+         return 1
+     if apply:
+-        try:
+-            clear()
+-        except (OSError, sqlite3.Error) as exc:
+-            print(
+-                f"error: files cleaned but search index could not be cleared: {exc}",
+-                file=sys.stderr,
+-            )
+-            return 2
+         print(
+             f"# cleaned {total} secret occurrences across {files} files; "
+             "markers: [sxr:redacted:<kind>:<fp>]. Rotation is still the real fix."
+@@ -184,6 +174,6 @@ def clean_view(refs: list[SessionRef], session_paths, apply: bool) -> int:
+     else:
+         print(
+             f"# DRY RUN: {total} occurrences across {files} files; nothing written. "
+-            "Write with: sxr clean --apply"
++            "Write with: sxr secrets clean --apply"
+         )
+     return 0
+diff --git a/src/sxr/secrets/detect.py b/src/sxr/secrets/detect.py
+index 647870b..e332dc3 100644
+--- a/src/sxr/secrets/detect.py
++++ b/src/sxr/secrets/detect.py
+@@ -86,7 +86,9 @@ def _apply_rule(rule: Rule, text: str, offset: int) -> list[Finding]:
+     ruleset = load_rules()
+     found = []
+     for m in rule.regex.finditer(text):
+-        group = rule.secret_group or (1 if m.lastindex else 0)
++        group = rule.secret_group or next(
++            (index for index, value in enumerate(m.groups(), 1) if value), 0
++        )
+         secret = m.group(group) or ""
+         if not secret or (rule.entropy and shannon(secret) < rule.entropy):
+             continue
+@@ -112,7 +114,7 @@ def _rule_findings(text: str, low: str) -> list[Finding]:
+     """
+     combined, by_keyword, bare = keyword_index()
+     found = []
+-    if len(text) <= SMALL_TEXT:
++    if len(text) <= SMALL_TEXT or len(low) != len(text):
+         triggered: dict[int, Rule] = {id(r): r for r in bare}
+         for hit in set(combined.findall(low)):
+             triggered.update((id(r), r) for r in by_keyword[hit])
+@@ -125,6 +127,9 @@ def _rule_findings(text: str, low: str) -> list[Finding]:
+         lo, hi = max(0, m.start() - WINDOW_BEFORE), min(len(text), m.end() + WINDOW_AFTER)
+         for rule in by_keyword[m.group(0)]:
+             rules[id(rule)] = rule
++            if rule.id == "private-key":
++                windows[id(rule)] = [[0, len(text)]]
++                continue
+             spans = windows.setdefault(id(rule), [])
+             if spans and lo <= spans[-1][1]:
+                 spans[-1][1] = max(hi, spans[-1][1])
+diff --git a/src/sxr/secrets/fingerprint.py b/src/sxr/secrets/fingerprint.py
+index ff71b83..5a2da53 100644
+--- a/src/sxr/secrets/fingerprint.py
++++ b/src/sxr/secrets/fingerprint.py
+@@ -35,7 +35,9 @@ def _salt(path: Path) -> bytes:
+ 
+ def fingerprint(value: str) -> str:
+     """8-hex salted tag for a secret value."""
+-    return hashlib.sha256(_salt(salt_path()) + value.encode()).hexdigest()[:8]
++    return hashlib.sha256(
++        _salt(salt_path()) + value.encode("utf-8", errors="surrogatepass")
++    ).hexdigest()[:8]
+ 
+ 
+ def marker(kind: str, value: str) -> str:
+diff --git a/src/sxr/secrets/patterns.py b/src/sxr/secrets/patterns.py
+index 5a7a487..b71e4b3 100644
+--- a/src/sxr/secrets/patterns.py
++++ b/src/sxr/secrets/patterns.py
+@@ -1,20 +1,21 @@
+ """Vendored gitleaks ruleset (MIT, github.com/gitleaks/gitleaks) for Python re.
+ 
+ gitleaks.toml ships verbatim from upstream; updating coverage means
+-replacing that file, not editing regexes here. Rules whose regex Python's
+-re cannot compile are skipped at load and counted in RuleSet.skipped.
++replacing that file, not editing regexes here. Go regex syntax is translated
++before compilation; unsupported rules stop the scan instead of losing coverage.
+ This module only loads and compiles: each Rule carries its keywords,
+ entropy threshold, secretGroup, and allowlists for detect.py to apply.
+ """
+ 
+ import re
+ import tomllib
+-import warnings
+ from dataclasses import dataclass
+ from functools import lru_cache
+ from importlib import resources
+ 
+-GENERIC_RULE_IDS = frozenset({"generic-api-key", "curl-auth-user"})
++from sxr.secrets.rule_regex import compile_rule
++
++GENERIC_RULE_IDS = frozenset({"generic-api-key", "curl-auth-user", "curl-auth-header"})
+ 
+ 
+ @dataclass(frozen=True)
+@@ -50,10 +51,7 @@ def _allow_parts(entries) -> tuple[list[re.Pattern], list[str]]:
+     stopwords: list[str] = []
+     for entry in entries or []:
+         for rx in entry.get("regexes", []):
+-            try:
+-                regexes.append(re.compile(rx))
+-            except re.error:
+-                continue
++            regexes.append(compile_rule(rx))
+         stopwords.extend(str(s).lower() for s in entry.get("stopwords", []))
+     return regexes, stopwords
+ 
+@@ -66,17 +64,13 @@ def load_rules() -> RuleSet:
+     top = cfg.get("allowlist", {})
+     global_regexes, global_stopwords = _allow_parts([top])
+     rules: list[Rule] = []
+-    skipped: list[str] = []
+     for rec in cfg.get("rules", []):
+         if "regex" not in rec:
+             continue  # path-only rules; sxr scans transcripts, not file trees
+         try:
+-            with warnings.catch_warnings():
+-                warnings.simplefilter("ignore", FutureWarning)
+-                regex = re.compile(rec["regex"])
+-        except re.error:
+-            skipped.append(rec["id"])
+-            continue
++            regex = compile_rule(rec["regex"])
++        except (re.error, ValueError) as exc:
++            raise ValueError(f"cannot compile secret rule {rec['id']}: {exc}") from exc
+         allow_regexes, allow_stopwords = _allow_parts(rec.get("allowlists"))
+         rules.append(
+             Rule(
+@@ -93,7 +87,7 @@ def load_rules() -> RuleSet:
+         rules=tuple(rules),
+         allow_regexes=tuple(global_regexes),
+         allow_stopwords=tuple(global_stopwords),
+-        skipped=tuple(skipped),
++        skipped=(),
+     )
+ 
+ 
+@@ -119,5 +113,23 @@ def keyword_index() -> tuple[re.Pattern, dict[str, tuple[Rule, ...]], tuple[Rule
+         for sub in keywords:
+             if sub != k and sub in k:
+                 by_keyword[k].extend(by_keyword[sub])
+-    combined = re.compile("|".join(re.escape(k) for k in keywords))
++    combined = _keyword_regex(keywords)
+     return combined, {k: tuple(v) for k, v in by_keyword.items()}, tuple(bare)
++
++
++def _keyword_regex(keywords):
++    """Share prefix branches so each character does not try every provider keyword."""
++    trie = {}
++    for keyword in keywords:
++        node = trie
++        for char in keyword:
++            node = node.setdefault(char, {})
++        node[""] = {}
++
++    def branch(node):
++        choices = [re.escape(char) + branch(child) for char, child in node.items() if char]
++        if "" in node:
++            choices.append("")  # Prefer the longer keyword when one contains another.
++        return choices[0] if len(choices) == 1 else "(?:" + "|".join(choices) + ")"
++
++    return re.compile(branch(trie) if trie else r"(?!)")
+diff --git a/src/sxr/secrets_commands.py b/src/sxr/secrets_commands.py
+index cdceb09..3bef131 100644
+--- a/src/sxr/secrets_commands.py
++++ b/src/sxr/secrets_commands.py
+@@ -5,7 +5,7 @@ from typing import Annotated
+ import typer
+ 
+ from sxr import flags
+-from sxr.handles import resolve
++from sxr.handles import fail, resolve
+ 
+ CandidatesF = Annotated[
+     bool,
+@@ -36,8 +36,14 @@ def secrets_cmd(
+     row per distinct secret (kind, salted fingerprint, spread); the value
+     itself is never printed, in --json mode included.
+     """
++    from sxr.secrets.patterns import load_rules
+     from sxr.views_secrets import secrets_view
+ 
++    try:
++        load_rules()
++    except ValueError as exc:
++        fail(str(exc))
++    candidates = candidates or ctx.meta.get("secrets_candidates", False)
+     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
+     sessions = flags.sessions(ctx, provider, cwd, since, before)
+     refs = sessions if arg is None else resolve(arg, sessions)
+@@ -61,7 +67,7 @@ def clean_cmd(
+     Only certain/probable findings are rewritten, never entropy candidates.
+     Changed lines are validated as JSON and files replaced atomically;
+     (live) sessions are skipped. No backup is kept: a backup keeps the
+-    secrets. sxr secrets first shows what would be found.
++    secrets. Run without --apply first to preview the same cleaning scope.
+     """
+     from sxr.secrets.clean import clean_view
+ 
+diff --git a/tests/test_clean.py b/tests/test_clean.py
+index 6001a8f..b017a10 100644
+--- a/tests/test_clean.py
++++ b/tests/test_clean.py
+@@ -1,4 +1,4 @@
+-"""sxr clean: dry run by default, validated atomic rewrite, live-session skip."""
++"""sxr secrets clean: preview, validated atomic rewrite, live-session skip."""
+ 
+ import json
+ from datetime import UTC, datetime
+@@ -112,6 +112,6 @@ def test_racing_writer_skips_the_file(corpus, capsys, monkeypatch) -> None:
+     racing_stat.calls = 0
+     monkeypatch.setattr(mod.Path, "stat", racing_stat)
+     before = refs[0].path.read_bytes()
+-    assert clean_view([refs[0]], paths, apply=True) == 1
+-    assert "changed while cleaning; skipped" in capsys.readouterr().err
++    assert clean_view([refs[0]], paths, apply=True) == 2
++    assert "changed before cleaning; skipped" in capsys.readouterr().err
+     assert refs[0].path.read_bytes() == before
+diff --git a/tests/test_file_selection.py b/tests/test_file_selection.py
+index fa8b3ff..ee0d12d 100644
+--- a/tests/test_file_selection.py
++++ b/tests/test_file_selection.py
+@@ -127,7 +127,7 @@ def test_codex_file_uses_its_own_history_profile(tmp_path, monkeypatch):
+         ["cmds", "--json"],
+         ["cmds", "--grep", "ls|test"],
+         ["secrets", "--json"],
+-        ["clean"],
++        ["secrets", "clean"],
+     ],
+ )
+ def test_file_scope_matches_all_session_views(tmp_path, monkeypatch, writer, command):
+diff --git a/tests/test_lazy_discovery.py b/tests/test_lazy_discovery.py
+index decd382..d3c2f26 100644
+--- a/tests/test_lazy_discovery.py
++++ b/tests/test_lazy_discovery.py
+@@ -184,7 +184,7 @@ def test_clean_loads_live_state_before_touching_a_file(corpus, monkeypatch):
+ 
+     monkeypatch.setattr(clean, "_clean_file", unexpected)
+     original = path.read_bytes()
+-    result = invoke(provider, "clean", "session-2", "--apply")
++    result = invoke(provider, "secrets", "clean", "session-2", "--apply")
+     assert result.exit_code == 1, result.output
+     assert "skipped 1 (live) session" in result.stdout
+     assert path.read_bytes() == original
+diff --git a/tests/test_search_index.py b/tests/test_search_index.py
+index f2fe138..d5758cc 100644
+--- a/tests/test_search_index.py
++++ b/tests/test_search_index.py
+@@ -221,7 +221,7 @@ def test_command_search_matches_direct_results(transcript, monkeypatch):
+ def test_clean_removes_an_index_created_during_the_rewrite(transcript, monkeypatch):
+     from sxr.secrets import clean
+ 
+-    def rewrite(path, apply):
++    def rewrite(path, apply, **kwargs):
+         assert search_index.candidates([transcript], "needle", False)
+         return clean.FileResult(path.name, lines=1, replacements=1)
+ 
+@@ -235,7 +235,7 @@ def test_clean_refuses_to_write_when_the_index_cannot_be_cleared(transcript):
+     original = transcript.path.read_bytes()
+     with sqlite3.connect(index_store.index_path()) as db:
+         db.execute("BEGIN EXCLUSIVE")
+-        result = CliRunner().invoke(app, ["--path", "/w", "clean", "--apply"])
++        result = CliRunner().invoke(app, ["--path", "/w", "secrets", "clean", "--apply"])
+     assert result.exit_code == 2
+     assert "cannot clear search index" in result.stderr
+     assert transcript.path.read_bytes() == original

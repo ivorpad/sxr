@@ -1,0 +1,383 @@
+[
+  {
+    "id": "SXR-AUD-001",
+    "title": "Secret audit misses credentials in Write tool contents",
+    "priority": "P1",
+    "status": "open",
+    "check_prefixes": [
+      "SECRETS-write-input"
+    ],
+    "source_symbols": [
+      "src/sxr/views_secrets.py:secrets_view",
+      "src/sxr/providers/claude_code.py:_tool_arg"
+    ],
+    "expected": "The masked audit finds credentials stored in a recorded Write.content value.",
+    "observed": "The synthetic Write call contains a password assignment. secrets --json exits 1 with no finding. secrets clean previews one replacement in the same file.",
+    "impact": "A rotation worklist can incorrectly report a clean session containing a stored credential. The same omission can affect other tool input fields hidden by the display summary.",
+    "acceptance": [
+      "Scan relevant decoded record values rather than only display summaries",
+      "Keep credential values out of text and JSON output",
+      "Add a test asserting that audit and clean agree on this Write fixture"
+    ],
+    "requirement_basis": "README and CLI help"
+  },
+  {
+    "id": "SXR-AUD-002",
+    "title": "Time filters compare timestamp strings instead of instants",
+    "priority": "P2",
+    "status": "open",
+    "check_prefixes": [
+      "TIME-fraction",
+      "TIME-offset"
+    ],
+    "source_symbols": [
+      "src/sxr/handles.py:_stamp",
+      "src/sxr/handles.py:window"
+    ],
+    "expected": "Session membership follows the UTC half-open interval [since, before), independent of timestamp precision and offset spelling.",
+    "observed": "A session at 12:00:00.123Z is excluded by --before 12:00:00.123001Z. A session at 13:00:00+02:00 is excluded by --before 12:00:00Z even though it started at 11:00 UTC.",
+    "impact": "Searches can omit the requested historical sessions or include sessions outside a time boundary.",
+    "acceptance": [
+      "Normalize both stored timestamps and bounds before comparing",
+      "Check inclusive since and exclusive before for equivalent offsets and mixed fractional precision",
+      "Preserve @N and today semantics"
+    ],
+    "requirement_basis": "README and CLI help"
+  },
+  {
+    "id": "SXR-AUD-003",
+    "title": "Counted Claude API errors disappear from the errors view",
+    "priority": "P2",
+    "status": "open",
+    "check_prefixes": [
+      "ERRORS-api-error"
+    ],
+    "source_symbols": [
+      "src/sxr/providers/claude_code.py:_record_events",
+      "src/sxr/providers/claude_code.py:_summarize",
+      "src/sxr/views_read.py:errors"
+    ],
+    "expected": "A Claude isApiErrorMessage record counted as an error can be inspected with errors and show --errors.",
+    "observed": "list --json reports errors=1 for the fixture, while errors --json returns no records and exits 1.",
+    "impact": "The aggregate error count points to a failure that the dedicated error view cannot retrieve.",
+    "acceptance": [
+      "Carry isApiErrorMessage into canonical error annotations",
+      "Return the original failed record in errors and show --errors",
+      "Keep list and stats error counts consistent"
+    ],
+    "requirement_basis": "Consistency between counted record properties and the errors command"
+  },
+  {
+    "id": "SXR-AUD-004",
+    "title": "Normalized find matches can produce excerpts with no matching text",
+    "priority": "P2",
+    "status": "open",
+    "check_prefixes": [
+      "FIND-unicode-evidence"
+    ],
+    "source_symbols": [
+      "src/sxr/find_query.py:_excerpt"
+    ],
+    "expected": "The excerpt for a normalized match shows the original source occurrence, including diacritic-insensitive matches.",
+    "observed": "Query cafe matches a long event ending in café, but the returned excerpt contains only its leading padding. The match lies beyond the excerpt because position lookup uses unnormalized substring search.",
+    "impact": "Agents receive a correctly matched session with evidence that does not demonstrate why it matched.",
+    "acceptance": [
+      "Locate excerpt spans using tokenization compatible with ranked matching",
+      "Retain a mapping to original source character positions",
+      "Test long events with diacritics and normalization differences"
+    ],
+    "requirement_basis": "README and CLI help"
+  },
+  {
+    "id": "SXR-AUD-005",
+    "title": "show, prompts and errors ignore row limits in JSON mode",
+    "priority": "P2",
+    "status": "open",
+    "check_prefixes": [
+      "LIMIT-json-show",
+      "LIMIT-json-prompts",
+      "LIMIT-json-errors"
+    ],
+    "source_symbols": [
+      "src/sxr/views_read.py:show",
+      "src/sxr/views_read.py:prompts",
+      "src/sxr/views_read.py:errors"
+    ],
+    "expected": "-n 1 returns at most one JSONL record, keeping that record complete.",
+    "observed": "The fixtures return 7 records from show, 3 from prompts, and 2 from errors with --json -n 1. cmds honors the same combination.",
+    "impact": "Consumers cannot bound these read responses and may load an entire large transcript unexpectedly.",
+    "acceptance": [
+      "Apply row selection limits before JSON serialization",
+      "Keep returned records unmodified",
+      "Report omissions through stderr or a documented metadata channel",
+      "Verify -n 0 still returns all records"
+    ],
+    "requirement_basis": "README and CLI help"
+  },
+  {
+    "id": "SXR-AUD-006",
+    "title": "errors applies text limits per session and hides omissions",
+    "priority": "P2",
+    "status": "open",
+    "check_prefixes": [
+      "LIMIT-errors-scope",
+      "LIMIT-errors-notice"
+    ],
+    "source_symbols": [
+      "src/sxr/views_read.py:errors"
+    ],
+    "expected": "The errors -n limit applies to the entire selected scope and a shortened view states the omitted count.",
+    "observed": "errors @1:@2 -n 1 prints two error rows. A single session with two errors prints one row but only reports a total of two errors, without stating one row was omitted.",
+    "impact": "Range scans exceed the requested budget and users can mistake a shortened list for the complete set of failures.",
+    "acceptance": [
+      "Track a scope-wide emitted-row count",
+      "Show a precise omitted-record notice",
+      "Cover multi-session and single-session limits"
+    ],
+    "requirement_basis": "README and CLI help"
+  },
+  {
+    "id": "SXR-AUD-007",
+    "title": "tools, stats, path and clean accept but ignore -n",
+    "priority": "P2",
+    "status": "open",
+    "check_prefixes": [
+      "LIMIT-tools",
+      "LIMIT-stats",
+      "LIMIT-path",
+      "LIMIT-clean"
+    ],
+    "source_symbols": [
+      "src/sxr/cli.py:tools",
+      "src/sxr/cli.py:stats",
+      "src/sxr/cli.py:path_cmd",
+      "src/sxr/secrets_commands.py:clean_cmd"
+    ],
+    "expected": "Commands that advertise a printed-row limit honor it, or reject an unsupported option.",
+    "observed": "With -n 1, tools prints two tool rows, stats prints 17 field rows, and path prints both parent and child paths. A clean preview also prints both selected file rows with -n 1.",
+    "impact": "The shared option appears valid while providing no control over these outputs.",
+    "acceptance": [
+      "Implement consistent row limits with omission notices or remove unsupported command options",
+      "Preserve explicit-file scope and unlimited zero semantics"
+    ],
+    "requirement_basis": "README and CLI help"
+  },
+  {
+    "id": "SXR-AUD-008",
+    "title": "--full still trims long transcript text",
+    "priority": "P2",
+    "status": "open",
+    "check_prefixes": [
+      "SHOW-full"
+    ],
+    "source_symbols": [
+      "src/sxr/views_read.py:_base_selection",
+      "src/sxr/views_read.py:show",
+      "src/sxr/onboard.py:EPILOG"
+    ],
+    "expected": "--full prints whole text, as both the help epilog and agent primer state.",
+    "observed": "show --full trims a synthetic user message larger than the default 40,000-character scan budget. --around correctly preserves the full text.",
+    "impact": "An agent following the documented recovery flag still loses content.",
+    "acceptance": [
+      "Treat --full as disabling text trimming, or consistently change the published contract",
+      "Add a long-record CLI check distinct from ordinary full-kind selection"
+    ],
+    "requirement_basis": "README and CLI help"
+  },
+  {
+    "id": "SXR-AUD-009",
+    "title": "Skill input counts multiply when calls share a record",
+    "priority": "P2",
+    "status": "open",
+    "check_prefixes": [
+      "TOOLS-skill-count"
+    ],
+    "source_symbols": [
+      "src/sxr/views_info.py:tools_view"
+    ],
+    "expected": "Two Skill blocks calling notify and review produce one input count for each.",
+    "observed": "calls reports Skill=2, but skill_inputs reports notify=2 and review=2. Each Skill event rescans all tool_use blocks in the original physical record.",
+    "impact": "Per-skill usage reports overcount batched tool calls.",
+    "acceptance": [
+      "Associate each event with its own input block or count each physical block once",
+      "Test two Skill calls plus an unrelated tool in the same record"
+    ],
+    "requirement_basis": "README and CLI help"
+  },
+  {
+    "id": "SXR-AUD-010",
+    "title": "Empty show selections exit successfully only in text mode",
+    "priority": "P2",
+    "status": "open",
+    "check_prefixes": [
+      "SHOW-empty"
+    ],
+    "source_symbols": [
+      "src/sxr/views_read.py:show"
+    ],
+    "expected": "An empty selection returns exit 1 regardless of output format.",
+    "observed": "show --type does-not-exist exits 0, while the same command with --json exits 1.",
+    "impact": "Scripts that use the documented exit code treat missing evidence as a successful result.",
+    "acceptance": [
+      "Return the same empty-result status for text and JSON",
+      "Check empty type, range and around selections"
+    ],
+    "requirement_basis": "README and CLI help"
+  },
+  {
+    "id": "SXR-AUD-011",
+    "title": "--tail 0 returns the entire selected transcript",
+    "priority": "P3",
+    "status": "open",
+    "check_prefixes": [
+      "SHOW-tail-zero"
+    ],
+    "source_symbols": [
+      "src/sxr/views_read.py:_selected"
+    ],
+    "expected": "Last zero events produces an empty selection; only -n 0 is documented as unlimited.",
+    "observed": "Python's [-0:] slice returns the complete selection, so --tail 0 --json emits every skeleton record.",
+    "impact": "A computed zero tail count can unexpectedly print a large transcript.",
+    "acceptance": [
+      "Handle zero explicitly or reject it with documented usage guidance",
+      "Validate negative tail counts",
+      "Keep positive tail order unchanged"
+    ],
+    "requirement_basis": "Inferred boundary behavior from 'Last N selected events' and the separate -n 0 convention"
+  },
+  {
+    "id": "SXR-AUD-012",
+    "title": "Negative row limits are accepted inconsistently",
+    "priority": "P3",
+    "status": "open",
+    "check_prefixes": [
+      "USAGE-negative-limit-"
+    ],
+    "source_symbols": [
+      "src/sxr/flags.py:merge",
+      "src/sxr/flags.py:LimitF"
+    ],
+    "expected": "A negative row count is a usage error, as already enforced by find and skills.",
+    "observed": "list, show, prompts, errors, tools, stats and cmds all accept -n -1 and exit 0. Some slice off a row, some emit none and some ignore the value.",
+    "impact": "A malformed calculated limit silently changes output instead of reporting the mistake.",
+    "acceptance": [
+      "Validate shared limits centrally as integers >= 0",
+      "Apply validation at every supported flag position",
+      "Retain the documented zero meaning"
+    ],
+    "requirement_basis": "Inferred consistency requirement with existing find/skills validation"
+  },
+  {
+    "id": "SXR-AUD-013",
+    "title": "path and secrets clean accept --json but emit plain text",
+    "priority": "P2",
+    "status": "open",
+    "check_prefixes": [
+      "FORMAT-clean-json",
+      "FORMAT-path-json"
+    ],
+    "source_symbols": [
+      "src/sxr/secrets_commands.py:clean_cmd",
+      "src/sxr/secrets/clean.py:clean_view",
+      "src/sxr/cli.py:path_cmd"
+    ],
+    "expected": "An accepted --json option emits structured output, or the command rejects the unsupported option.",
+    "observed": "The clean command advertises --json, accepts it and exits 0, but stdout contains a TSV header, data row and dry-run prose. path --json likewise accepts the option and returns a plain pathname.",
+    "impact": "Automation piping a clean preview to a JSON reader fails despite using an accepted flag.",
+    "acceptance": [
+      "Implement JSON output for preview/apply results or reject the flag clearly",
+      "Keep diagnostics separate and credential values masked"
+    ],
+    "requirement_basis": "README and CLI help"
+  },
+  {
+    "id": "SXR-AUD-014",
+    "title": "Limited secret worklists understate the number of findings",
+    "priority": "P2",
+    "status": "open",
+    "check_prefixes": [
+      "LIMIT-secrets-notice"
+    ],
+    "source_symbols": [
+      "src/sxr/views_secrets.py:secrets_view"
+    ],
+    "expected": "A worklist limited with -n reports the full distinct count and number omitted.",
+    "observed": "Two different synthetic password values are detected. With -n 1, the footer says '1 distinct secrets' and provides no omitted-count notice.",
+    "impact": "A user can stop rotating credentials after the one displayed row because the summary hides the remaining finding.",
+    "acceptance": [
+      "Compute totals before slicing",
+      "Report shown, total and omitted counts",
+      "Keep returned fingerprints stable across limited and unlimited views"
+    ],
+    "requirement_basis": "README and CLI help"
+  },
+  {
+    "id": "SXR-AUD-015",
+    "title": "A non-object JSONL record crashes transcript reads",
+    "priority": "P2",
+    "status": "open",
+    "check_prefixes": [
+      "USAGE-invalid-json-record"
+    ],
+    "source_symbols": [
+      "src/sxr/providers/claude_code.py:_iter_records",
+      "src/sxr/providers/claude_code.py:_record_events"
+    ],
+    "expected": "A structurally invalid record is skipped or reported through a controlled error without losing source-coordinate integrity.",
+    "observed": "A valid user record followed by JSON number 42 makes show --full exit 1 with an AttributeError traceback rather than a diagnostic.",
+    "impact": "One malformed record can make otherwise readable session evidence inaccessible and is reported using the documented empty-result exit code.",
+    "acceptance": [
+      "Validate decoded record shapes before accessing mapping fields",
+      "Keep later valid records readable or clearly mark the read incomplete",
+      "Apply the same policy to both providers and cache parsing"
+    ],
+    "requirement_basis": "Resilience expectation based on supported malformed/torn JSONL handling"
+  },
+  {
+    "id": "SXR-AUD-016",
+    "title": "Primer filesystem failures escape as Python tracebacks",
+    "priority": "P3",
+    "status": "open",
+    "check_prefixes": [
+      "INIT-file-error"
+    ],
+    "source_symbols": [
+      "src/sxr/onboard.py:install_primer",
+      "src/sxr/onboard.py:_apply"
+    ],
+    "expected": "An invalid or unwritable destination returns a useful filesystem diagnostic with exit 2.",
+    "observed": "init --write not-a-directory/AGENTS.md, where not-a-directory is an existing regular file, exits 1 with a FileExistsError traceback.",
+    "impact": "Setup automation receives the empty/stale status for a real write error, with an unnecessarily long exception dump.",
+    "acceptance": [
+      "Catch relevant filesystem errors at the command boundary",
+      "Report the destination and error on stderr",
+      "Keep the original file intact"
+    ],
+    "requirement_basis": "README and CLI help"
+  },
+  {
+    "id": "SXR-AUD-017",
+    "title": "The documented empty-result exit code omits the list exception",
+    "priority": "P3",
+    "status": "open",
+    "check_prefixes": [],
+    "source_symbols": [
+      "src/sxr/views_info.py:list_scope",
+      "src/sxr/onboard.py:EPILOG"
+    ],
+    "expected": "The exit-code reference clearly describes list returning 0 for an empty scope, if that deliberate exception remains.",
+    "observed": "README and top-level help say exit 1 means an empty result. list_scope explicitly returns 0 for an empty scope, and test_empty_json_list_keeps_stdout_machine_readable asserts that behavior.",
+    "impact": "Consumers following the global exit-code description cannot infer whether an empty listing is a miss or a successful command.",
+    "acceptance": [
+      "Document the empty-list exception in the README and help, or adopt a consistent behavior after reviewing compatibility",
+      "Keep the primer exit-code guidance consistent with the chosen rule"
+    ],
+    "requirement_basis": "Documentation consistency, confirmed by the existing empty-list CLI test",
+    "feature_ids": [
+      "DOC-EXIT-CODES"
+    ],
+    "pytest_selectors": [
+      "test_discovery.py::test_empty_json_list_keeps_stdout_machine_readable"
+    ]
+  }
+]

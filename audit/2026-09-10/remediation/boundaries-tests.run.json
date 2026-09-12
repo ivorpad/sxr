@@ -1,0 +1,17 @@
+{
+  "argv": [
+    ".venv/bin/pytest",
+    "tests/test_show_boundaries.py",
+    "tests/test_record_shape.py",
+    "tests/test_primer_errors.py",
+    "tests/test_onboard.py",
+    "tests/test_discovery.py",
+    "tests/test_read_cache.py"
+  ],
+  "started": "2026-09-10T11:04:44.381013+00:00",
+  "ended": "2026-09-10T11:04:44.549373+00:00",
+  "exit_code": 4,
+  "source_identity": "source-0c98be5f2cc8834b.json",
+  "source_unchanged": true,
+  "evidence": "boundaries-tests.log"
+}

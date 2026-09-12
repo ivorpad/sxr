@@ -1,0 +1,41 @@
+{
+  "generated_at": "2026-09-10T10:51:04.508337+00:00",
+  "passed": 0,
+  "failed": 1,
+  "results": [
+    {
+      "id": "SECRETS-write-input",
+      "expected": "Secret audit detects a password inside the contents of a recorded Write tool call.",
+      "status": "failed",
+      "detail": "AssertionError: audit exits 1 with no finding; clean detects the password",
+      "duration_seconds": 0.247004,
+      "calls": [
+        {
+          "argv": [
+            "secrets",
+            "--json",
+            "--file",
+            "<fixture-root>/extras/write-content.jsonl"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "secrets",
+            "clean",
+            "--file",
+            "<fixture-root>/extras/write-content.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "# session\tfile\tlines\treplacements\tkinds\nwrite-co\twrite-content.jsonl\t1\t1\tpassword-assignment(1)\n# DRY RUN: 1 occurrences across 1 files; nothing written. Write with: sxr secrets clean --apply\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    }
+  ],
+  "source_identity": "initial-source.json"
+}

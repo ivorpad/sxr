@@ -1,0 +1,51 @@
+{
+  "generated_at": "2026-09-10T10:57:51.574468+00:00",
+  "passed": 2,
+  "failed": 0,
+  "results": [
+    {
+      "id": "FIND-unicode-evidence",
+      "expected": "A normalized word match includes the matching source text in its excerpt.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.072995,
+      "calls": [
+        {
+          "argv": [
+            "find",
+            "cafe",
+            "--json",
+            "--file",
+            "<fixture-root>/extras/accent.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"results\": [{\"provider\": \"claude\", \"id\": \"accent\", \"path\": \"<fixture-root>/extras/accent.jsonl\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T12:00:00.000Z\", \"title\": \"padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding \", \"matched\": [\"cafe\"], \"sources\": [\"<fixture-root>/extras/accent.jsonl\"], \"evidence\": [{\"seq\": 1, \"part\": 0, \"kind\": \"text\", \"role\": \"user\", \"tool\": \"\", \"outcome\": \"\", \"text\": \"\\u2026padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding caf\\u00e9 unique ending\"}], \"follow_up\": \"sxr --file <fixture-root>/extras/accent.jsonl show accent --around 1 --context 3\"}], \"total\": 1, \"complete\": true, \"coverage\": [{\"root\": \"<fixture-root>/extras/accent.jsonl\", \"provider\": \"claude\", \"files\": 1, \"excluded\": 0, \"searched\": 1}], \"errors\": []}\n",
+          "stderr": "# refreshing ranked session index\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "FIND-unicode-match",
+      "expected": "Latin-diacritic normalization finds the correct source session.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.070857,
+      "calls": [
+        {
+          "argv": [
+            "find",
+            "cafe",
+            "--json",
+            "--file",
+            "<fixture-root>/extras/normalized.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"results\": [{\"provider\": \"claude\", \"id\": \"normalized\", \"path\": \"<fixture-root>/extras/normalized.jsonl\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T12:00:00.000Z\", \"title\": \"padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding \", \"matched\": [\"cafe\"], \"sources\": [\"<fixture-root>/extras/normalized.jsonl\"], \"evidence\": [{\"seq\": 1, \"part\": 0, \"kind\": \"text\", \"role\": \"user\", \"tool\": \"\", \"outcome\": \"\", \"text\": \"\\u2026padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding caf\\u00e9 ending\"}], \"follow_up\": \"sxr --file <fixture-root>/extras/normalized.jsonl show normalized --around 1 --context 3\"}], \"total\": 1, \"complete\": true, \"coverage\": [{\"root\": \"<fixture-root>/extras/normalized.jsonl\", \"provider\": \"claude\", \"files\": 1, \"excluded\": 0, \"searched\": 1}], \"errors\": []}\n",
+          "stderr": "# refreshing ranked session index\n",
+          "environment_overrides": {}
+        }
+      ]
+    }
+  ]
+}

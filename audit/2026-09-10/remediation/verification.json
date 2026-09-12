@@ -1,0 +1,77 @@
+{
+  "checks": {
+    "argv": [
+      "env",
+      "UV_CACHE_DIR=/private/tmp/sxr-astra-uv-cache",
+      "PYTEST_ADDOPTS=--junitxml=audit/2026-09-10/remediation/pytest-permitted.xml",
+      "just",
+      "check"
+    ],
+    "started": "2026-09-10T11:13:38.827781+00:00",
+    "ended": "2026-09-10T11:13:50.476292+00:00",
+    "exit_code": 0,
+    "source_identity": "source-e3c3deb911732ffd.json",
+    "source_unchanged": true,
+    "evidence": "final-checks-permitted.log",
+    "artifacts": {
+      "final-checks-permitted.log": "fc4ecc75854ab7bbfbfbae287f9c5c9bd29fe5e5ae4670be8aac4aa3837f7a78",
+      "pytest-permitted.xml": "d25a36ef0736e3feaf82257c42b762c394389dc7290037d416c936bf8e33a126"
+    }
+  },
+  "contracts": {
+    "argv": [
+      ".venv/bin/python",
+      "audit/2026-09-10/verify_cli.py",
+      "--output",
+      "audit/2026-09-10/remediation/final-contracts.json"
+    ],
+    "started": "2026-09-10T11:11:03.290918+00:00",
+    "ended": "2026-09-10T11:11:10.052905+00:00",
+    "exit_code": 0,
+    "source_identity": "source-9795519e2aaa2fa7.json",
+    "source_unchanged": true,
+    "evidence": "final-contracts.log",
+    "artifacts": {
+      "final-contracts.log": "cb2196900aec49534f9fd1d769e1b0bba04e7fa9e3476207541944562fd42af8",
+      "final-contracts.json": "689422f3880de158a96aaa8b121e912a388ffd92db607b20706bb0baf61dabb1"
+    }
+  },
+  "build": {
+    "argv": [
+      "env",
+      "PYTHONPATH=/private/tmp/sxr-audit-packaging-deps:/path/to/sxr/src",
+      "PYINSTALLER_CONFIG_DIR=/private/tmp/sxr-astra-pyinstaller",
+      ".venv/bin/python",
+      "packaging/build.py",
+      "--output",
+      "/private/tmp/sxr-astra-bundle"
+    ],
+    "started": "2026-09-10T11:11:03.290915+00:00",
+    "ended": "2026-09-10T11:11:14.929162+00:00",
+    "exit_code": 0,
+    "source_identity": "source-9795519e2aaa2fa7.json",
+    "source_unchanged": true,
+    "evidence": "bundle-build.log",
+    "artifacts": {
+      "bundle-build.log": "95f036de3f1c59a805addbd0df1f450e75ba7fc31a0b53008bd14ed0b8740fd4",
+      "/private/tmp/sxr-astra-bundle/sxr-0.12.2-macos-arm64.tar.gz": "2476be5a5a49b8cfa7a5f6fa379117d7cc21daa7747c1868888a4a7cf61af657"
+    }
+  },
+  "bundle": {
+    "argv": [
+      ".venv/bin/python",
+      "packaging/verify.py",
+      "/private/tmp/sxr-astra-bundle/sxr-0.12.2-macos-arm64.tar.gz"
+    ],
+    "started": "2026-09-10T11:13:44.389528+00:00",
+    "ended": "2026-09-10T11:13:48.951685+00:00",
+    "exit_code": 0,
+    "source_identity": "source-e3c3deb911732ffd.json",
+    "source_unchanged": true,
+    "evidence": "bundle-verify.log",
+    "artifacts": {
+      "bundle-verify.log": "f6009dd51cb95204920d96906082b04be79d180092a52868343d2805f79b3060",
+      "/private/tmp/sxr-astra-bundle/sxr-0.12.2-macos-arm64.tar.gz": "2476be5a5a49b8cfa7a5f6fa379117d7cc21daa7747c1868888a4a7cf61af657"
+    }
+  }
+}

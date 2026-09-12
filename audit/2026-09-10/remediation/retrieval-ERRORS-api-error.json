@@ -1,0 +1,40 @@
+{
+  "generated_at": "2026-09-10T10:57:51.642145+00:00",
+  "passed": 1,
+  "failed": 0,
+  "results": [
+    {
+      "id": "ERRORS-api-error",
+      "expected": "A Claude record counted as an API error is available in the errors view.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.215858,
+      "calls": [
+        {
+          "argv": [
+            "list",
+            "--json",
+            "--file",
+            "<fixture-root>/extras/api-error.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"session\", \"id\": \"api-error\", \"provider\": \"claude\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T12:00:00Z\", \"live\": false, \"title\": \"request\", \"name\": \"\", \"kind\": \"\", \"model\": \"\", \"messages\": 2, \"errors\": 1, \"tokens\": 0, \"size_bytes\": 284, \"path\": \"<fixture-root>/extras/api-error.jsonl\", \"parent_id\": \"\", \"archived\": false, \"sources\": [\"<fixture-root>/extras/api-error.jsonl\"]}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "errors",
+            "--json",
+            "--file",
+            "<fixture-root>/extras/api-error.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"API Error: synthetic\"}]}, \"isApiErrorMessage\": true}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    }
+  ]
+}

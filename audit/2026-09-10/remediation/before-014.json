@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-09-10T10:51:52.030213+00:00",
+  "passed": 0,
+  "failed": 1,
+  "results": [
+    {
+      "id": "LIMIT-secrets-notice",
+      "expected": "A shortened secret worklist reports omitted findings and the full distinct count.",
+      "status": "failed",
+      "detail": "AssertionError: two detected values are reported as '1 distinct secrets' with no omitted-count notice",
+      "duration_seconds": 0.162629,
+      "calls": [
+        {
+          "argv": [
+            "secrets",
+            "-n",
+            "1",
+            "--file",
+            "<fixture-root>/extras/two-secrets.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "# kind\tseverity\tfingerprint\tsessions\thits\tfirst\npassword-assignment\tprobable\tbafc685d\t1\t1\ttwo-secr:1\n# 1 distinct secrets (0 certain); values never printed. Rotate certain ones first; zoom: sxr show <id> --around <seq>\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    }
+  ],
+  "source_identity": "initial-source.json"
+}

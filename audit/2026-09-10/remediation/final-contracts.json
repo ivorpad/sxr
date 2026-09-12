@@ -1,0 +1,1860 @@
+{
+  "generated_at": "2026-09-10T11:11:10.043690+00:00",
+  "passed": 67,
+  "failed": 0,
+  "results": [
+    {
+      "id": "HELP-root",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.09064,
+      "calls": [
+        {
+          "argv": [
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "Usage: -c [OPTIONS] COMMAND [ARGS]...\n\n  sxr: read Claude Code and Codex sessions for a directory.\n\n  Bare invocation lists sessions newest first, with @N handles.\n\nOptions:\n  --codex                  Read Codex sessions\n  --claude                 Read Claude Code sessions (default)\n  --path <path>            Inspect DIR instead of cwd\n  --json                   Raw JSONL records, never truncated\n  -n, --limit <int range>  Cap printed rows (0 = all)  [x>=0]\n  --since <str>            Sessions started on/after DATE (YYYY-MM-DD, ISO,\n                           today, @N)\n  --before <str>           Sessions started before DATE; --before today skips\n                           today's\n  --version                Print version and exit\n  --file <path>            Read this JSONL file directly; detect Claude or\n                           Codex\n  --recursive              Include sessions recorded in descendant directories\n  --worktrees              Include registered Git worktrees of the selected\n                           repository\n  --claude-root <path>     Claude config root to search; repeat for multiple\n                           profiles\n  --include-agents         Include nested Claude agent transcripts\n  --archives               Include Codex archived_sessions alongside active\n                           sessions\n  --coverage               Report searched/unavailable roots and discovered\n                           sources on stderr\n  --help                   Show this message and exit.\n\nCommands:\n  list     List sessions for the directory, newest first; (live) =...\n  show     Transcript skeleton; zooms (--around/--range/--type) print...\n  serve    Show status or stop the local find worker (bundled installs...\n  prompts  Human prompts in order, excluding records labelled as injected...\n  errors   Records with error properties (is_error, nonzero exit_code).\n  tools    Per-tool call and error counts.\n  stats    Counts by record property: the elevation view.\n  path     Print session file paths; feed them straight to jq.\n  grep     Search event text across all sessions in scope; -c ranks matches.\n  cmds     Tool commands with ok/err state; --grep searches all sessions...\n  init     Print the primer that teaches agents sxr, or install it in a...\n  index    Build or refresh the search index for a scope; --clear removes...\n  find     Find ranked sessions with evidence.\n  skills   Find installed SKILL.md files by name or path; sxr skills...\n  secrets  Audit leaked credentials, showing fingerprints only.\n\n  ids: @N from the list; @A:@B names a range; any unique id prefix; a session\n  name (set via /rename); no id at all means the newest session.\n  \b\n  output: tab-separated rows with a # header line; data on stdout, notices on\n  stderr; exit 0 = content (list also succeeds when empty), 1 = empty result,\n  2 = usage, bad id or an operation failure. --json\n  emits original JSONL in read views; find emits ranked evidence and coverage. ...[+N chars] marks a\n  display trim; zooms (--around, --range, --type) and --full print whole text.\n  \b\n  budgets: scan views (show, prompts) print whole text whenever they fit\n  --budget chars (default 40k; env SXR_BUDGET); over budget they trim lines\n  to --line-limit chars (default 200; env SXR_LINE_LIMIT) and say so.\n  --budget 0 disables trimming entirely.\n  \b\n  secrets: sxr secrets audits the scope for leaked keys and passwords\n  (vendored gitleaks rules + structural checks). Rows are kind, severity,\n  and salted fingerprint; the value itself is never printed, --json included,\n  because sxr's own output lands in the corpus it audits. sxr secrets clean previews\n  replacing those values with [sxr:redacted:<kind>:<fp>] markers; only\n  --apply writes, atomically, skipping (live) sessions and entropy-tier\n  candidates. Rotation is the fix; cleaning only stops re-propagation.\n  \b\n  scope: exact cwd by default; --path resolves relative paths, ~ and symlinks.\n  --recursive includes descendants; --worktrees includes registered Git worktrees.\n  Repeat --claude-root for explicit profiles; --include-agents searches Claude\n  children; --codex --archives includes archives. --coverage shows roots on stderr.\n  \b\n  examples:\n    sxr                          sessions for this directory (--codex for Codex)\n    sxr find \"webhook retries\"   ranked sessions and evidence, both providers\n    sxr skills notify --paths    locate an installed SKILL.md by name\n    sxr grep -c timeout          which sessions mention it, before reading any\n    sxr grep \"release\" @2 -C 3   matches with 3 surrounding events inline\n    sxr cmds @2                  every command a session ran, with ok/err\n    sxr cmds --grep \"git push\"   commands that did X, across all sessions\n    sxr grep -c x --before today history only: not your own (live) session\n    sxr show @2 --around 1247    untruncated window around event #1247\n    sxr show @2 --tail 5         how a session ended, whole text\n    sxr prompts                  user messages of the newest session, as stored\n    sxr errors @2                is_error records with event indexes\n    sxr init --write             install the primer in the nearest AGENTS.md\n    sxr init --check             is the installed primer this version?\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "HELP-list",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.063041,
+      "calls": [
+        {
+          "argv": [
+            "list",
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "Usage: -c list [OPTIONS]\n\n  List sessions for the directory, newest first; (live) = written just now.\n\nOptions:\n  --codex                  Read Codex sessions\n  --claude                 Read Claude Code sessions (default)\n  --path <path>            Inspect DIR instead of cwd\n  --json                   Raw JSONL records, never truncated\n  -n, --limit <int range>  Cap printed rows (0 = all)  [x>=0]\n  --since <str>            Sessions started on/after DATE (YYYY-MM-DD, ISO,\n                           today, @N)\n  --before <str>           Sessions started before DATE; --before today skips\n                           today's\n  --file <path>            Read this JSONL file directly; detect Claude or\n                           Codex\n  --recursive              Include sessions recorded in descendant directories\n  --worktrees              Include registered Git worktrees of the selected\n                           repository\n  --claude-root <path>     Claude config root to search; repeat for multiple\n                           profiles\n  --include-agents         Include nested Claude agent transcripts\n  --archives               Include Codex archived_sessions alongside active\n                           sessions\n  --coverage               Report searched/unavailable roots and discovered\n                           sources on stderr\n  --help                   Show this message and exit.\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "HELP-show",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.066176,
+      "calls": [
+        {
+          "argv": [
+            "show",
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "Usage: -c show [OPTIONS] [arg]\n\n  Transcript skeleton; zooms (--around/--range/--type) print whole text.\n\nArguments:\n  arg  Session: @N, @A:@B, id prefix, or name\n\nOptions:\n  --around <int>           Zoom to +/-context of event #N\n  --context <int>          Zoom window half-width  [default: 10]\n  --range <str>            Event span A:B\n  --type <str>             Record type filter\n  --tail <int range>       Last N selected events, whole text (0 = none)\n                           [x>=0]\n  --thinking\n  --tools\n  --errors\n  --full\n  --budget <int>           Chars before scan views trim (0 = never; env\n                           SXR_BUDGET)\n  --line-limit <int>       Per-line char cap when trimming (env\n                           SXR_LINE_LIMIT)\n  --codex                  Read Codex sessions\n  --claude                 Read Claude Code sessions (default)\n  --path <path>            Inspect DIR instead of cwd\n  --json                   Raw JSONL records, never truncated\n  -n, --limit <int range>  Cap printed rows (0 = all)  [x>=0]\n  --file <path>            Read this JSONL file directly; detect Claude or\n                           Codex\n  --recursive              Include sessions recorded in descendant directories\n  --worktrees              Include registered Git worktrees of the selected\n                           repository\n  --claude-root <path>     Claude config root to search; repeat for multiple\n                           profiles\n  --include-agents         Include nested Claude agent transcripts\n  --archives               Include Codex archived_sessions alongside active\n                           sessions\n  --coverage               Report searched/unavailable roots and discovered\n                           sources on stderr\n  --help                   Show this message and exit.\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "HELP-prompts",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.073221,
+      "calls": [
+        {
+          "argv": [
+            "prompts",
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "Usage: -c prompts [OPTIONS] [arg]\n\n  Human prompts in order, excluding records labelled as injected context.\n\nArguments:\n  arg  Session: @N, @A:@B, id prefix, or name\n\nOptions:\n  --all                    Include injected context and tool results\n  --budget <int>           Chars before scan views trim (0 = never; env\n                           SXR_BUDGET)\n  --line-limit <int>       Per-line char cap when trimming (env\n                           SXR_LINE_LIMIT)\n  --codex                  Read Codex sessions\n  --claude                 Read Claude Code sessions (default)\n  --path <path>            Inspect DIR instead of cwd\n  --json                   Raw JSONL records, never truncated\n  -n, --limit <int range>  Cap printed rows (0 = all)  [x>=0]\n  --file <path>            Read this JSONL file directly; detect Claude or\n                           Codex\n  --recursive              Include sessions recorded in descendant directories\n  --worktrees              Include registered Git worktrees of the selected\n                           repository\n  --claude-root <path>     Claude config root to search; repeat for multiple\n                           profiles\n  --include-agents         Include nested Claude agent transcripts\n  --archives               Include Codex archived_sessions alongside active\n                           sessions\n  --coverage               Report searched/unavailable roots and discovered\n                           sources on stderr\n  --help                   Show this message and exit.\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "HELP-cmds",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.060936,
+      "calls": [
+        {
+          "argv": [
+            "cmds",
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "Usage: -c cmds [OPTIONS] [arg]\n\n  Tool commands with ok/err state; --grep searches all sessions in scope.\n\n  --since/--before narrow the scope by session start date.\n\nArguments:\n  arg  Session: @N, @A:@B, id prefix, or name\n\nOptions:\n  --grep <str>             Only commands matching regex (smart-case)\n  --since <str>            Sessions started on/after DATE (YYYY-MM-DD, ISO,\n                           today, @N)\n  --before <str>           Sessions started before DATE; --before today skips\n                           today's\n  --codex                  Read Codex sessions\n  --claude                 Read Claude Code sessions (default)\n  --path <path>            Inspect DIR instead of cwd\n  --json                   Raw JSONL records, never truncated\n  -n, --limit <int range>  Cap printed rows (0 = all)  [x>=0]\n  --file <path>            Read this JSONL file directly; detect Claude or\n                           Codex\n  --recursive              Include sessions recorded in descendant directories\n  --worktrees              Include registered Git worktrees of the selected\n                           repository\n  --claude-root <path>     Claude config root to search; repeat for multiple\n                           profiles\n  --include-agents         Include nested Claude agent transcripts\n  --archives               Include Codex archived_sessions alongside active\n                           sessions\n  --coverage               Report searched/unavailable roots and discovered\n                           sources on stderr\n  --help                   Show this message and exit.\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "HELP-errors",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.067614,
+      "calls": [
+        {
+          "argv": [
+            "errors",
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "Usage: -c errors [OPTIONS] [arg]\n\n  Records with error properties (is_error, nonzero exit_code).\n\nArguments:\n  arg  Session: @N, @A:@B, id prefix, or name\n\nOptions:\n  --codex                  Read Codex sessions\n  --claude                 Read Claude Code sessions (default)\n  --path <path>            Inspect DIR instead of cwd\n  --json                   Raw JSONL records, never truncated\n  -n, --limit <int range>  Cap printed rows (0 = all)  [x>=0]\n  --file <path>            Read this JSONL file directly; detect Claude or\n                           Codex\n  --recursive              Include sessions recorded in descendant directories\n  --worktrees              Include registered Git worktrees of the selected\n                           repository\n  --claude-root <path>     Claude config root to search; repeat for multiple\n                           profiles\n  --include-agents         Include nested Claude agent transcripts\n  --archives               Include Codex archived_sessions alongside active\n                           sessions\n  --coverage               Report searched/unavailable roots and discovered\n                           sources on stderr\n  --help                   Show this message and exit.\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "HELP-tools",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.061198,
+      "calls": [
+        {
+          "argv": [
+            "tools",
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "Usage: -c tools [OPTIONS] [arg]\n\n  Per-tool call and error counts.\n\nArguments:\n  arg  Session: @N, @A:@B, id prefix, or name\n\nOptions:\n  --codex                  Read Codex sessions\n  --claude                 Read Claude Code sessions (default)\n  --path <path>            Inspect DIR instead of cwd\n  --json                   Raw JSONL records, never truncated\n  -n, --limit <int range>  Cap printed rows (0 = all)  [x>=0]\n  --file <path>            Read this JSONL file directly; detect Claude or\n                           Codex\n  --recursive              Include sessions recorded in descendant directories\n  --worktrees              Include registered Git worktrees of the selected\n                           repository\n  --claude-root <path>     Claude config root to search; repeat for multiple\n                           profiles\n  --include-agents         Include nested Claude agent transcripts\n  --archives               Include Codex archived_sessions alongside active\n                           sessions\n  --coverage               Report searched/unavailable roots and discovered\n                           sources on stderr\n  --help                   Show this message and exit.\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "HELP-stats",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.0663,
+      "calls": [
+        {
+          "argv": [
+            "stats",
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "Usage: -c stats [OPTIONS] [arg]\n\n  Counts by record property: the elevation view.\n\nArguments:\n  arg  Session: @N, @A:@B, id prefix, or name\n\nOptions:\n  --codex                  Read Codex sessions\n  --claude                 Read Claude Code sessions (default)\n  --path <path>            Inspect DIR instead of cwd\n  --json                   Raw JSONL records, never truncated\n  -n, --limit <int range>  Cap printed rows (0 = all)  [x>=0]\n  --file <path>            Read this JSONL file directly; detect Claude or\n                           Codex\n  --recursive              Include sessions recorded in descendant directories\n  --worktrees              Include registered Git worktrees of the selected\n                           repository\n  --claude-root <path>     Claude config root to search; repeat for multiple\n                           profiles\n  --include-agents         Include nested Claude agent transcripts\n  --archives               Include Codex archived_sessions alongside active\n                           sessions\n  --coverage               Report searched/unavailable roots and discovered\n                           sources on stderr\n  --help                   Show this message and exit.\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "HELP-path",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.060221,
+      "calls": [
+        {
+          "argv": [
+            "path",
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "Usage: -c path [OPTIONS] [arg]\n\n  Print session file paths; feed them straight to jq.\n\nArguments:\n  arg  Session: @N, @A:@B, id prefix, or name\n\nOptions:\n  --codex                  Read Codex sessions\n  --claude                 Read Claude Code sessions (default)\n  --path <path>            Inspect DIR instead of cwd\n  --json                   Raw JSONL records, never truncated\n  -n, --limit <int range>  Cap printed rows (0 = all)  [x>=0]\n  --file <path>            Read this JSONL file directly; detect Claude or\n                           Codex\n  --recursive              Include sessions recorded in descendant directories\n  --worktrees              Include registered Git worktrees of the selected\n                           repository\n  --claude-root <path>     Claude config root to search; repeat for multiple\n                           profiles\n  --include-agents         Include nested Claude agent transcripts\n  --archives               Include Codex archived_sessions alongside active\n                           sessions\n  --coverage               Report searched/unavailable roots and discovered\n                           sources on stderr\n  --help                   Show this message and exit.\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "HELP-grep",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.059368,
+      "calls": [
+        {
+          "argv": [
+            "grep",
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "Usage: -c grep [OPTIONS] [pattern] [arg]\n\n  Search event text across all sessions in scope; -c ranks matches.\n\n  --since/--before narrow the sessions; -n 0 lifts row and budget limits.\n\nArguments:\n  pattern  Regex (smart-case; -F for literal)\n  arg      Session: @N, @A:@B, id prefix, or name\n\nOptions:\n  -c, --count               Rank sessions: matches, first seq, started, title\n  -F, --fixed               Fixed string, not a regex\n  -C, --context <int>       Events around each match  [default: 0]\n  -i, --ignore-case         Match any case (default: smart-case)\n  -l, --files-with-matches  Print only ids of matching sessions\n  -e, --regexp <str>        Pattern (allows a leading dash)\n  --all                     -c: keep zero-match rows\n  --sort <str>              -c order: matches (default) or started (oldest\n                            first)  [default: matches]\n  --since <str>             Sessions started on/after DATE (YYYY-MM-DD, ISO,\n                            today, @N)\n  --before <str>            Sessions started before DATE; --before today skips\n                            today's\n  --budget <int>            Chars of match rows before grep stops (0 = all;\n                            env SXR_BUDGET)\n  --codex                   Read Codex sessions\n  --claude                  Read Claude Code sessions (default)\n  --path <path>             Inspect DIR instead of cwd\n  --json                    Raw JSONL records, never truncated\n  -n, --limit <int range>   Cap printed rows (0 = all)  [x>=0]\n  --file <path>             Read this JSONL file directly; detect Claude or\n                            Codex\n  --recursive               Include sessions recorded in descendant\n                            directories\n  --worktrees               Include registered Git worktrees of the selected\n                            repository\n  --claude-root <path>      Claude config root to search; repeat for multiple\n                            profiles\n  --include-agents          Include nested Claude agent transcripts\n  --archives                Include Codex archived_sessions alongside active\n                            sessions\n  --coverage                Report searched/unavailable roots and discovered\n                            sources on stderr\n  --help                    Show this message and exit.\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "HELP-find",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.037356,
+      "calls": [
+        {
+          "argv": [
+            "find",
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "usage: sxr find [-h] [--all-projects] [--any] [--index] [--codex] [--claude]\n                [--path PATH] [--json] [--paths] [--limit LIMIT] [--since SINCE]\n                [--before BEFORE] [--file FILE] [--claude-root CLAUDE_ROOTS]\n                [--recursive] [--worktrees] [--include-agents] [--archives]\n                [--coverage] [--include-current]\n                [--exclude-session EXCLUDE_SESSIONS]\n                [query]\n\nFind sessions with source evidence across Claude and Codex. Use a few\ndistinctive words or quoted phrases; default scope is cwd.\n\npositional arguments:\n  query                 Required words or quoted phrases\n\noptions:\n  -h, --help            show this help message and exit\n  --all-projects        Search every project\n  --any                 Match any clue\n  --index               Prepare the ranked search index\n  --codex               Only Codex\n  --claude              Only Claude\n  --path PATH           Project directory (default: cwd)\n  --json                Structured results\n  --paths               Matching source paths, without ranking or excerpts\n                        (default: all)\n  --limit, -n LIMIT     Session result limit (default: 5; 0: all)\n  --since SINCE         Session start on/after DATE\n  --before BEFORE       Session start before DATE\n  --file FILE           Search one verified transcript\n  --claude-root CLAUDE_ROOTS\n                        Claude config profile; repeat for several\n  --recursive           Include descendant projects\n  --worktrees           Include registered worktrees\n  --include-agents      Children are included by default\n  --archives            Archives are included by default\n  --coverage            Include source coverage\n  --include-current     Include the invoking Codex session\n  --exclude-session EXCLUDE_SESSIONS\n                        Exclude a full session ID; repeat for several\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "HELP-index",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.061404,
+      "calls": [
+        {
+          "argv": [
+            "index",
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "Usage: -c index [OPTIONS]\n\n  Build or refresh the search index for a scope; --clear removes its cached\n  data.\n\nOptions:\n  --clear               Remove the whole local search index\n  --codex               Read Codex sessions\n  --claude              Read Claude Code sessions (default)\n  --path <path>         Inspect DIR instead of cwd\n  --since <str>         Sessions started on/after DATE (YYYY-MM-DD, ISO,\n                        today, @N)\n  --before <str>        Sessions started before DATE; --before today skips\n                        today's\n  --file <path>         Read this JSONL file directly; detect Claude or Codex\n  --recursive           Include sessions recorded in descendant directories\n  --worktrees           Include registered Git worktrees of the selected\n                        repository\n  --claude-root <path>  Claude config root to search; repeat for multiple\n                        profiles\n  --include-agents      Include nested Claude agent transcripts\n  --archives            Include Codex archived_sessions alongside active\n                        sessions\n  --coverage            Report searched/unavailable roots and discovered\n                        sources on stderr\n  --help                Show this message and exit.\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "HELP-skills",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.040472,
+      "calls": [
+        {
+          "argv": [
+            "skills",
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "usage: sxr skills [-h] [--index] [--root ROOT] [--defaults] [--paths]\n                  [--aliases] [--copies] [--exact] [--json] [--limit LIMIT]\n                  [--clear]\n                  [query]\n\nFind installed SKILL.md files by directory name or path clues.\n\npositional arguments:\n  query              Skill name or qualified path clues\n\noptions:\n  -h, --help         show this help message and exit\n  --index            Discover SKILL.md files (default: all of HOME)\n  --root ROOT        Discover below this directory; repeat for more\n  --defaults         With --index, restore discovery across HOME\n  --paths            Print only canonical SKILL.md paths\n  --aliases          With --paths, include symlinked paths\n  --copies           Show every matching file instead of grouping by SHA-256\n  --exact            Match the whole skill directory name\n  --json             Include paths, aliases, roots, and completeness\n  --limit, -n LIMIT  Maximum skills (default: 20; --paths: all; 0: all)\n  --clear            Remove the default map and remembered roots\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "HELP-secrets",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.073665,
+      "calls": [
+        {
+          "argv": [
+            "secrets",
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "Usage: -c secrets [OPTIONS] COMMAND [ARGS]...\n\n  Audit leaked credentials, showing fingerprints only. Use clean to redact\n  them.\n\n  With no subcommand, audit the scope. A session ID, @N handle or name narrows\n  the audit: sxr secrets @2. Cleaning previews changes unless --apply is set.\n\nOptions:\n  --candidates             Include entropy review candidates\n  --since <str>            Sessions started on/after DATE (YYYY-MM-DD, ISO,\n                           today, @N)\n  --before <str>           Sessions started before DATE; --before today skips\n                           today's\n  --codex                  Read Codex sessions\n  --claude                 Read Claude Code sessions (default)\n  --path <path>            Inspect DIR instead of cwd\n  --json                   Raw JSONL records, never truncated\n  -n, --limit <int range>  Cap printed rows (0 = all)  [x>=0]\n  --file <path>            Read this JSONL file directly; detect Claude or\n                           Codex\n  --recursive              Include sessions recorded in descendant directories\n  --worktrees              Include registered Git worktrees of the selected\n                           repository\n  --claude-root <path>     Claude config root to search; repeat for multiple\n                           profiles\n  --include-agents         Include nested Claude agent transcripts\n  --archives               Include Codex archived_sessions alongside active\n                           sessions\n  --coverage               Report searched/unavailable roots and discovered\n                           sources on stderr\n  --help                   Show this message and exit.\n\nCommands:\n  clean  Replace leaked secrets in session files with masked markers.\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "HELP-init",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.064797,
+      "calls": [
+        {
+          "argv": [
+            "init",
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "Usage: -c init [OPTIONS] [file]\n\n  Print the primer that teaches agents sxr, or install it in a context file.\n\n  Bare init writes the block to stdout. --write inserts or replaces it between\n  <!-- sxr:primer vX.Y.Z --> markers in FILE (default: the nearest AGENTS.md\n  walking up from cwd; --global for the user file), so running it twice\n  changes nothing. --check exits 1 when the block is missing or stamped\n  another version. Unbalanced markers are never rewritten: exit 2.\n\nArguments:\n  file  Target file; default: nearest AGENTS.md\n\nOptions:\n  --write   Insert or replace the primer in FILE\n  --check   Is the installed primer this version?\n  --global  Target the user AGENTS.md/CLAUDE.md\n  --help    Show this message and exit.\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "HELP-serve",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.045311,
+      "calls": [
+        {
+          "argv": [
+            "serve",
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "usage: sxr serve [-h] [{status,stop}]\n\npositional arguments:\n  {status,stop}\n\noptions:\n  -h, --help     show this help message and exit\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "HELP-secrets-clean",
+      "expected": "Every public command provides help.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.064727,
+      "calls": [
+        {
+          "argv": [
+            "secrets",
+            "clean",
+            "--help"
+          ],
+          "exit_code": 0,
+          "stdout": "Usage: -c secrets clean [OPTIONS] [arg]\n\n  Replace leaked secrets in session files with masked markers. DRY RUN unless\n  --apply.\n\n  Only certain/probable findings are rewritten, never entropy candidates.\n  Changed lines are validated as JSON and files replaced atomically; (live)\n  sessions are skipped. No backup is kept: a backup keeps the secrets. Run\n  without --apply first to preview the same cleaning scope.\n\nArguments:\n  arg  Session: @N, @A:@B, id prefix, or name\n\nOptions:\n  --apply                  Write the changes; without it this is a dry run\n  --since <str>            Sessions started on/after DATE (YYYY-MM-DD, ISO,\n                           today, @N)\n  --before <str>           Sessions started before DATE; --before today skips\n                           today's\n  --codex                  Read Codex sessions\n  --claude                 Read Claude Code sessions (default)\n  --path <path>            Inspect DIR instead of cwd\n  --json                   Raw JSONL records, never truncated\n  -n, --limit <int range>  Cap printed rows (0 = all)  [x>=0]\n  --file <path>            Read this JSONL file directly; detect Claude or\n                           Codex\n  --recursive              Include sessions recorded in descendant directories\n  --worktrees              Include registered Git worktrees of the selected\n                           repository\n  --claude-root <path>     Claude config root to search; repeat for multiple\n                           profiles\n  --include-agents         Include nested Claude agent transcripts\n  --archives               Include Codex archived_sessions alongside active\n                           sessions\n  --coverage               Report searched/unavailable roots and discovered\n                           sources on stderr\n  --help                   Show this message and exit.\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "VERSION",
+      "expected": "The source entry point reports the package version.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.062114,
+      "calls": [
+        {
+          "argv": [
+            "--version"
+          ],
+          "exit_code": 0,
+          "stdout": "sxr 0.12.2\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "LIST-default",
+      "expected": "Bare invocation equals list; Claude is default and sessions are newest first.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.120184,
+      "calls": [
+        {
+          "argv": [
+            "--path",
+            "/sxr-audit-project",
+            "--json"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"session\", \"id\": \"aaa-main\", \"provider\": \"claude\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T12:00:00Z\", \"live\": false, \"title\": \"alpha needle first prompt\", \"name\": \"audit-main\", \"kind\": \"\", \"model\": \"\", \"messages\": 9, \"errors\": 2, \"tokens\": 0, \"size_bytes\": 1633, \"path\": \"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\", \"parent_id\": \"\", \"archived\": false, \"sources\": [\"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\"]}\n{\"type\": \"session\", \"id\": \"bbb-second\", \"provider\": \"claude\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-07-01T12:00:00Z\", \"live\": false, \"title\": \"second session needle\", \"name\": \"\", \"kind\": \"\", \"model\": \"\", \"messages\": 3, \"errors\": 1, \"tokens\": 0, \"size_bytes\": 527, \"path\": \"<fixture-root>/claude/projects/-sxr-audit-project/bbb-second.jsonl\", \"parent_id\": \"\", \"archived\": false, \"sources\": [\"<fixture-root>/claude/projects/-sxr-audit-project/bbb-second.jsonl\"]}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "list",
+            "--json",
+            "--path",
+            "/sxr-audit-project"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"session\", \"id\": \"aaa-main\", \"provider\": \"claude\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T12:00:00Z\", \"live\": false, \"title\": \"alpha needle first prompt\", \"name\": \"audit-main\", \"kind\": \"\", \"model\": \"\", \"messages\": 9, \"errors\": 2, \"tokens\": 0, \"size_bytes\": 1633, \"path\": \"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\", \"parent_id\": \"\", \"archived\": false, \"sources\": [\"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\"]}\n{\"type\": \"session\", \"id\": \"bbb-second\", \"provider\": \"claude\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-07-01T12:00:00Z\", \"live\": false, \"title\": \"second session needle\", \"name\": \"\", \"kind\": \"\", \"model\": \"\", \"messages\": 3, \"errors\": 1, \"tokens\": 0, \"size_bytes\": 527, \"path\": \"<fixture-root>/claude/projects/-sxr-audit-project/bbb-second.jsonl\", \"parent_id\": \"\", \"archived\": false, \"sources\": [\"<fixture-root>/claude/projects/-sxr-audit-project/bbb-second.jsonl\"]}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "LIST-provider",
+      "expected": "Codex listing and root/command flag positions select the same source.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.11746,
+      "calls": [
+        {
+          "argv": [
+            "list",
+            "--codex",
+            "--json",
+            "--path",
+            "/sxr-audit-project"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"session\", \"id\": \"codex-audit\", \"provider\": \"codex\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-02T12:00:00Z\", \"live\": false, \"title\": \"\", \"name\": \"\", \"kind\": \"\", \"model\": \"\", \"messages\": 1, \"errors\": 1, \"tokens\": 0, \"size_bytes\": 668, \"path\": \"<fixture-root>/codex/sessions/2026/08/02/rollout-audit.jsonl\", \"parent_id\": \"\", \"archived\": false, \"sources\": [\"<fixture-root>/codex/sessions/2026/08/02/rollout-audit.jsonl\"]}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "--codex",
+            "--json",
+            "--path",
+            "/sxr-audit-project",
+            "list"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"session\", \"id\": \"codex-audit\", \"provider\": \"codex\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-02T12:00:00Z\", \"live\": false, \"title\": \"\", \"name\": \"\", \"kind\": \"\", \"model\": \"\", \"messages\": 1, \"errors\": 1, \"tokens\": 0, \"size_bytes\": 668, \"path\": \"<fixture-root>/codex/sessions/2026/08/02/rollout-audit.jsonl\", \"parent_id\": \"\", \"archived\": false, \"sources\": [\"<fixture-root>/codex/sessions/2026/08/02/rollout-audit.jsonl\"]}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "SELECT-range",
+      "expected": "A session range includes both endpoints and accepts reversed bounds.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.12382,
+      "calls": [
+        {
+          "argv": [
+            "grep",
+            "needle",
+            "@1:@2",
+            "-c",
+            "--json",
+            "--path",
+            "/sxr-audit-project"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"grep_count\", \"session\": \"aaa-main\", \"matches\": 3, \"first\": 1, \"started\": \"2026-08-01\", \"live\": false, \"title\": \"audit-main\"}\n{\"type\": \"grep_count\", \"session\": \"bbb-second\", \"matches\": 1, \"first\": 1, \"started\": \"2026-07-01\", \"live\": false, \"title\": \"second session needle\"}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "grep",
+            "needle",
+            "@2:@1",
+            "-c",
+            "--json",
+            "--path",
+            "/sxr-audit-project"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"grep_count\", \"session\": \"aaa-main\", \"matches\": 3, \"first\": 1, \"started\": \"2026-08-01\", \"live\": false, \"title\": \"audit-main\"}\n{\"type\": \"grep_count\", \"session\": \"bbb-second\", \"matches\": 1, \"first\": 1, \"started\": \"2026-07-01\", \"live\": false, \"title\": \"second session needle\"}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "SELECT-identities",
+      "expected": "Handle, unique prefix, name, and omitted ID select the expected source.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.253079,
+      "calls": [
+        {
+          "argv": [
+            "path",
+            "--path",
+            "/sxr-audit-project"
+          ],
+          "exit_code": 0,
+          "stdout": "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "path",
+            "@1",
+            "--path",
+            "/sxr-audit-project"
+          ],
+          "exit_code": 0,
+          "stdout": "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "path",
+            "aaa",
+            "--path",
+            "/sxr-audit-project"
+          ],
+          "exit_code": 0,
+          "stdout": "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "path",
+            "audit-main",
+            "--path",
+            "/sxr-audit-project"
+          ],
+          "exit_code": 0,
+          "stdout": "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "FIND-roundtrip",
+      "expected": "Find combines providers, returns real evidence, and prints a working exact-file follow-up.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.230882,
+      "calls": [
+        {
+          "argv": [
+            "find",
+            "needle",
+            "--json",
+            "--path",
+            "/sxr-audit-project"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"results\": [{\"provider\": \"codex\", \"id\": \"codex-audit\", \"path\": \"<fixture-root>/codex/sessions/2026/08/02/rollout-audit.jsonl\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-02T12:00:00.000Z\", \"title\": \"codex needle\", \"matched\": [\"needle\"], \"sources\": [\"<fixture-root>/codex/sessions/2026/08/02/rollout-audit.jsonl\"], \"evidence\": [{\"seq\": 2, \"part\": 0, \"kind\": \"text\", \"role\": \"user\", \"tool\": \"\", \"outcome\": \"\", \"text\": \"codex needle\"}], \"follow_up\": \"sxr --file <fixture-root>/codex/sessions/2026/08/02/rollout-audit.jsonl show codex-audit --around 2 --context 3\"}, {\"provider\": \"claude\", \"id\": \"bbb-second\", \"path\": \"<fixture-root>/claude/projects/-sxr-audit-project/bbb-second.jsonl\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-07-01T12:00:00.000Z\", \"title\": \"second session needle\", \"matched\": [\"needle\"], \"sources\": [\"<fixture-root>/claude/projects/-sxr-audit-project/bbb-second.jsonl\"], \"evidence\": [{\"seq\": 1, \"part\": 0, \"kind\": \"text\", \"role\": \"user\", \"tool\": \"\", \"outcome\": \"\", \"text\": \"second session needle\"}], \"follow_up\": \"sxr --file <fixture-root>/claude/projects/-sxr-audit-project/bbb-second.jsonl show bbb-second --around 1 --context 3\"}, {\"provider\": \"claude\", \"id\": \"aaa-main\", \"path\": \"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T12:00:00.000Z\", \"title\": \"alpha needle first prompt\", \"matched\": [\"needle\"], \"sources\": [\"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\"], \"evidence\": [{\"seq\": 1, \"part\": 0, \"kind\": \"text\", \"role\": \"user\", \"tool\": \"\", \"outcome\": \"\", \"text\": \"alpha needle first prompt\"}], \"follow_up\": \"sxr --file <fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl show aaa-main --around 1 --context 3\"}], \"total\": 3, \"complete\": true, \"coverage\": [{\"root\": \"<fixture-root>/claude/projects\", \"provider\": \"claude\", \"files\": 2, \"excluded\": 0, \"searched\": 2}, {\"root\": \"<fixture-root>/codex/sessions\", \"provider\": \"codex\", \"files\": 1, \"excluded\": 0, \"searched\": 1}], \"errors\": []}\n",
+          "stderr": "# refreshing ranked session index\n",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "--file",
+            "<fixture-root>/codex/sessions/2026/08/02/rollout-audit.jsonl",
+            "show",
+            "codex-audit",
+            "--around",
+            "2",
+            "--context",
+            "3"
+          ],
+          "exit_code": 0,
+          "stdout": "session:  codex-audit\nfile:     <fixture-root>/codex/sessions/2026/08/02/rollout-audit.jsonl\nstarted:  2026-08-02T12:00:00Z\nevents:   4\n\n#0001  12:00:00  meta   session_meta \n#0002  --:--:--  user   text    \"codex needle\"\n#0003  --:--:--  asst   tool    exec_command \"{\"cmd\": \"echo needle\"}\" -> err\n#0004  --:--:--  user   result  (exec_command, is_error) \"synthetic failure\"\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/bbb-second.jsonl",
+            "show",
+            "bbb-second",
+            "--around",
+            "1",
+            "--context",
+            "3"
+          ],
+          "exit_code": 0,
+          "stdout": "session:  bbb-second\nfile:     <fixture-root>/claude/projects/-sxr-audit-project/bbb-second.jsonl\nstarted:  2026-07-01T12:00:00Z\nevents:   3\n\n#0001  12:00:00  user   text    \"second session needle\"\n#0002  --:--:--  asst   tool    Bash \"false\" -> err\n#0003  12:00:00  user   result  (Bash, is_error) \"synthetic failure\"\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl",
+            "show",
+            "aaa-main",
+            "--around",
+            "1",
+            "--context",
+            "3"
+          ],
+          "exit_code": 0,
+          "stdout": "session:  aaa-main\nfile:     <fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\nstarted:  2026-08-01T12:00:00Z\nevents:   11\n\n#0001  12:00:00  user   text    \"alpha needle first prompt\"\n#0002  12:00:00  user   text    \"beta NEEDLE second prompt\"\n#0003  12:00:00  user   text    \"third prompt with literal a.b and --dash\"\n#0004  --:--:--  asst   text    \"answer\"\n#0004  --:--:--  asst   think   \"private reasoning fixture\"\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "FIND-paths",
+      "expected": "Path mode returns every matching physical source in sorted order.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.045256,
+      "calls": [
+        {
+          "argv": [
+            "find",
+            "needle",
+            "--paths",
+            "--json",
+            "--path",
+            "/sxr-audit-project"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"paths\": [\"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\", \"<fixture-root>/claude/projects/-sxr-audit-project/bbb-second.jsonl\", \"<fixture-root>/codex/sessions/2026/08/02/rollout-audit.jsonl\"], \"total\": 3, \"complete\": true, \"coverage\": [{\"root\": \"<fixture-root>/claude/projects\", \"provider\": \"claude\", \"files\": 2, \"excluded\": 0, \"searched\": 2}, {\"root\": \"<fixture-root>/codex/sessions\", \"provider\": \"codex\", \"files\": 1, \"excluded\": 0, \"searched\": 1}], \"errors\": []}\n",
+          "stderr": "# refreshing ranked session index\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "FIND-freshness",
+      "expected": "A warm search sees source edits and removes stale matches.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.123607,
+      "calls": [
+        {
+          "argv": [
+            "find",
+            "alpha",
+            "--json",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"results\": [{\"provider\": \"claude\", \"id\": \"aaa-main\", \"path\": \"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T12:00:00.000Z\", \"title\": \"alpha needle first prompt\", \"matched\": [\"alpha\"], \"sources\": [\"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\"], \"evidence\": [{\"seq\": 1, \"part\": 0, \"kind\": \"text\", \"role\": \"user\", \"tool\": \"\", \"outcome\": \"\", \"text\": \"alpha needle first prompt\"}], \"follow_up\": \"sxr --file <fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl show aaa-main --around 1 --context 3\"}], \"total\": 1, \"complete\": true, \"coverage\": [{\"root\": \"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\", \"provider\": \"claude\", \"files\": 1, \"excluded\": 0, \"searched\": 1}], \"errors\": []}\n",
+          "stderr": "# refreshing ranked session index\n",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "find",
+            "alpha",
+            "--json",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 1,
+          "stdout": "{\"results\": [], \"total\": 0, \"complete\": true, \"coverage\": [{\"root\": \"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\", \"provider\": \"claude\", \"files\": 1, \"excluded\": 0, \"searched\": 1}], \"errors\": []}\n",
+          "stderr": "# refreshing ranked session index\n",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "find",
+            "replacement",
+            "--json",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"results\": [{\"provider\": \"claude\", \"id\": \"aaa-main\", \"path\": \"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T12:00:00.000Z\", \"title\": \"replacement needle first prompt\", \"matched\": [\"replacement\"], \"sources\": [\"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\"], \"evidence\": [{\"seq\": 1, \"part\": 0, \"kind\": \"text\", \"role\": \"user\", \"tool\": \"\", \"outcome\": \"\", \"text\": \"replacement needle first prompt\"}], \"follow_up\": \"sxr --file <fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl show aaa-main --around 1 --context 3\"}], \"total\": 1, \"complete\": true, \"coverage\": [{\"root\": \"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\", \"provider\": \"claude\", \"files\": 1, \"excluded\": 0, \"searched\": 1}], \"errors\": []}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "FIND-exclusion",
+      "expected": "Find excludes the current Codex thread unless explicitly included.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.086696,
+      "calls": [
+        {
+          "argv": [
+            "find",
+            "needle",
+            "--path",
+            "/sxr-audit-project",
+            "--json"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"results\": [{\"provider\": \"claude\", \"id\": \"bbb-second\", \"path\": \"<fixture-root>/claude/projects/-sxr-audit-project/bbb-second.jsonl\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-07-01T12:00:00.000Z\", \"title\": \"second session needle\", \"matched\": [\"needle\"], \"sources\": [\"<fixture-root>/claude/projects/-sxr-audit-project/bbb-second.jsonl\"], \"evidence\": [{\"seq\": 1, \"part\": 0, \"kind\": \"text\", \"role\": \"user\", \"tool\": \"\", \"outcome\": \"\", \"text\": \"second session needle\"}], \"follow_up\": \"sxr --file <fixture-root>/claude/projects/-sxr-audit-project/bbb-second.jsonl show bbb-second --around 1 --context 3\"}, {\"provider\": \"claude\", \"id\": \"aaa-main\", \"path\": \"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T12:00:00.000Z\", \"title\": \"alpha needle first prompt\", \"matched\": [\"needle\"], \"sources\": [\"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\"], \"evidence\": [{\"seq\": 1, \"part\": 0, \"kind\": \"text\", \"role\": \"user\", \"tool\": \"\", \"outcome\": \"\", \"text\": \"alpha needle first prompt\"}], \"follow_up\": \"sxr --file <fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl show aaa-main --around 1 --context 3\"}], \"total\": 2, \"complete\": true, \"coverage\": [{\"root\": \"<fixture-root>/claude/projects\", \"provider\": \"claude\", \"files\": 2, \"excluded\": 0, \"searched\": 2}, {\"root\": \"<fixture-root>/codex/sessions\", \"provider\": \"codex\", \"files\": 1, \"excluded\": 1, \"searched\": 0}], \"errors\": []}\n",
+          "stderr": "# excluded 1 session files; --include-current includes the invoking session\n# refreshing ranked session index\n",
+          "environment_overrides": {
+            "CODEX_THREAD_ID": "codex-audit"
+          }
+        },
+        {
+          "argv": [
+            "find",
+            "needle",
+            "--path",
+            "/sxr-audit-project",
+            "--json",
+            "--include-current"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"results\": [{\"provider\": \"codex\", \"id\": \"codex-audit\", \"path\": \"<fixture-root>/codex/sessions/2026/08/02/rollout-audit.jsonl\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-02T12:00:00.000Z\", \"title\": \"codex needle\", \"matched\": [\"needle\"], \"sources\": [\"<fixture-root>/codex/sessions/2026/08/02/rollout-audit.jsonl\"], \"evidence\": [{\"seq\": 2, \"part\": 0, \"kind\": \"text\", \"role\": \"user\", \"tool\": \"\", \"outcome\": \"\", \"text\": \"codex needle\"}], \"follow_up\": \"sxr --file <fixture-root>/codex/sessions/2026/08/02/rollout-audit.jsonl show codex-audit --around 2 --context 3\"}, {\"provider\": \"claude\", \"id\": \"bbb-second\", \"path\": \"<fixture-root>/claude/projects/-sxr-audit-project/bbb-second.jsonl\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-07-01T12:00:00.000Z\", \"title\": \"second session needle\", \"matched\": [\"needle\"], \"sources\": [\"<fixture-root>/claude/projects/-sxr-audit-project/bbb-second.jsonl\"], \"evidence\": [{\"seq\": 1, \"part\": 0, \"kind\": \"text\", \"role\": \"user\", \"tool\": \"\", \"outcome\": \"\", \"text\": \"second session needle\"}], \"follow_up\": \"sxr --file <fixture-root>/claude/projects/-sxr-audit-project/bbb-second.jsonl show bbb-second --around 1 --context 3\"}, {\"provider\": \"claude\", \"id\": \"aaa-main\", \"path\": \"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T12:00:00.000Z\", \"title\": \"alpha needle first prompt\", \"matched\": [\"needle\"], \"sources\": [\"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\"], \"evidence\": [{\"seq\": 1, \"part\": 0, \"kind\": \"text\", \"role\": \"user\", \"tool\": \"\", \"outcome\": \"\", \"text\": \"alpha needle first prompt\"}], \"follow_up\": \"sxr --file <fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl show aaa-main --around 1 --context 3\"}], \"total\": 3, \"complete\": true, \"coverage\": [{\"root\": \"<fixture-root>/claude/projects\", \"provider\": \"claude\", \"files\": 2, \"excluded\": 0, \"searched\": 2}, {\"root\": \"<fixture-root>/codex/sessions\", \"provider\": \"codex\", \"files\": 1, \"excluded\": 0, \"searched\": 1}], \"errors\": []}\n",
+          "stderr": "# refreshing ranked session index\n",
+          "environment_overrides": {
+            "CODEX_THREAD_ID": "codex-audit"
+          }
+        }
+      ]
+    },
+    {
+      "id": "FIND-unicode-evidence",
+      "expected": "A normalized word match includes the matching source text in its excerpt.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.044702,
+      "calls": [
+        {
+          "argv": [
+            "find",
+            "cafe",
+            "--json",
+            "--file",
+            "<fixture-root>/extras/accent.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"results\": [{\"provider\": \"claude\", \"id\": \"accent\", \"path\": \"<fixture-root>/extras/accent.jsonl\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T12:00:00.000Z\", \"title\": \"padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding \", \"matched\": [\"cafe\"], \"sources\": [\"<fixture-root>/extras/accent.jsonl\"], \"evidence\": [{\"seq\": 1, \"part\": 0, \"kind\": \"text\", \"role\": \"user\", \"tool\": \"\", \"outcome\": \"\", \"text\": \"\\u2026padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding caf\\u00e9 unique ending\"}], \"follow_up\": \"sxr --file <fixture-root>/extras/accent.jsonl show accent --around 1 --context 3\"}], \"total\": 1, \"complete\": true, \"coverage\": [{\"root\": \"<fixture-root>/extras/accent.jsonl\", \"provider\": \"claude\", \"files\": 1, \"excluded\": 0, \"searched\": 1}], \"errors\": []}\n",
+          "stderr": "# refreshing ranked session index\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "GREP-modes",
+      "expected": "Regex, fixed strings, smart case, -i, and leading-dash patterns have distinct semantics.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.307725,
+      "calls": [
+        {
+          "argv": [
+            "grep",
+            "needle",
+            "--json",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"alpha needle first prompt\"}}\n{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"beta NEEDLE second prompt\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t1\", \"name\": \"Bash\", \"input\": {\"command\": \"echo needle\"}}]}}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "grep",
+            "NEEDLE",
+            "--json",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"beta NEEDLE second prompt\"}}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "grep",
+            "NEEDLE",
+            "-i",
+            "--json",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"alpha needle first prompt\"}}\n{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"beta NEEDLE second prompt\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t1\", \"name\": \"Bash\", \"input\": {\"command\": \"echo needle\"}}]}}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "grep",
+            "a.b",
+            "-F",
+            "--json",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"third prompt with literal a.b and --dash\"}}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "grep",
+            "-e",
+            "--dash",
+            "--json",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"third prompt with literal a.b and --dash\"}}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "GREP-cache-parity",
+      "expected": "Indexed and direct grep return identical decoded records.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.122436,
+      "calls": [
+        {
+          "argv": [
+            "grep",
+            "needle",
+            "--json",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"alpha needle first prompt\"}}\n{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"beta NEEDLE second prompt\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t1\", \"name\": \"Bash\", \"input\": {\"command\": \"echo needle\"}}]}}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "grep",
+            "needle",
+            "--json",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"alpha needle first prompt\"}}\n{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"beta NEEDLE second prompt\"}}\n{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t1\", \"name\": \"Bash\", \"input\": {\"command\": \"echo needle\"}}]}}\n",
+          "stderr": "",
+          "environment_overrides": {
+            "SXR_NO_CACHE": "1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "READ-provider-outcomes",
+      "expected": "Both providers display command failures and preserve original error records.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.235098,
+      "calls": [
+        {
+          "argv": [
+            "cmds",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "#0005  --:--:--  Bash  \"echo needle\" -> err\n#0007  --:--:--  Read  \"/tmp/example\" -> err\n# recorded outcomes; ? = unknown; zoom: sxr --file <fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl show aaa-main --around 5\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "errors",
+            "--json",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": [{\"type\": \"tool_result\", \"tool_use_id\": \"t1\", \"is_error\": true, \"content\": \"synthetic failure\"}]}}\n{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": [{\"type\": \"tool_result\", \"tool_use_id\": \"t2\", \"is_error\": true, \"content\": \"synthetic failure\"}]}}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "cmds",
+            "--file",
+            "<fixture-root>/codex/sessions/2026/08/02/rollout-audit.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "#0003  --:--:--  exec_command  \"{\"cmd\": \"echo needle\"}\" -> err\n# recorded outcomes; ? = unknown; zoom: sxr --file <fixture-root>/codex/sessions/2026/08/02/rollout-audit.jsonl show codex-audit --around 3\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "errors",
+            "--json",
+            "--file",
+            "<fixture-root>/codex/sessions/2026/08/02/rollout-audit.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"response_item\", \"payload\": {\"type\": \"function_call_output\", \"call_id\": \"c1\", \"output\": \"{\\\"output\\\": \\\"synthetic failure\\\", \\\"metadata\\\": {\\\"exit_code\\\": 2}}\"}}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "PROMPTS-filter",
+      "expected": "Prompts omit metadata and tool results; --all restores user-role records.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.124726,
+      "calls": [
+        {
+          "argv": [
+            "prompts",
+            "--json",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"alpha needle first prompt\"}}\n{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"beta NEEDLE second prompt\"}}\n{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"third prompt with literal a.b and --dash\"}}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "prompts",
+            "--all",
+            "--json",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"alpha needle first prompt\"}}\n{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"beta NEEDLE second prompt\"}}\n{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"third prompt with literal a.b and --dash\"}}\n{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": [{\"type\": \"tool_result\", \"tool_use_id\": \"t1\", \"is_error\": true, \"content\": \"synthetic failure\"}]}}\n{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": [{\"type\": \"tool_result\", \"tool_use_id\": \"t2\", \"is_error\": true, \"content\": \"synthetic failure\"}]}}\n{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"injected fixture\"}, \"isMeta\": true}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "LIMIT-json-show",
+      "expected": "-n 1 caps the number of JSONL records without truncating record contents.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.069967,
+      "calls": [
+        {
+          "argv": [
+            "show",
+            "--json",
+            "-n",
+            "1",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"alpha needle first prompt\"}}\n",
+          "stderr": "# +6 more records (shown 1 of 7; raise -n, -n 0 for all)\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "LIMIT-json-prompts",
+      "expected": "-n 1 caps the number of JSONL records without truncating record contents.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.067419,
+      "calls": [
+        {
+          "argv": [
+            "prompts",
+            "--json",
+            "-n",
+            "1",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": \"alpha needle first prompt\"}}\n",
+          "stderr": "# +2 more records (shown 1 of 3; raise -n, -n 0 for all)\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "LIMIT-json-errors",
+      "expected": "-n 1 caps the number of JSONL records without truncating record contents.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.064169,
+      "calls": [
+        {
+          "argv": [
+            "errors",
+            "--json",
+            "-n",
+            "1",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"user\", \"timestamp\": \"2026-08-01T12:00:00.000Z\", \"cwd\": \"/sxr-audit-project\", \"message\": {\"role\": \"user\", \"content\": [{\"type\": \"tool_result\", \"tool_use_id\": \"t1\", \"is_error\": true, \"content\": \"synthetic failure\"}]}}\n",
+          "stderr": "# +1 more error records (shown 1 of 2; raise -n, -n 0 for all)\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "LIMIT-json-cmds",
+      "expected": "-n 1 caps the number of JSONL records without truncating record contents.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.061445,
+      "calls": [
+        {
+          "argv": [
+            "cmds",
+            "--json",
+            "-n",
+            "1",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"tool_use\", \"id\": \"t1\", \"name\": \"Bash\", \"input\": {\"command\": \"echo needle\"}}]}}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "LIMIT-errors-scope",
+      "expected": "An errors row limit applies across the entire selected range.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.063499,
+      "calls": [
+        {
+          "argv": [
+            "errors",
+            "@1:@2",
+            "-n",
+            "1",
+            "--path",
+            "/sxr-audit-project"
+          ],
+          "exit_code": 0,
+          "stdout": "#0006  12:00:00  Bash  \"synthetic failure\"\n# +2 more error records (shown 1 of 3; raise -n, -n 0 for all)\n# 3 error records (Bash 2, Read 1)\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "LIMIT-errors-notice",
+      "expected": "A shortened errors view reports how many records were omitted.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.063387,
+      "calls": [
+        {
+          "argv": [
+            "errors",
+            "-n",
+            "1",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "#0006  12:00:00  Bash  \"synthetic failure\"\n# +1 more error records (shown 1 of 2; raise -n, -n 0 for all)\n# 2 error records (Bash 1, Read 1)\n# zoom: sxr --file <fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl show aaa-main --around 6\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "LIMIT-tools",
+      "expected": "The advertised tools -n option caps printed tool rows.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.060645,
+      "calls": [
+        {
+          "argv": [
+            "tools",
+            "-n",
+            "1",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "# tool\tcalls\terrors\nBash\t1\t1\n# +1 more tools (shown 1 of 2; raise -n, -n 0 for all)\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "LIMIT-stats",
+      "expected": "The advertised stats -n option caps printed field rows.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.061765,
+      "calls": [
+        {
+          "argv": [
+            "stats",
+            "-n",
+            "1",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "# field\tvalue\nprovider\tclaude\n# +16 more stat rows (shown 1 of 17; raise -n, -n 0 for all)\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "LIMIT-path",
+      "expected": "The advertised path -n option caps printed paths, including child transcripts.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.060227,
+      "calls": [
+        {
+          "argv": [
+            "path",
+            "aaa-main",
+            "-n",
+            "1",
+            "--path",
+            "/sxr-audit-project"
+          ],
+          "exit_code": 0,
+          "stdout": "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\n",
+          "stderr": "# +1 more paths (shown 1 of 2; raise -n, -n 0 for all)\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "LIMIT-secrets-notice",
+      "expected": "A shortened secret worklist reports omitted findings and the full distinct count.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.09676,
+      "calls": [
+        {
+          "argv": [
+            "secrets",
+            "-n",
+            "1",
+            "--file",
+            "<fixture-root>/extras/two-secrets.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "# showing 1 of 2 distinct secrets; 1 more (use -n 0 for all)\n# kind\tseverity\tfingerprint\tsessions\thits\tfirst\npassword-assignment\tprobable\td9435010\t1\t1\ttwo-secr:1\n# 2 distinct secrets (0 certain); values never printed. Rotate certain ones first; zoom: sxr show <id> --around <seq>\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "SHOW-full",
+      "expected": "--full prints whole text as promised by the top-level help and primer.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.060268,
+      "calls": [
+        {
+          "argv": [
+            "show",
+            "--full",
+            "--file",
+            "<fixture-root>/extras/long.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "session:  long\nfile:     <fixture-root>/extras/long.jsonl\nstarted:  2026-08-01T12:00:00Z\nevents:   1\n\n#0001  12:00:00  user   text    \"audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text audit long text unique end marker\"\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "SHOW-zoom",
+      "expected": "A zoom prints full text despite a small scan budget.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.065436,
+      "calls": [
+        {
+          "argv": [
+            "show",
+            "--around",
+            "1",
+            "--context",
+            "0",
+            "--budget",
+            "1",
+            "--file",
+            "<fixture-root>/extras/zoom.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "session:  zoom\nfile:     <fixture-root>/extras/zoom.jsonl\nstarted:  2026-08-01T12:00:00Z\nevents:   1\n\n#0001  12:00:00  user   text    \"audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text audit text end marker\"\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "SHOW-empty",
+      "expected": "A show selection with no matching records exits 1 in both text and JSON modes.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.124218,
+      "calls": [
+        {
+          "argv": [
+            "show",
+            "--type",
+            "does-not-exist",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 1,
+          "stdout": "session:  aaa-main\nfile:     <fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\nstarted:  2026-08-01T12:00:00Z\nevents:   11\n\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "show",
+            "--type",
+            "does-not-exist",
+            "--json",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "SHOW-tail-zero",
+      "expected": "Last zero selected events returns an empty result.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.062086,
+      "calls": [
+        {
+          "argv": [
+            "show",
+            "--tail",
+            "0",
+            "--json",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "USAGE-negative-limit-list",
+      "expected": "Negative row counts are usage errors, consistent with find and skills.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.066349,
+      "calls": [
+        {
+          "argv": [
+            "list",
+            "-n",
+            "-1",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 2,
+          "stdout": "",
+          "stderr": "Usage: -c list [OPTIONS]\nTry '-c list --help' for help.\n\nError: Invalid value for '--limit' / '-n': -1 is not in the range x>=0.\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "USAGE-negative-limit-show",
+      "expected": "Negative row counts are usage errors, consistent with find and skills.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.060372,
+      "calls": [
+        {
+          "argv": [
+            "show",
+            "-n",
+            "-1",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 2,
+          "stdout": "",
+          "stderr": "Usage: -c show [OPTIONS] [arg]\nTry '-c show --help' for help.\n\nError: Invalid value for '--limit' / '-n': -1 is not in the range x>=0.\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "USAGE-negative-limit-prompts",
+      "expected": "Negative row counts are usage errors, consistent with find and skills.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.058624,
+      "calls": [
+        {
+          "argv": [
+            "prompts",
+            "-n",
+            "-1",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 2,
+          "stdout": "",
+          "stderr": "Usage: -c prompts [OPTIONS] [arg]\nTry '-c prompts --help' for help.\n\nError: Invalid value for '--limit' / '-n': -1 is not in the range x>=0.\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "USAGE-negative-limit-errors",
+      "expected": "Negative row counts are usage errors, consistent with find and skills.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.061644,
+      "calls": [
+        {
+          "argv": [
+            "errors",
+            "-n",
+            "-1",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 2,
+          "stdout": "",
+          "stderr": "Usage: -c errors [OPTIONS] [arg]\nTry '-c errors --help' for help.\n\nError: Invalid value for '--limit' / '-n': -1 is not in the range x>=0.\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "USAGE-negative-limit-tools",
+      "expected": "Negative row counts are usage errors, consistent with find and skills.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.059291,
+      "calls": [
+        {
+          "argv": [
+            "tools",
+            "-n",
+            "-1",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 2,
+          "stdout": "",
+          "stderr": "Usage: -c tools [OPTIONS] [arg]\nTry '-c tools --help' for help.\n\nError: Invalid value for '--limit' / '-n': -1 is not in the range x>=0.\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "USAGE-negative-limit-stats",
+      "expected": "Negative row counts are usage errors, consistent with find and skills.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.060225,
+      "calls": [
+        {
+          "argv": [
+            "stats",
+            "-n",
+            "-1",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 2,
+          "stdout": "",
+          "stderr": "Usage: -c stats [OPTIONS] [arg]\nTry '-c stats --help' for help.\n\nError: Invalid value for '--limit' / '-n': -1 is not in the range x>=0.\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "USAGE-negative-limit-cmds",
+      "expected": "Negative row counts are usage errors, consistent with find and skills.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.059873,
+      "calls": [
+        {
+          "argv": [
+            "cmds",
+            "-n",
+            "-1",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 2,
+          "stdout": "",
+          "stderr": "Usage: -c cmds [OPTIONS] [arg]\nTry '-c cmds --help' for help.\n\nError: Invalid value for '--limit' / '-n': -1 is not in the range x>=0.\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "TIME-fraction",
+      "expected": "UTC date filtering compares instants, including fractional-second boundaries.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.066879,
+      "calls": [
+        {
+          "argv": [
+            "list",
+            "--before",
+            "2026-08-01T12:00:00.123001Z",
+            "--json",
+            "--file",
+            "<fixture-root>/extras/fraction.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"session\", \"id\": \"fraction\", \"provider\": \"claude\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T12:00:00Z\", \"live\": false, \"title\": \"needle\", \"name\": \"\", \"kind\": \"\", \"model\": \"\", \"messages\": 1, \"errors\": 0, \"tokens\": 0, \"size_bytes\": 137, \"path\": \"<fixture-root>/extras/fraction.jsonl\", \"parent_id\": \"\", \"archived\": false, \"sources\": [\"<fixture-root>/extras/fraction.jsonl\"]}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "TIME-offset",
+      "expected": "Recorded timestamp offsets are normalized to UTC before filtering.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.066155,
+      "calls": [
+        {
+          "argv": [
+            "list",
+            "--before",
+            "2026-08-01T12:00:00Z",
+            "--json",
+            "--file",
+            "<fixture-root>/extras/offset.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"session\", \"id\": \"offset\", \"provider\": \"claude\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T13:00:00Z\", \"live\": false, \"title\": \"needle\", \"name\": \"\", \"kind\": \"\", \"model\": \"\", \"messages\": 1, \"errors\": 0, \"tokens\": 0, \"size_bytes\": 138, \"path\": \"<fixture-root>/extras/offset.jsonl\", \"parent_id\": \"\", \"archived\": false, \"sources\": [\"<fixture-root>/extras/offset.jsonl\"]}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "TOOLS-skill-count",
+      "expected": "Each Skill call increments only its own input's count once.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.060879,
+      "calls": [
+        {
+          "argv": [
+            "tools",
+            "--json",
+            "--file",
+            "<fixture-root>/extras/skill-calls.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"tools\", \"calls\": {\"Skill\": 2}, \"errors\": {}, \"skill_inputs\": {\"notify\": 1, \"review\": 1}}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "ERRORS-api-error",
+      "expected": "A Claude record counted as an API error is available in the errors view.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.129947,
+      "calls": [
+        {
+          "argv": [
+            "list",
+            "--json",
+            "--file",
+            "<fixture-root>/extras/api-error.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"session\", \"id\": \"api-error\", \"provider\": \"claude\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T12:00:00Z\", \"live\": false, \"title\": \"request\", \"name\": \"\", \"kind\": \"\", \"model\": \"\", \"messages\": 2, \"errors\": 1, \"tokens\": 0, \"size_bytes\": 284, \"path\": \"<fixture-root>/extras/api-error.jsonl\", \"parent_id\": \"\", \"archived\": false, \"sources\": [\"<fixture-root>/extras/api-error.jsonl\"]}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "errors",
+            "--json",
+            "--file",
+            "<fixture-root>/extras/api-error.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"assistant\", \"message\": {\"role\": \"assistant\", \"content\": [{\"type\": \"text\", \"text\": \"API Error: synthetic\"}]}, \"isApiErrorMessage\": true}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "SECRETS-dry-apply",
+      "expected": "Secret cleaning previews changes, applies them only on request, and is idempotent.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.292963,
+      "calls": [
+        {
+          "argv": [
+            "secrets",
+            "clean",
+            "--file",
+            "<fixture-root>/extras/secret.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "# session\tfile\tlines\treplacements\tkinds\nsecret\tsecret.jsonl\t1\t1\tpassword-assignment(1)\n# DRY RUN: 1 occurrences across 1 files; nothing written. Write with: sxr secrets clean --apply\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "secrets",
+            "clean",
+            "--apply",
+            "--file",
+            "<fixture-root>/extras/secret.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "# session\tfile\tlines\treplacements\tkinds\nsecret\tsecret.jsonl\t1\t1\tpassword-assignment(1)\n# cleaned 1 secret occurrences across 1 files; markers: [sxr:redacted:<kind>:<fp>]. Rotation is still the real fix.\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "secrets",
+            "clean",
+            "--apply",
+            "--file",
+            "<fixture-root>/extras/secret.jsonl"
+          ],
+          "exit_code": 1,
+          "stdout": "# session\tfile\tlines\treplacements\tkinds\n# nothing to clean in scope\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "SECRETS-write-input",
+      "expected": "Secret audit detects a password inside the contents of a recorded Write tool call.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.197547,
+      "calls": [
+        {
+          "argv": [
+            "secrets",
+            "--json",
+            "--file",
+            "<fixture-root>/extras/write-content.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"secret\", \"fingerprint\": \"60b6c54a\", \"kind\": \"password-assignment\", \"severity\": \"probable\", \"sessions\": [\"write-co\"], \"hits\": 1, \"first\": \"write-co:2\"}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "secrets",
+            "clean",
+            "--file",
+            "<fixture-root>/extras/write-content.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "# session\tfile\tlines\treplacements\tkinds\nwrite-co\twrite-content.jsonl\t1\t1\tpassword-assignment(1)\n# DRY RUN: 1 occurrences across 1 files; nothing written. Write with: sxr secrets clean --apply\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "FORMAT-clean-json",
+      "expected": "An advertised --json option emits machine-readable JSON, or rejects the unsupported mode.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.096443,
+      "calls": [
+        {
+          "argv": [
+            "secrets",
+            "clean",
+            "--json",
+            "--file",
+            "<fixture-root>/extras/clean-json.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"clean\", \"session\": \"clean-js\", \"file\": \"<fixture-root>/extras/clean-json.jsonl\", \"lines\": 1, \"replacements\": 1, \"kinds\": {\"password-assignment\": 1}, \"applied\": false}\n",
+          "stderr": "# DRY RUN: 1 occurrences across 1 files; nothing written. Write with: sxr secrets clean --apply\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "SKILLS-workflow",
+      "expected": "Skills group identical contents, expand copies, refresh edits, and clear the map.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.183162,
+      "calls": [
+        {
+          "argv": [
+            "skills",
+            "--index",
+            "--root",
+            "<fixture-root>/skills",
+            "--json"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"skills\": [{\"name\": \"notify\", \"path\": \"<fixture-root>/skills/notify/SKILL.md\", \"aliases\": [\"<fixture-root>/skills/notify/SKILL.md\"], \"sha256\": \"3c8e5897f8d4a05b312467952f1349827548e627a578747f29c4d94088c09055\", \"copies\": 2, \"locations\": [{\"name\": \"notify\", \"path\": \"<fixture-root>/skills/notify/SKILL.md\", \"aliases\": [\"<fixture-root>/skills/notify/SKILL.md\"], \"sha256\": \"3c8e5897f8d4a05b312467952f1349827548e627a578747f29c4d94088c09055\"}, {\"name\": \"notify\", \"path\": \"<fixture-root>/skills/backup/notify/SKILL.md\", \"aliases\": [\"<fixture-root>/skills/backup/notify/SKILL.md\"], \"sha256\": \"3c8e5897f8d4a05b312467952f1349827548e627a578747f29c4d94088c09055\"}]}], \"total\": 1, \"unique\": 1, \"files\": 2, \"complete\": true, \"errors\": [], \"coverage\": [{\"root\": \"<fixture-root>/skills\", \"present\": true}], \"index\": \"<fixture-root>/cache/skills.json\", \"indexed_at\": \"2026-09-10T11:11:08.867627+00:00\", \"cycles_skipped\": 0}\n",
+          "stderr": "# discovered 2 files (1 distinct SKILL.md contents) across 1 roots: <fixture-root>/cache/skills.json\n",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "skills",
+            "notify",
+            "--json"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"skills\": [{\"name\": \"notify\", \"path\": \"<fixture-root>/skills/notify/SKILL.md\", \"aliases\": [\"<fixture-root>/skills/notify/SKILL.md\"], \"sha256\": \"3c8e5897f8d4a05b312467952f1349827548e627a578747f29c4d94088c09055\", \"copies\": 2, \"locations\": [{\"name\": \"notify\", \"path\": \"<fixture-root>/skills/notify/SKILL.md\", \"aliases\": [\"<fixture-root>/skills/notify/SKILL.md\"], \"sha256\": \"3c8e5897f8d4a05b312467952f1349827548e627a578747f29c4d94088c09055\"}, {\"name\": \"notify\", \"path\": \"<fixture-root>/skills/backup/notify/SKILL.md\", \"aliases\": [\"<fixture-root>/skills/backup/notify/SKILL.md\"], \"sha256\": \"3c8e5897f8d4a05b312467952f1349827548e627a578747f29c4d94088c09055\"}]}], \"total\": 1, \"unique\": 1, \"files\": 2, \"complete\": true, \"errors\": [], \"coverage\": [{\"root\": \"<fixture-root>/skills\", \"present\": true}], \"index\": \"<fixture-root>/cache/skills.json\", \"indexed_at\": \"2026-09-10T11:11:08.867627+00:00\", \"cycles_skipped\": 0}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "skills",
+            "notify",
+            "--paths",
+            "--copies"
+          ],
+          "exit_code": 0,
+          "stdout": "<fixture-root>/skills/backup/notify/SKILL.md\n<fixture-root>/skills/notify/SKILL.md\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "skills",
+            "notify",
+            "--json"
+          ],
+          "exit_code": 2,
+          "stdout": "{\"skills\": [{\"name\": \"notify\", \"path\": \"<fixture-root>/skills/notify/SKILL.md\", \"aliases\": [\"<fixture-root>/skills/notify/SKILL.md\"], \"sha256\": \"3c8e5897f8d4a05b312467952f1349827548e627a578747f29c4d94088c09055\", \"copies\": 1, \"locations\": [{\"name\": \"notify\", \"path\": \"<fixture-root>/skills/notify/SKILL.md\", \"aliases\": [\"<fixture-root>/skills/notify/SKILL.md\"], \"sha256\": \"3c8e5897f8d4a05b312467952f1349827548e627a578747f29c4d94088c09055\"}]}, {\"name\": \"notify\", \"path\": \"<fixture-root>/skills/backup/notify/SKILL.md\", \"aliases\": [\"<fixture-root>/skills/backup/notify/SKILL.md\"], \"sha256\": \"60849f22a38773aa1725c65258e2afa0ca2d8618f6a785b5468851c08e381a1c\", \"copies\": 1, \"locations\": [{\"name\": \"notify\", \"path\": \"<fixture-root>/skills/backup/notify/SKILL.md\", \"aliases\": [\"<fixture-root>/skills/backup/notify/SKILL.md\"], \"sha256\": \"60849f22a38773aa1725c65258e2afa0ca2d8618f6a785b5468851c08e381a1c\"}]}], \"total\": 2, \"unique\": 2, \"files\": 2, \"complete\": false, \"errors\": [\"indexed SKILL.md paths or contents changed; rerun sxr skills --index\"], \"coverage\": [{\"root\": \"<fixture-root>/skills\", \"present\": true}], \"index\": \"<fixture-root>/cache/skills.json\", \"indexed_at\": \"2026-09-10T11:11:08.867627+00:00\", \"cycles_skipped\": 0}\n",
+          "stderr": "# incomplete: indexed SKILL.md paths or contents changed; rerun sxr skills --index\n",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "skills",
+            "--clear"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "INIT-workflow",
+      "expected": "Explicit-file primer installation preserves surrounding prose and is idempotent.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.239451,
+      "calls": [
+        {
+          "argv": [
+            "init",
+            "--check",
+            "<fixture-root>/instructions/AGENTS.md"
+          ],
+          "exit_code": 1,
+          "stdout": "",
+          "stderr": "no sxr primer block in <fixture-root>/instructions/AGENTS.md; run sxr init --write\n",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "init",
+            "--write",
+            "<fixture-root>/instructions/AGENTS.md"
+          ],
+          "exit_code": 0,
+          "stdout": "appended primer v0.12.2 in <fixture-root>/instructions/AGENTS.md\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "init",
+            "--write",
+            "<fixture-root>/instructions/AGENTS.md"
+          ],
+          "exit_code": 0,
+          "stdout": "unchanged primer v0.12.2 in <fixture-root>/instructions/AGENTS.md\n",
+          "stderr": "",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "init",
+            "--check",
+            "<fixture-root>/instructions/AGENTS.md"
+          ],
+          "exit_code": 0,
+          "stdout": "",
+          "stderr": "primer v0.12.2 up to date in <fixture-root>/instructions/AGENTS.md\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "INDEX-clear",
+      "expected": "Index preparation creates a cache and --clear removes it.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.133602,
+      "calls": [
+        {
+          "argv": [
+            "index",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "# search index: <fixture-root>/cache/search.sqlite3\n",
+          "stderr": "# indexed 1/1 sessions\n",
+          "environment_overrides": {}
+        },
+        {
+          "argv": [
+            "index",
+            "--clear"
+          ],
+          "exit_code": 0,
+          "stdout": "# cleared search index: <fixture-root>/cache/search.sqlite3\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "USAGE-invalid-json-record",
+      "expected": "A malformed record shape produces a diagnostic instead of a Python traceback.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.135956,
+      "calls": [
+        {
+          "argv": [
+            "show",
+            "--full",
+            "--file",
+            "<fixture-root>/extras/invalid-shape.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "session:  invalid-shape\nfile:     <fixture-root>/extras/invalid-shape.jsonl\nstarted:  2026-08-01T12:00:00Z\nevents:   2\n\n#0001  12:00:00  user   text    \"valid beginning\"\n#0003  12:00:00  user   text    \"valid ending\"\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "INIT-file-error",
+      "expected": "An unwritable primer destination reports an error with exit 2 and no traceback.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.180391,
+      "calls": [
+        {
+          "argv": [
+            "init",
+            "--write",
+            "<fixture-root>/not-a-directory/AGENTS.md"
+          ],
+          "exit_code": 2,
+          "stdout": "",
+          "stderr": "error: cannot access primer destination <fixture-root>/not-a-directory/AGENTS.md: [Errno 17] File exists: '<fixture-root>/not-a-directory'\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "FIND-unicode-match",
+      "expected": "Latin-diacritic normalization finds the correct source session.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.083197,
+      "calls": [
+        {
+          "argv": [
+            "find",
+            "cafe",
+            "--json",
+            "--file",
+            "<fixture-root>/extras/normalized.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"results\": [{\"provider\": \"claude\", \"id\": \"normalized\", \"path\": \"<fixture-root>/extras/normalized.jsonl\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T12:00:00.000Z\", \"title\": \"padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding \", \"matched\": [\"cafe\"], \"sources\": [\"<fixture-root>/extras/normalized.jsonl\"], \"evidence\": [{\"seq\": 1, \"part\": 0, \"kind\": \"text\", \"role\": \"user\", \"tool\": \"\", \"outcome\": \"\", \"text\": \"\\u2026padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding caf\\u00e9 ending\"}], \"follow_up\": \"sxr --file <fixture-root>/extras/normalized.jsonl show normalized --around 1 --context 3\"}], \"total\": 1, \"complete\": true, \"coverage\": [{\"root\": \"<fixture-root>/extras/normalized.jsonl\", \"provider\": \"claude\", \"files\": 1, \"excluded\": 0, \"searched\": 1}], \"errors\": []}\n",
+          "stderr": "# refreshing ranked session index\n",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "FORMAT-path-json",
+      "expected": "path honors --json or rejects an unsupported output mode.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.0933,
+      "calls": [
+        {
+          "argv": [
+            "path",
+            "--json",
+            "--file",
+            "<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"path\", \"path\": \"<fixture-root>/claude/projects/-sxr-audit-project/aaa-main.jsonl\"}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "LIMIT-clean",
+      "expected": "The advertised clean -n option caps the printed file rows.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.135376,
+      "calls": [
+        {
+          "argv": [
+            "secrets",
+            "clean",
+            "-n",
+            "1",
+            "--path",
+            "/sxr-audit-project"
+          ],
+          "exit_code": 0,
+          "stdout": "# session\tfile\tlines\treplacements\tkinds\nbbb-seco\tbbb-second.jsonl\t1\t1\tpassword-assignment(1)\n# +1 more file rows (shown 1 of 2; raise -n, -n 0 for all)\n# DRY RUN: 2 occurrences across 2 files; nothing written. Write with: sxr secrets clean --apply\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    }
+  ]
+}

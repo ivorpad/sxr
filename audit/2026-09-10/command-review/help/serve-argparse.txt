@@ -1,0 +1,7 @@
+usage: sxr serve [-h] [{status,stop}]
+
+positional arguments:
+  {status,stop}
+
+options:
+  -h, --help     show this help message and exit

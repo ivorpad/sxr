@@ -1,0 +1,286 @@
+{
+  "SXR-AUD-001": {
+    "disposition": "fixed",
+    "decision": "Audit the decoded stored values with the cleaner's structured detector, once per physical record. Tool display summaries no longer determine coverage.",
+    "changed_files": [
+      "src/sxr/views_secrets.py",
+      "src/sxr/secrets/records.py",
+      "src/sxr/secrets_commands.py"
+    ],
+    "regression_selectors": [
+      "test_secret_audit_records.py::test_hidden_tool_values_agree_with_cleaner*",
+      "test_secrets.py::test_secrets_view*",
+      "test_secret_rewrite.py::*"
+    ],
+    "check_ids": [
+      "SECRETS-write-input"
+    ],
+    "remaining_limitation": ""
+  },
+  "SXR-AUD-002": {
+    "disposition": "fixed",
+    "decision": "Compare UTC datetime values, including offset and fractional boundaries. A missing or invalid session start cannot establish membership in a bounded window.",
+    "changed_files": [
+      "src/sxr/handles.py"
+    ],
+    "regression_selectors": [
+      "test_audit_retrieval.py::test_windows*",
+      "test_audit_retrieval.py::test_unknown_start*",
+      "test_scope.py::test_*"
+    ],
+    "check_ids": [
+      "TIME-fraction",
+      "TIME-offset"
+    ],
+    "remaining_limitation": ""
+  },
+  "SXR-AUD-003": {
+    "disposition": "fixed",
+    "decision": "Preserve isApiErrorMessage on error-bearing events without assigning a tool call a false outcome. Multiple text blocks emit their original JSON record once. Invalidate older read-position snapshots.",
+    "changed_files": [
+      "src/sxr/providers/claude_code.py",
+      "src/sxr/read_cache.py",
+      "src/sxr/views_read.py"
+    ],
+    "regression_selectors": [
+      "test_audit_retrieval.py::test_api_errors*",
+      "test_read_cache.py::*"
+    ],
+    "check_ids": [
+      "ERRORS-api-error"
+    ],
+    "remaining_limitation": ""
+  },
+  "SXR-AUD-004": {
+    "disposition": "fixed",
+    "decision": "Use the same SQLite unicode61 tokenizer for finding the excerpt location as for retrieval. Cut the original string at source offsets.",
+    "changed_files": [
+      "src/sxr/find_query.py"
+    ],
+    "regression_selectors": [
+      "test_audit_retrieval.py::test_normalized_excerpt*",
+      "test_find.py::*"
+    ],
+    "check_ids": [
+      "FIND-unicode-evidence"
+    ],
+    "remaining_limitation": ""
+  },
+  "SXR-AUD-005": {
+    "disposition": "fixed",
+    "decision": "Limit complete distinct physical JSON records in show, prompts and errors. Omission counts go to stderr.",
+    "changed_files": [
+      "src/sxr/output.py",
+      "src/sxr/views_read.py"
+    ],
+    "regression_selectors": [
+      "test_output_contracts.py::test_json_limits*"
+    ],
+    "check_ids": [
+      "LIMIT-json-show",
+      "LIMIT-json-prompts",
+      "LIMIT-json-errors"
+    ],
+    "remaining_limitation": ""
+  },
+  "SXR-AUD-006": {
+    "disposition": "fixed",
+    "decision": "Share the errors row allowance across selected sessions and report the full omitted count in both formats.",
+    "changed_files": [
+      "src/sxr/output.py",
+      "src/sxr/views_read.py"
+    ],
+    "regression_selectors": [
+      "test_output_contracts.py::test_limits_span_selected_sessions[False-errors]",
+      "test_output_contracts.py::test_limits_span_selected_sessions[True-errors]"
+    ],
+    "check_ids": [
+      "LIMIT-errors-scope",
+      "LIMIT-errors-notice"
+    ],
+    "remaining_limitation": ""
+  },
+  "SXR-AUD-007": {
+    "disposition": "fixed",
+    "decision": "Apply -n to tool rows, stat rows, paths and cleaning report rows. JSON aggregate objects retain all fields. A cleaning report limit never changes which selected files are scanned or rewritten.",
+    "changed_files": [
+      "src/sxr/cli.py",
+      "src/sxr/views_info.py",
+      "src/sxr/output.py",
+      "src/sxr/secrets_commands.py",
+      "src/sxr/secrets/clean.py"
+    ],
+    "regression_selectors": [
+      "test_output_contracts.py::test_limits_span_selected_sessions*",
+      "test_output_contracts.py::test_tool_row_limit*",
+      "test_output_contracts.py::test_clean_limit*"
+    ],
+    "check_ids": [
+      "LIMIT-tools",
+      "LIMIT-stats",
+      "LIMIT-path",
+      "LIMIT-clean"
+    ],
+    "remaining_limitation": ""
+  },
+  "SXR-AUD-008": {
+    "disposition": "fixed",
+    "decision": "Full views bypass the character budget while retaining row limits and complete selected text.",
+    "changed_files": [
+      "src/sxr/views_read.py"
+    ],
+    "regression_selectors": [
+      "test_show_boundaries.py::test_full_bypasses_budget*"
+    ],
+    "check_ids": [
+      "SHOW-full"
+    ],
+    "remaining_limitation": ""
+  },
+  "SXR-AUD-009": {
+    "disposition": "fixed",
+    "decision": "Attach each Claude tool input to its own event and count only that Skill call, excluding unrelated tools.",
+    "changed_files": [
+      "src/sxr/providers/claude_code.py",
+      "src/sxr/views_info.py"
+    ],
+    "regression_selectors": [
+      "test_audit_retrieval.py::test_skill_counts*"
+    ],
+    "check_ids": [
+      "TOOLS-skill-count"
+    ],
+    "remaining_limitation": ""
+  },
+  "SXR-AUD-010": {
+    "disposition": "fixed",
+    "decision": "Empty show selections return 1 in both text and JSON, with and without the read cache.",
+    "changed_files": [
+      "src/sxr/views_read.py"
+    ],
+    "regression_selectors": [
+      "test_show_boundaries.py::test_empty_selection*"
+    ],
+    "check_ids": [
+      "SHOW-empty"
+    ],
+    "remaining_limitation": ""
+  },
+  "SXR-AUD-011": {
+    "disposition": "fixed",
+    "decision": "Choose zero selected events for --tail 0, with empty-result exit 1. Negative tails are usage errors. This is distinct from the documented unlimited -n 0.",
+    "changed_files": [
+      "src/sxr/views_read.py",
+      "src/sxr/show_command.py",
+      "README.md"
+    ],
+    "regression_selectors": [
+      "test_show_boundaries.py::test_empty_selection*",
+      "test_show_boundaries.py::test_negative_tail*"
+    ],
+    "check_ids": [
+      "SHOW-tail-zero"
+    ],
+    "remaining_limitation": ""
+  },
+  "SXR-AUD-012": {
+    "disposition": "fixed",
+    "decision": "Reject negative row limits before discovery in the shared Typer option. Existing fast find and skills validation agrees. Root, group and command flag positions retain the same rule.",
+    "changed_files": [
+      "src/sxr/flags.py",
+      "README.md"
+    ],
+    "regression_selectors": [
+      "test_output_contracts.py::test_negative_limits*",
+      "test_output_contracts.py::test_fast_entry_points*"
+    ],
+    "check_ids": [
+      "USAGE-negative-limit-list",
+      "USAGE-negative-limit-show",
+      "USAGE-negative-limit-prompts",
+      "USAGE-negative-limit-errors",
+      "USAGE-negative-limit-tools",
+      "USAGE-negative-limit-stats",
+      "USAGE-negative-limit-cmds"
+    ],
+    "remaining_limitation": ""
+  },
+  "SXR-AUD-013": {
+    "disposition": "fixed",
+    "decision": "Path JSON emits path objects. Clean JSON emits masked file-result objects with applied state, counts and kinds. Diagnostics and totals remain on stderr.",
+    "changed_files": [
+      "src/sxr/views_info.py",
+      "src/sxr/cli.py",
+      "src/sxr/secrets_commands.py",
+      "src/sxr/secrets/clean.py",
+      "README.md"
+    ],
+    "regression_selectors": [
+      "test_output_contracts.py::test_clean_limit*",
+      "test_output_contracts.py::test_limits_span_selected_sessions[True-path]"
+    ],
+    "check_ids": [
+      "FORMAT-clean-json",
+      "FORMAT-path-json"
+    ],
+    "remaining_limitation": ""
+  },
+  "SXR-AUD-014": {
+    "disposition": "fixed",
+    "decision": "Compute all distinct-secret and severity totals before slicing. Limited and unlimited output retain the same fingerprints.",
+    "changed_files": [
+      "src/sxr/views_secrets.py"
+    ],
+    "regression_selectors": [
+      "test_secret_audit_records.py::test_limited_worklist*"
+    ],
+    "check_ids": [
+      "LIMIT-secrets-notice"
+    ],
+    "remaining_limitation": ""
+  },
+  "SXR-AUD-015": {
+    "disposition": "fixed",
+    "decision": "Skip non-object JSONL records like malformed syntax, in both providers and index parsing. Later valid records retain physical line numbers. Files are not rewritten.",
+    "changed_files": [
+      "src/sxr/providers/claude_code.py",
+      "src/sxr/providers/codex.py",
+      "src/sxr/index_records.py"
+    ],
+    "regression_selectors": [
+      "test_record_shape.py::*"
+    ],
+    "check_ids": [
+      "USAGE-invalid-json-record"
+    ],
+    "remaining_limitation": ""
+  },
+  "SXR-AUD-016": {
+    "disposition": "fixed",
+    "decision": "Catch filesystem and text-decoding failures at the init command boundary, name the destination and return 2. Preserve existing files on denied access.",
+    "changed_files": [
+      "src/sxr/onboard.py"
+    ],
+    "regression_selectors": [
+      "test_primer_errors.py::*",
+      "test_init.py::*"
+    ],
+    "check_ids": [
+      "INIT-file-error"
+    ],
+    "remaining_limitation": ""
+  },
+  "SXR-AUD-017": {
+    "disposition": "fixed",
+    "decision": "Keep the deliberate successful empty listing for compatibility. State the exception in README, top-level help and generated primer.",
+    "changed_files": [
+      "README.md",
+      "src/sxr/onboard.py"
+    ],
+    "regression_selectors": [
+      "test_discovery.py::test_empty_json_list_keeps_stdout_machine_readable"
+    ],
+    "check_ids": [],
+    "remaining_limitation": ""
+  }
+}

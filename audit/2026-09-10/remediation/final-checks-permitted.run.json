@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "env",
+    "UV_CACHE_DIR=/private/tmp/sxr-astra-uv-cache",
+    "PYTEST_ADDOPTS=--junitxml=audit/2026-09-10/remediation/pytest-permitted.xml",
+    "just",
+    "check"
+  ],
+  "started": "2026-09-10T11:13:38.827781+00:00",
+  "ended": "2026-09-10T11:13:50.476292+00:00",
+  "exit_code": 0,
+  "source_identity": "source-e3c3deb911732ffd.json",
+  "source_unchanged": true,
+  "evidence": "final-checks-permitted.log",
+  "artifacts": {
+    "final-checks-permitted.log": "fc4ecc75854ab7bbfbfbae287f9c5c9bd29fe5e5ae4670be8aac4aa3837f7a78",
+    "pytest-permitted.xml": "d25a36ef0736e3feaf82257c42b762c394389dc7290037d416c936bf8e33a126"
+  }
+}

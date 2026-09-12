@@ -1,0 +1,17 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "packaging/verify.py",
+    "/private/tmp/sxr-astra-bundle/sxr-0.12.2-macos-arm64.tar.gz"
+  ],
+  "started": "2026-09-10T11:13:44.389528+00:00",
+  "ended": "2026-09-10T11:13:48.951685+00:00",
+  "exit_code": 0,
+  "source_identity": "source-e3c3deb911732ffd.json",
+  "source_unchanged": true,
+  "evidence": "bundle-verify.log",
+  "artifacts": {
+    "bundle-verify.log": "f6009dd51cb95204920d96906082b04be79d180092a52868343d2805f79b3060",
+    "/private/tmp/sxr-astra-bundle/sxr-0.12.2-macos-arm64.tar.gz": "2476be5a5a49b8cfa7a5f6fa379117d7cc21daa7747c1868888a4a7cf61af657"
+  }
+}

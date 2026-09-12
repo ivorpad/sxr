@@ -1,0 +1,630 @@
+diff -ruN -x __pycache__ /tmp/sxr-b05/CLAUDE.md /tmp/sxr-a05/CLAUDE.md
+--- /tmp/sxr-b05/CLAUDE.md	2026-07-27 07:13:04
++++ /tmp/sxr-a05/CLAUDE.md	2026-09-11 17:17:51
+@@ -20,42 +20,65 @@
+ 
+ Suppression comments (`konpy: ignore[rule]`) are for approved exceptions only. Never add one without explicit human approval -- see `docs/reference/suppressions.md`. Fix the violation, or ask a human to approve a suppression with a reason.
+ 
+-<!-- sxr:primer v0.3.0 -->
++<!-- sxr:primer v0.14.0 -->
+ ## sxr: search past agent sessions (Claude Code + Codex)
+ 
+-Every session on this machine is recorded as JSONL. Before re-deriving how
+-something was done (a release, a fix, a config, a command), search history —
+-it is usually 1-3 calls. Every command takes --help. Exit codes: 0 content,
+-1 empty result, 2 usage error.
++Before re-deriving a release, fix, decision or command, search session history.
++Start with a few distinctive clues. `find` searches Claude and Codex together,
++including nested Claude agents and Codex archives, and returns ranked sessions
++with source excerpts. Copy a result's exact follow-up command for more context.
+ 
+-Recipes — the funnel is count -> locate -> zoom:
+ ```
+-how/where did X happen?    sxr grep -c "x"             # ranked table; `first` column
+-                                                       #   feeds show --around directly
+-                           sxr grep "x" @N -C 3        # matches + surrounding events
+-what command did X?        sxr cmds --grep "git push"  # ALL sessions, one call
+-how did a session end?     sxr show @N --tail 5        # its final report, whole text
+-what did the human ask?    sxr prompts @N
+-what failed?               sxr errors @N
+-session overview:          sxr stats @N | sxr tools @N
+-read around event #1247:   sxr show @N --around 1247   # whole text, no trims
+-another project's history: add --path <dir> to any of the above
++past decision         sxr find "webhook retries"  # this project's history
++project unknown       sxr find "webhook retries" --all-projects
++another project       sxr find "webhook retries" --path /repo
++structured evidence   sxr find "webhook retries" --json
++installed skill       sxr skills notify --paths
++exact text counts     sxr grep -c -F "literal"
++recorded commands     sxr cmds --all-sessions --grep "git push"
++session ending        sxr show @N --tail 5
++human requests        sxr prompts @N
++recorded failures     sxr errors @N
+ ```
+ 
+-Sharp edges:
+-- grep patterns are smart-case regex: all-lowercase matches case-insensitively,
+-  capitals match exact case (-i forces any-case). Use -F for literal strings
+-  (error text, paths, URLs); -l prints just the matching session ids.
+-- `...[+N chars]` marks a display trim, never lost data: zoom (--around,
+-  --range, --type) or --full prints whole text; --budget 0 disables trimming.
+-- ids: @N from bare `sxr` (newest first), @A:@B range, unique id prefix, or
+-  name; no id = newest session. For the ORIGIN of X, `grep -c "x" --sort
+-  started`: oldest recorded mention first (history may predate the corpus).
+-- your own running session is in the corpus and matches your own commands:
+-  rows marked `(live)` are being written now; `--before today` scopes them out.
+-- --codex switches provider. --json emits raw untruncated JSONL; get file
+-  paths for jq via `sxr path @N`.
+-- Transcripts record ATTEMPTS, not outcomes: trust the -> ok/err/? markers
+-  and verify external state (git ls-remote, gh, brew) before believing a
+-  command worked.
++Details that affect retrieval:
++- find requires every clue somewhere in a session; --any broadens it. Quote
++  phrases inside the query: `sxr find '"build 19" CloudKit'`. Matching is by
++  case-insensitive words, not regex or literal bytes. It returns 5 sessions
++  by default (-n changes this); displayed ranks are not @N session handles.
++- find builds its index on first use and refreshes changed files. Prepare it
++  ahead of searches with `sxr find --index --all-projects`. An incomplete
++  search exits 2; find --json includes complete, coverage and errors. A cached
++  search still checks source files. `sxr index --clear` removes session caches.
++- skills locates SKILL.md files by directory name or path clues. --paths prints
++  one path per distinct SKILL.md content; --copies includes identical copies,
++  and --aliases includes symlinks. `sxr skills --index` discovers
++  them across your home directory, including hidden folders and repositories.
++  Rerun it after installing skills to refresh the JSON map; lookups reuse that
++  snapshot. Add --root DIR to choose discovery roots; repeat it for more.
++- grep patterns are smart-case regex: lowercase ignores case, capitals match
++  exact case. Use -i to ignore case, -F for literal text, -l for matching IDs.
++- find skips the invoking Codex session when its ID is in the environment;
++  --include-current includes it. For Claude or other sessions, use
++  --exclude-session FULL_ID. Other views still include your own commands.
++  --before today filters session start dates (UTC), not last activity, so it
++  does not exclude a live session resumed from yesterday.
++- --path accepts relative paths and ~; symlinks resolve to their physical path.
++  Scope is exact by default. --recursive includes descendants; --worktrees
++  includes registered Git worktrees. --coverage prints searched/missing roots.
++- --claude-root DIR selects a config profile; repeat it to search several.
++  find includes children and archives by default; --claude or --codex restricts
++  it to one provider. Other commands need --include-agents or --codex --archives.
++- Copy the printed zoom command: --file preserves the exact source without
++  rediscovery. Read views emit raw JSONL with --json; find emits bounded excerpts.
++  Zoom (--around, --range, --type) or --full prints whole text.
++- IDs: @N from bare sxr (newest first), @A:@B range, unique ID prefix, or name.
++  No ID means newest. For an origin, `sxr grep -c "x" --sort started` orders
++  oldest recorded mentions first; history may predate the corpus.
++- -> ok/err/? describes the recorded command outcome. Nonzero exits include
++  expected empty grep results. Outer exec success does not prove a nested
++  command succeeded. Verify external state when the task depends on it.
++
++Every command takes --help. Exit codes: 0 content (also an empty list),
++1 empty result, 2 error.
+ <!-- /sxr:primer -->
+diff -ruN -x __pycache__ /tmp/sxr-b05/README.md /tmp/sxr-a05/README.md
+--- /tmp/sxr-b05/README.md	2026-09-11 16:50:04
++++ /tmp/sxr-a05/README.md	2026-09-11 17:17:41
+@@ -252,7 +252,7 @@
+ sxr show --file /path/session.jsonl --around 1247 # skip discovery, either provider
+ sxr prompts                    # complete human prompts of the newest session
+ sxr cmds @6                    # every command a session ran, with ok/err
+-sxr cmds --grep "git push"     # commands that did X, across all sessions
++sxr cmds --all-sessions --grep "git push"  # commands that did X, whole history
+ sxr errors @6                  # is_error records, whole text, each row's session named
+ sxr errors @1:@3 --compact     # one trimmed line per error, to scan a range first
+ sxr tools @6                   # per-tool call and failure counts
+@@ -292,6 +292,15 @@
+ per error for scanning a wide range, and it is the only thing that trims. `-n`
+ remains one allowance shared by every selected session, and `--json` still emits
+ the complete original records, `--compact` or not.
++
++`cmds` takes its scope from the selector alone. No selector means the newest
++session whether or not `--grep` is present, and `--all-sessions` searches every
++session in scope. Until 0.14.0 a nonempty `--grep` with no selector silently
++widened the scope to the whole project, so `sxr cmds --grep "git push"` searched
++history while `sxr cmds @1 --grep "git push"` searched one session; that is the
++behavior `--all-sessions` now names. A filtered view that searched fewer sessions
++than the scope holds says so and names the flag, in the empty case on stderr and
++otherwise as a `#` note.
+ 
+ `prompts --codex` uses explicit user-message events when present. Otherwise,
+ it reads user-role text and uses recorded content labels to exclude injected
+diff -ruN -x __pycache__ /tmp/sxr-b05/pyproject.toml /tmp/sxr-a05/pyproject.toml
+--- /tmp/sxr-b05/pyproject.toml	2026-09-09 20:24:17
++++ /tmp/sxr-a05/pyproject.toml	2026-09-11 17:17:41
+@@ -1,6 +1,6 @@
+ [project]
+ name = "sxr"
+-version = "0.12.2"
++version = "0.14.0"
+ description = "Read and digest Codex and Claude Code sessions from the terminal"
+ readme = "README.md"
+ authors = [
+diff -ruN -x __pycache__ /tmp/sxr-b05/src/sxr/__init__.py /tmp/sxr-a05/src/sxr/__init__.py
+--- /tmp/sxr-b05/src/sxr/__init__.py	2026-09-09 20:24:17
++++ /tmp/sxr-a05/src/sxr/__init__.py	2026-09-11 17:17:41
+@@ -1,6 +1,6 @@
+ """sxr: x-ray Codex and Claude Code sessions from the terminal."""
+ 
+-__version__ = "0.12.2"
++__version__ = "0.14.0"
+ 
+ 
+ def main() -> None:
+diff -ruN -x __pycache__ /tmp/sxr-b05/src/sxr/cli.py /tmp/sxr-a05/src/sxr/cli.py
+--- /tmp/sxr-b05/src/sxr/cli.py	2026-09-11 16:43:07
++++ /tmp/sxr-a05/src/sxr/cli.py	2026-09-11 17:21:38
+@@ -260,6 +260,9 @@
+     grep_: Annotated[
+         str | None, typer.Option("--grep", help="Only commands matching regex (smart-case)")
+     ] = None,
++    all_sessions: Annotated[
++        bool, typer.Option("--all-sessions", help="Every session in scope, with or without --grep")
++    ] = False,
+     since: flags.SinceF = None,
+     before: flags.BeforeF = None,
+     use_codex: flags.CodexF = False,
+@@ -268,14 +271,21 @@
+     json_out: flags.JsonF = False,
+     limit: flags.LimitF = None,
+ ) -> None:
+-    """Tool commands with ok/err state; --grep searches all sessions in scope.
++    """Tool commands with ok/err state; scope is the selector, never the filter.
+ 
+-    --since/--before narrow the scope by session start date.
++    No selector means the newest session, with or without --grep.
++    --all-sessions searches every session in scope. --since/--before narrow that
++    scope by session start date.
+     """
++    if all_sessions and arg is not None:
++        fail(f"--all-sessions and '{arg}' select different scopes", "name one or the other")
+     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
+     sessions = flags.sessions(ctx, provider, cwd, since, before)
+-    refs = sessions if arg is None and grep_ else resolve(arg, sessions)
+-    raise typer.Exit(cmds_view(refs, provider, json_out, limit, grep_))
++    refs = sessions if all_sessions else resolve(arg, sessions)
++    # Only a filter that fell back to the default scope needs telling; a named
++    # selector or --all-sessions is a scope the caller chose.
++    defaulted = len(sessions) if arg is None and not all_sessions and grep_ else None
++    raise typer.Exit(cmds_view(refs, provider, json_out, limit, grep_, defaulted))
+ 
+ 
+ # These commands carry their own flags; their modules own them.
+diff -ruN -x __pycache__ /tmp/sxr-b05/src/sxr/onboard.py /tmp/sxr-a05/src/sxr/onboard.py
+--- /tmp/sxr-b05/src/sxr/onboard.py	2026-09-11 16:50:20
++++ /tmp/sxr-a05/src/sxr/onboard.py	2026-09-11 17:15:31
+@@ -61,7 +61,7 @@
+   sxr grep -c timeout          which sessions mention it, before reading any
+   sxr grep "release" @2 -C 3   matches with 3 surrounding events inline
+   sxr cmds @2                  every command a session ran, with ok/err
+-  sxr cmds --grep "git push"   commands that did X, across all sessions
++  sxr cmds --all-sessions --grep "git push"  commands that did X, whole history
+   sxr grep -c x --before today history only: not your own (live) session
+   sxr show @2 --around 1247    untruncated window around event #1247
+   sxr show @2 --tail 5         how a session ended, whole text
+@@ -87,7 +87,7 @@
+ structured evidence   sxr find "webhook retries" --json
+ installed skill       sxr skills notify --paths
+ exact text counts     sxr grep -c -F "literal"
+-recorded commands     sxr cmds --grep "git push"
++recorded commands     sxr cmds --all-sessions --grep "git push"
+ session ending        sxr show @N --tail 5
+ human requests        sxr prompts @N
+ recorded failures     sxr errors @N
+diff -ruN -x __pycache__ /tmp/sxr-b05/src/sxr/search_index.py /tmp/sxr-a05/src/sxr/search_index.py
+--- /tmp/sxr-b05/src/sxr/search_index.py	2026-09-09 07:31:16
++++ /tmp/sxr-a05/src/sxr/search_index.py	2026-09-11 17:21:57
+@@ -57,14 +57,25 @@
+     return views_grep.grep_view(pattern, refs, provider.parse, opts)
+ 
+ 
+-def cmds_view(refs, provider, json_out: bool, limit: int | None, pattern: str | None) -> int:
+-    """Use the same candidate index for literal command searches."""
++def cmds_view(
++    refs,
++    provider,
++    json_out: bool,
++    limit: int | None,
++    pattern: str | None,
++    scope_size: int | None = None,
++) -> int:
++    """Use the same candidate index for literal command searches.
++
++    scope_size is how many sessions the scope holds, and is set only when a
++    filtered view defaulted its scope instead of being given one.
++    """
+     selected = candidates(refs, pattern, False) if pattern else None
+ 
+     def parse(path):
+         return provider.parse(path) if selected is None or path in selected else []
+ 
+-    return views_info.cmds_view(refs, parse, json_out, limit, pattern)
++    return views_info.cmds_view(refs, parse, json_out, limit, pattern, scope_size)
+ 
+ 
+ def index_cmd(
+diff -ruN -x __pycache__ /tmp/sxr-b05/src/sxr/views_info.py /tmp/sxr-a05/src/sxr/views_info.py
+--- /tmp/sxr-b05/src/sxr/views_info.py	2026-09-11 13:36:21
++++ /tmp/sxr-a05/src/sxr/views_info.py	2026-09-11 17:21:50
+@@ -207,12 +207,20 @@
+ 
+ 
+ def cmds_view(
+-    refs: list[SessionRef], parse, json_out: bool, limit: int | None, pattern: str | None = None
++    refs: list[SessionRef],
++    parse,
++    json_out: bool,
++    limit: int | None,
++    pattern: str | None = None,
++    scope_size: int | None = None,
+ ) -> int:
+     """Tool commands of the scope, one per line, with paired result state.
+ 
+     pattern (smart-case regex) matches the untruncated command text, so it
+-    finds what a piped `| grep` over the display lines would miss. -n caps
++    finds what a piped `| grep` over the display lines would miss. It narrows
++    rows only, never the sessions searched. scope_size is set when a filtered
++    view fell back to the default scope rather than a chosen one: then the
++    sessions it did not read are disclosed and --all-sessions is named. -n caps
+     printed rows across the whole scope, not per session; -n 0 prints all.
+     """
+     import re
+@@ -248,14 +256,18 @@
+                 f'"{one_line(event.raw.get("command", event.text), cap)}" -> {event.tag or "?"}'
+             )
+             shown += 1
++    unsearched = scope_size - len(refs) if scope_size else 0
+     if total == 0:
+         scope = ", ".join(r.short_id for r in refs)
+         what = f"no commands matching '{pattern}'" if pattern else "no tool calls"
+-        print(f"{what} in {scope}", file=sys.stderr)
++        rest = f"; --all-sessions searches the other {unsearched} in scope" if unsearched else ""
++        print(f"{what} in {scope}{rest}", file=sys.stderr)
+         return 1
+     if not json_out:
+         if total > shown:
+             print(f"# {total} commands, showing first {shown} (raise -n, or -n 0 for all)")
++        if unsearched:
++            print(f"# {len(refs)} of {scope_size} sessions searched; all of them: --all-sessions")
+         if first_call:
+             ref, seq = first_call
+             zoom = command(ref, "show", "--around", str(seq))
+diff -ruN -x __pycache__ /tmp/sxr-b05/tests/test_cmds_scope.py /tmp/sxr-a05/tests/test_cmds_scope.py
+--- /tmp/sxr-b05/tests/test_cmds_scope.py	1970-01-01 01:00:00
++++ /tmp/sxr-a05/tests/test_cmds_scope.py	2026-09-11 17:22:05
+@@ -0,0 +1,305 @@
++"""SXR-CLI-05: a `cmds` filter narrows rows, never the set of sessions searched.
++
++Until 0.14.0 a nonempty `--grep` with no selector silently widened the scope from
++the newest session to every session in the project, so the same flag meant two
++different scopes depending on whether a selector was present. `--all-sessions`
++now names that scope explicitly.
++"""
++
++import json
++
++import pytest
++from typer.testing import CliRunner
++
++from sxr.cli import app
++from sxr.onboard import EPILOG, PRIMER_BODY
++
++runner = CliRunner()
++
++
++def _write(path, records):
++    """One JSONL transcript, one physical line per record."""
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text("\n".join(json.dumps(record) for record in records) + "\n")
++    return path
++
++
++def _claude_session(root, ident, stamp, marker):
++    """Two shell calls and one non-shell call, each with a paired result."""
++
++    def message(seq, role, content):
++        return dict(
++            type="assistant" if role == "assistant" else "user",
++            timestamp=f"2026-09-0{seq}T12:0{seq}:0{seq}Z",
++            cwd="/w",
++            message=dict(role=role, content=content),
++        )
++
++    def call(seq, call_id, tool, arguments):
++        return message(
++            seq, "assistant", [dict(type="tool_use", id=call_id, name=tool, input=arguments)]
++        )
++
++    def result(seq, call_id, body):
++        return message(seq, "user", [dict(type="tool_result", tool_use_id=call_id, content=body)])
++
++    return _write(
++        root / "projects" / "-w" / f"{ident}.jsonl",
++        [
++            dict(type="user", timestamp=stamp, cwd="/w", message=dict(role="user", content="hi")),
++            call(2, "call-a", "Bash", dict(command=f"git push origin {marker}")),
++            result(3, "call-a", "pushed"),
++            call(4, "call-b", "Read", dict(file_path=f"/w/{marker}.py")),
++            result(5, "call-b", "contents"),
++        ],
++    )
++
++
++def _codex_session(root, ident, day, marker):
++    """The same coverage on Codex record shapes.
++
++    Shell commands arrive as `event_msg`/`item_completed` CommandExecution items,
++    which is where Codex records the normalized command text, and one MCP-style
++    `function_call` stands in for a non-shell tool.
++    """
++
++    def executed(seq, call_id, command, output):
++        return dict(
++            timestamp=f"2026-09-0{seq}T12:0{seq}:0{seq}Z",
++            type="event_msg",
++            payload=dict(
++                type="item_completed",
++                item=dict(
++                    type="CommandExecution",
++                    id=call_id,
++                    call_id=call_id,
++                    command=command,
++                    aggregated_output=output,
++                    exit_code=0,
++                ),
++            ),
++        )
++
++    return _write(
++        root
++        / "sessions"
++        / "2026"
++        / "09"
++        / f"0{day}"
++        / f"rollout-2026-09-0{day}T12-00-00-{ident}.jsonl",
++        [
++            dict(
++                timestamp="2026-09-01T12:00:00Z",
++                type="session_meta",
++                payload=dict(id=ident, cwd="/w", timestamp="2026-09-01T12:00:00Z"),
++            ),
++            dict(
++                timestamp="2026-09-01T12:01:01Z",
++                type="response_item",
++                payload=dict(
++                    type="message", role="user", content=[dict(type="input_text", text="hi")]
++                ),
++            ),
++            executed(2, "call-a", ["git", "push", "origin", marker], "pushed"),
++            dict(
++                timestamp="2026-09-04T12:04:04Z",
++                type="response_item",
++                payload=dict(
++                    type="function_call",
++                    name="read_file",
++                    call_id="call-b",
++                    arguments=json.dumps(dict(path=f"/w/{marker}.py")),
++                ),
++            ),
++            dict(
++                timestamp="2026-09-05T12:05:05Z",
++                type="response_item",
++                payload=dict(
++                    type="function_call_output",
++                    call_id="call-b",
++                    output=json.dumps(dict(output="contents", metadata=dict(exit_code=0))),
++                ),
++            ),
++        ],
++    )
++
++
++@pytest.fixture(params=["claude", "codex"])
++def corpus(request, tmp_path, monkeypatch):
++    """Two sessions in one scope: newest says 'beta', oldest says 'alpha'."""
++    root = tmp_path / request.param
++    if request.param == "claude":
++        _claude_session(
++            root, "aaaaaaa1-0000-4000-8000-00000000000a", "2026-09-01T12:00:00Z", "alpha"
++        )
++        _claude_session(
++            root, "bbbbbbb2-0000-4000-8000-00000000000b", "2026-09-02T12:00:00Z", "beta"
++        )
++        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(root))
++        return []
++    _codex_session(root, "01999991-aaaa-7000-8000-00000000000a", 1, "alpha")
++    _codex_session(root, "01999992-bbbb-7000-8000-00000000000b", 2, "beta")
++    monkeypatch.setenv("CODEX_HOME", str(root))
++    return ["--codex"]
++
++
++def _run(corpus, *args):
++    """Invoke cmds in the fixture scope."""
++    return runner.invoke(app, [*corpus, "cmds", *args, "--path", "/w"])
++
++
++def _markers(stdout):
++    """Which sessions the printed rows came from, by their distinctive text."""
++    return {m for m in ("alpha", "beta") if m in stdout}
++
++
++def test_a_filter_no_longer_widens_the_scope(corpus):
++    """The defect: --grep with no selector used to reach every session."""
++    result = _run(corpus, "--grep", "git push")
++    assert result.exit_code == 0, result.output
++    assert _markers(result.stdout) == {"beta"}
++
++
++def test_all_sessions_restores_the_old_reach_explicitly(corpus):
++    """The migration path named in the row's compatibility clause."""
++    result = _run(corpus, "--all-sessions", "--grep", "git push")
++    assert result.exit_code == 0, result.output
++    assert _markers(result.stdout) == {"alpha", "beta"}
++
++
++def test_all_sessions_works_without_a_filter(corpus):
++    """It is a scope flag, not a filter modifier."""
++    result = _run(corpus, "--all-sessions")
++    assert result.exit_code == 0, result.output
++    assert _markers(result.stdout) == {"alpha", "beta"}
++
++
++def test_no_selector_and_no_filter_is_unchanged(corpus):
++    """The stable default was already the newest session; it still is."""
++    result = _run(corpus)
++    assert result.exit_code == 0, result.output
++    assert _markers(result.stdout) == {"beta"}
++
++
++def test_an_explicit_selector_still_wins_over_a_filter(corpus):
++    """Unchanged: naming a session searches that session."""
++    assert _markers(_run(corpus, "@2", "--grep", "git push").stdout) == {"alpha"}
++    assert _markers(_run(corpus, "@1", "--grep", "git push").stdout) == {"beta"}
++
++
++def test_a_range_still_selects_every_reference(corpus):
++    """Unchanged: @A:@B is its own explicit scope."""
++    result = _run(corpus, "@1:@2", "--grep", "git push")
++    assert result.exit_code == 0, result.output
++    assert _markers(result.stdout) == {"alpha", "beta"}
++
++
++def test_all_sessions_with_a_selector_is_a_usage_error(corpus):
++    """Two contradictory scopes are rejected rather than one silently winning."""
++    result = _run(corpus, "@1", "--all-sessions")
++    assert result.exit_code == 2, result.output
++    assert "--all-sessions" in result.output
++    assert "Traceback" not in result.output
++
++
++def test_an_empty_filter_string_is_still_no_filter(corpus):
++    """Unchanged edge: --grep '' does not filter, and does not widen either."""
++    result = _run(corpus, "--grep", "")
++    assert result.exit_code == 0, result.output
++    assert _markers(result.stdout) == {"beta"}
++
++
++def test_a_match_only_in_an_older_session_teaches_the_flag(corpus):
++    """The whole point of the migration: the empty result says where the rest are."""
++    result = _run(corpus, "--grep", "alpha")
++    assert result.exit_code == 1
++    assert result.stdout == ""
++    assert "--all-sessions searches the other 1 in scope" in result.stderr
++
++
++def test_a_narrowed_search_says_how_many_sessions_it_read(corpus):
++    """A found result still discloses that the scope was larger."""
++    result = _run(corpus, "--grep", "git push")
++    assert "# 1 of 2 sessions searched; all of them: --all-sessions" in result.stdout
++
++
++def test_all_sessions_does_not_claim_a_narrowed_scope(corpus):
++    """The note is about what was skipped, so searching everything prints none."""
++    result = _run(corpus, "--all-sessions", "--grep", "git push")
++    assert "sessions searched" not in result.stdout
++
++
++def test_a_chosen_scope_is_never_second_guessed(corpus):
++    """The note explains a defaulted scope; a named one needs no explaining.
++
++    This is what keeps every already-explicit invocation byte-identical to
++    0.12.2, which the evidence-05 capture index checks case by case.
++    """
++    for args in (["@2", "--grep", "git push"], ["@1:@2", "--grep", "git push"]):
++        assert "sessions searched" not in _run(corpus, *args).stdout
++
++
++def test_an_unfiltered_default_is_not_annotated_either(corpus):
++    """`sxr cmds` is the oldest default in the tool; it gains no new output."""
++    assert "sessions searched" not in _run(corpus).stdout
++
++
++def test_no_match_anywhere_still_exits_one(corpus):
++    """Unchanged: an empty result is exit 1 with a clean stdout."""
++    result = _run(corpus, "--all-sessions", "--grep", "nothing-matches-this")
++    assert result.exit_code == 1
++    assert result.stdout == ""
++    assert "no commands matching 'nothing-matches-this'" in result.stderr
++
++
++def test_json_emits_complete_records_one_per_physical_line(corpus):
++    """SXR-AUD-005/015: raw records, unchanged by the new flag."""
++    result = _run(corpus, "--all-sessions", "--json")
++    assert result.exit_code == 0, result.output
++    lines = result.stdout.splitlines()
++    assert len(lines) == 4  # two tool calls per session
++    for line in lines:
++        assert isinstance(json.loads(line), dict)
++
++
++def test_the_row_limit_still_spans_the_selected_sessions(corpus):
++    """SXR-AUD-006: -n is one allowance for the invocation, not per session."""
++    result = _run(corpus, "--all-sessions", "--grep", "git push", "-n", "1")
++    assert result.exit_code == 0, result.output
++    rows = [r for r in result.stdout.splitlines() if not r.startswith("#")]
++    assert len(rows) == 1
++    assert "showing first 1" in result.stdout
++
++
++def test_a_negative_limit_is_still_a_usage_error(corpus):
++    """SXR-AUD-012, unchanged."""
++    result = _run(corpus, "--all-sessions", "-n", "-1")
++    assert result.exit_code == 2
++    assert "limit" in result.output
++
++
++def test_non_shell_tool_calls_are_still_covered(corpus):
++    """The row's compatibility clause: preserve all-tool coverage."""
++    result = _run(corpus, "--all-sessions")
++    assert "git push" in result.stdout
++    assert ("Read" in result.stdout) or ("read_file" in result.stdout)
++
++
++def test_help_documents_the_new_scope_flag(corpus):
++    """Discoverable without reading the changelog."""
++    result = runner.invoke(app, [*corpus, "cmds", "--help"])
++    assert result.exit_code == 0
++    assert "--all-sessions" in result.stdout
++
++
++def test_the_primer_recipe_teaches_all_sessions():
++    """The primer ships inside other repositories, so its recipe must stay true."""
++    recipe = [line for line in PRIMER_BODY.splitlines() if line.startswith("recorded commands")]
++    assert len(recipe) == 1
++    assert "--all-sessions" in recipe[0]
++
++
++def test_the_epilog_example_teaches_all_sessions():
++    """`sxr --help` is the other place the old scope was advertised."""
++    lines = [line for line in EPILOG.splitlines() if "cmds" in line and "--grep" in line]
++    assert lines and all("--all-sessions" in line for line in lines)
+diff -ruN -x __pycache__ /tmp/sxr-b05/tests/test_scope.py /tmp/sxr-a05/tests/test_scope.py
+--- /tmp/sxr-b05/tests/test_scope.py	2026-07-27 07:13:01
++++ /tmp/sxr-a05/tests/test_scope.py	2026-09-11 17:25:12
+@@ -239,9 +239,13 @@
+ 
+ 
+ def test_cmds_grep_honors_the_window(corpus) -> None:
+-    result = runner.invoke(app, ["cmds", "--grep", "x", "--path", "/w", "--since", "2026-07-28"])
+-    assert result.exit_code == 1
+-    assert "kept none of 3 sessions in scope" in result.output
++    # Exit 2, as for every other read command whose scope holds no sessions.
++    # This asserted exit 1 until SXR-CLI-05: --grep used to bypass selector
++    # resolution, so the same empty window exited 1 with a filter and 2 without.
++    for args in (["--grep", "x"], []):
++        result = runner.invoke(app, ["cmds", *args, "--path", "/w", "--since", "2026-07-28"])
++        assert result.exit_code == 2, args
++        assert "kept none of 3 sessions in scope" in result.output
+ 
+ 
+ def test_bad_since_exits_2_through_the_cli(corpus) -> None:
+diff -ruN -x __pycache__ /tmp/sxr-b05/uv.lock /tmp/sxr-a05/uv.lock
+--- /tmp/sxr-b05/uv.lock	2026-09-09 20:24:17
++++ /tmp/sxr-a05/uv.lock	2026-09-11 17:17:41
+@@ -264,7 +264,7 @@
+ 
+ [[package]]
+ name = "sxr"
+-version = "0.12.2"
++version = "0.14.0"
+ source = { editable = "." }
+ dependencies = [
+     { name = "typer" },

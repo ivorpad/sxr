@@ -1,0 +1,160 @@
+uv run ruff format --check .
+128 files already formatted
+uv run ruff check .
+All checks passed!
+uv run konpy validate
+Configuration is valid.
+uv run konpy check
+Checked 95 files in 240ms. No violations found.
+uv run pytest
+........................................................................ [ 11%]
+........................................................................ [ 22%]
+........................................................................ [ 34%]
+........................................................................ [ 45%]
+........................................................................ [ 56%]
+........................................................................ [ 68%]
+........................................................................ [ 79%]
+........................................................................ [ 91%]
+.................................................FFF..F.                 [100%]
+=================================== FAILURES ===================================
+________ test_worker_reuses_process_but_observes_changes_and_current_id ________
+
+launcher = (PosixPath('/private/var/folders/yp/7myn5z6j7sbbzgvtby4pxv6w0000gn/T/pytest-of-ivor/pytest-462/test_worker_reuses_proc...vor/pytest-462/test_worker_reuses_process_but0/.codex/sessions/2026/07/24/rollout-2026-07-24T16-58-24-019f9510.jsonl'))
+
+    def test_worker_reuses_process_but_observes_changes_and_current_id(launcher):
+        command, source = launcher
+        original = find(command)
+        assert original.returncode == 0, original.stderr
+>       status = json.loads(run(command, "serve", "status").stdout)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_worker.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../../.local/share/uv/python/cpython-3.14.2-macos-aarch64-none/lib/python3.14/json/__init__.py:352: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/share/uv/python/cpython-3.14.2-macos-aarch64-none/lib/python3.14/json/decoder.py:345: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <json.decoder.JSONDecoder object at 0x104eaa7b0>, s = '', idx = 0
+
+    def raw_decode(self, s, idx=0):
+        """Decode a JSON document from ``s`` (a ``str`` beginning with
+        a JSON document) and return a 2-tuple of the Python
+        representation and the index in ``s`` where the document ended.
+    
+        This can be used to decode a JSON document from a string that may
+        have extraneous data at the end.
+    
+        """
+        try:
+            obj, end = self.scan_once(s, idx)
+        except StopIteration as err:
+>           raise JSONDecodeError("Expecting value", s, err.value) from None
+E           json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+../../../.local/share/uv/python/cpython-3.14.2-macos-aarch64-none/lib/python3.14/json/decoder.py:363: JSONDecodeError
+___________ test_worker_parallel_start_paths_fallback_and_relocation ___________
+
+launcher = (PosixPath('/private/var/folders/yp/7myn5z6j7sbbzgvtby4pxv6w0000gn/T/pytest-of-ivor/pytest-462/test_worker_parallel_st...vor/pytest-462/test_worker_parallel_start_pat0/.codex/sessions/2026/07/24/rollout-2026-07-24T16-58-24-019f9510.jsonl'))
+tmp_path = PosixPath('/private/var/folders/yp/7myn5z6j7sbbzgvtby4pxv6w0000gn/T/pytest-of-ivor/pytest-462/test_worker_parallel_start_pat0')
+
+    def test_worker_parallel_start_paths_fallback_and_relocation(launcher, tmp_path):
+        command, source = launcher
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            results = list(pool.map(lambda _: find(command), range(4)))
+>       assert all(result.returncode == 0 for result in results), [r.stderr for r in results]
+E       AssertionError: ['error: cannot search ranked index: table files already exists; run sxr index --clear or use grep for direct reads
+E         ', '', '# refreshing ranked session index
+E         ', '# refreshing ranked session index
+E         ']
+E       assert False
+E        +  where False = all(<generator object test_worker_parallel_start_paths_fallback_and_relocation.<locals>.<genexpr> at 0x10c7246c0>)
+
+tests/test_worker.py:100: AssertionError
+_______________ test_worker_idle_expiry_and_rejects_bad_request ________________
+
+launcher = (PosixPath('/private/var/folders/yp/7myn5z6j7sbbzgvtby4pxv6w0000gn/T/pytest-of-ivor/pytest-462/test_worker_idle_expiry...vor/pytest-462/test_worker_idle_expiry_and_re0/.codex/sessions/2026/07/24/rollout-2026-07-24T16-58-24-019f9510.jsonl'))
+
+    def test_worker_idle_expiry_and_rejects_bad_request(launcher):
+        command, _ = launcher
+        path = Path(os.environ["SXR_CACHE_DIR"]) / f"find-{__version__}.sock"
+        worker = subprocess.Popen(
+            [str(command), "serve", "--foreground", str(path), "--idle", "0.2"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        try:
+            deadline = time.monotonic() + 5
+            while not path.exists() and time.monotonic() < deadline:
+                time.sleep(0.01)
+>           assert path.stat().st_mode & 0o777 == 0o600
+                   ^^^^^^^^^^^
+
+tests/test_worker.py:129: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/tmp/sxrw-xefe58o3/find-0.12.2.sock'), follow_symlinks = True
+
+    def stat(self, *, follow_symlinks=True):
+        """
+        Return the result of the stat() system call on this path, like
+        os.stat() does.
+        """
+>       return os.stat(self, follow_symlinks=follow_symlinks)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/tmp/sxrw-xefe58o3/find-0.12.2.sock'
+
+../../../.local/share/uv/python/cpython-3.14.2-macos-aarch64-none/lib/python3.14/pathlib/__init__.py:654: FileNotFoundError
+_____________ test_worker_skill_discovery_refresh_and_caller_roots _____________
+
+launcher = (PosixPath('/private/var/folders/yp/7myn5z6j7sbbzgvtby4pxv6w0000gn/T/pytest-of-ivor/pytest-462/test_worker_skill_disco...vor/pytest-462/test_worker_skill_discovery_re0/.codex/sessions/2026/07/24/rollout-2026-07-24T16-58-24-019f9510.jsonl'))
+tmp_path = PosixPath('/private/var/folders/yp/7myn5z6j7sbbzgvtby4pxv6w0000gn/T/pytest-of-ivor/pytest-462/test_worker_skill_discovery_re0')
+
+    def test_worker_skill_discovery_refresh_and_caller_roots(launcher, tmp_path):
+        command, _ = launcher
+        root = tmp_path / ".agents/skills/notify"
+        root.mkdir(parents=True)
+        (root / "SKILL.md").write_text("fixture")
+        result = run(command, "skills", "notify", "--paths")
+        assert result.returncode == 0 and result.stdout.strip() == str(root / "SKILL.md")
+>       status = json.loads(run(command, "serve", "status").stdout)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_worker.py:173: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../../.local/share/uv/python/cpython-3.14.2-macos-aarch64-none/lib/python3.14/json/__init__.py:352: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/share/uv/python/cpython-3.14.2-macos-aarch64-none/lib/python3.14/json/decoder.py:345: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <json.decoder.JSONDecoder object at 0x104eaa7b0>, s = '', idx = 0
+
+    def raw_decode(self, s, idx=0):
+        """Decode a JSON document from ``s`` (a ``str`` beginning with
+        a JSON document) and return a 2-tuple of the Python
+        representation and the index in ``s`` where the document ended.
+    
+        This can be used to decode a JSON document from a string that may
+        have extraneous data at the end.
+    
+        """
+        try:
+            obj, end = self.scan_once(s, idx)
+        except StopIteration as err:
+>           raise JSONDecodeError("Expecting value", s, err.value) from None
+E           json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+../../../.local/share/uv/python/cpython-3.14.2-macos-aarch64-none/lib/python3.14/json/decoder.py:363: JSONDecodeError
+=========================== short test summary info ============================
+FAILED tests/test_worker.py::test_worker_reuses_process_but_observes_changes_and_current_id
+FAILED tests/test_worker.py::test_worker_parallel_start_paths_fallback_and_relocation
+FAILED tests/test_worker.py::test_worker_idle_expiry_and_rejects_bad_request
+FAILED tests/test_worker.py::test_worker_skill_discovery_refresh_and_caller_roots
+4 failed, 628 passed in 16.53s
+error: recipe `test` failed on line 42 with exit code 1

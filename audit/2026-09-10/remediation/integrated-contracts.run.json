@@ -1,0 +1,14 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "audit/2026-09-10/verify_cli.py",
+    "--output",
+    "audit/2026-09-10/remediation/integrated-contracts.json"
+  ],
+  "started": "2026-09-10T11:02:20.962504+00:00",
+  "ended": "2026-09-10T11:02:27.717196+00:00",
+  "exit_code": 0,
+  "source_identity": "source-ad779d971fe1dc73.json",
+  "source_unchanged": true,
+  "evidence": "integrated-contracts.log"
+}

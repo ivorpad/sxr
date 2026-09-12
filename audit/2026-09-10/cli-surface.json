@@ -1,0 +1,4873 @@
+[
+  {
+    "command": "root",
+    "parser": "typer",
+    "hidden": false,
+    "help": "sxr: read Claude Code and Codex sessions for a directory.\n\nBare invocation lists sessions newest first, with @N handles.",
+    "parameters": [
+      {
+        "name": "use_codex",
+        "kind": "option",
+        "flags": [
+          "--codex"
+        ],
+        "help": "Read Codex sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-CODEX",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "use_claude",
+        "kind": "option",
+        "flags": [
+          "--claude"
+        ],
+        "help": "Read Claude Code sessions (default)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-DEFAULT",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "path",
+        "kind": "option",
+        "flags": [
+          "--path"
+        ],
+        "help": "Inspect DIR instead of cwd",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a9130>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PATH"
+        ]
+      },
+      {
+        "name": "json_out",
+        "kind": "option",
+        "flags": [
+          "--json"
+        ],
+        "help": "Raw JSONL records, never truncated",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FORMAT-JSON"
+        ]
+      },
+      {
+        "name": "limit",
+        "kind": "option",
+        "flags": [
+          "--limit",
+          "-n"
+        ],
+        "help": "Cap printed rows (0 = all)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-LIMIT",
+          "CLI-NEGATIVE-LIMIT"
+        ]
+      },
+      {
+        "name": "since",
+        "kind": "option",
+        "flags": [
+          "--since"
+        ],
+        "help": "Sessions started on/after DATE (YYYY-MM-DD, ISO, today, @N)",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "before",
+        "kind": "option",
+        "flags": [
+          "--before"
+        ],
+        "help": "Sessions started before DATE; --before today skips today's",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "version",
+        "kind": "option",
+        "flags": [
+          "--version"
+        ],
+        "help": "Print version and exit",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "CLI-VERSION"
+        ]
+      },
+      {
+        "name": "file",
+        "kind": "option",
+        "flags": [
+          "--file"
+        ],
+        "help": "Read this JSONL file directly; detect Claude or Codex",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a91d0>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-FILE",
+          "SCOPE-FILE-VALIDATION"
+        ]
+      },
+      {
+        "name": "recursive",
+        "kind": "option",
+        "flags": [
+          "--recursive"
+        ],
+        "help": "Include sessions recorded in descendant directories",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-RECURSIVE"
+        ]
+      },
+      {
+        "name": "worktrees",
+        "kind": "option",
+        "flags": [
+          "--worktrees"
+        ],
+        "help": "Include registered Git worktrees of the selected repository",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-WORKTREES"
+        ]
+      },
+      {
+        "name": "claude_roots",
+        "kind": "option",
+        "flags": [
+          "--claude-root"
+        ],
+        "help": "Claude config root to search; repeat for multiple profiles",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a9270>",
+        "required": false,
+        "multiple": true,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PROFILES"
+        ]
+      },
+      {
+        "name": "include_agents",
+        "kind": "option",
+        "flags": [
+          "--include-agents"
+        ],
+        "help": "Include nested Claude agent transcripts",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-CHILDREN"
+        ]
+      },
+      {
+        "name": "archives",
+        "kind": "option",
+        "flags": [
+          "--archives"
+        ],
+        "help": "Include Codex archived_sessions alongside active sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-ARCHIVES"
+        ]
+      },
+      {
+        "name": "coverage",
+        "kind": "option",
+        "flags": [
+          "--coverage"
+        ],
+        "help": "Report searched/unavailable roots and discovered sources on stderr",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-COVERAGE"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "list",
+    "parser": "typer",
+    "hidden": false,
+    "help": "List sessions for the directory, newest first; (live) = written just now.",
+    "parameters": [
+      {
+        "name": "use_codex",
+        "kind": "option",
+        "flags": [
+          "--codex"
+        ],
+        "help": "Read Codex sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-CODEX",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "use_claude",
+        "kind": "option",
+        "flags": [
+          "--claude"
+        ],
+        "help": "Read Claude Code sessions (default)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-DEFAULT",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "path",
+        "kind": "option",
+        "flags": [
+          "--path"
+        ],
+        "help": "Inspect DIR instead of cwd",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1036a9400>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PATH"
+        ]
+      },
+      {
+        "name": "json_out",
+        "kind": "option",
+        "flags": [
+          "--json"
+        ],
+        "help": "Raw JSONL records, never truncated",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FORMAT-JSON"
+        ]
+      },
+      {
+        "name": "limit",
+        "kind": "option",
+        "flags": [
+          "--limit",
+          "-n"
+        ],
+        "help": "Cap printed rows (0 = all)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-LIMIT",
+          "CLI-NEGATIVE-LIMIT"
+        ]
+      },
+      {
+        "name": "since",
+        "kind": "option",
+        "flags": [
+          "--since"
+        ],
+        "help": "Sessions started on/after DATE (YYYY-MM-DD, ISO, today, @N)",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "before",
+        "kind": "option",
+        "flags": [
+          "--before"
+        ],
+        "help": "Sessions started before DATE; --before today skips today's",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "file",
+        "kind": "option",
+        "flags": [
+          "--file"
+        ],
+        "help": "Read this JSONL file directly; detect Claude or Codex",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x103785310>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-FILE",
+          "SCOPE-FILE-VALIDATION"
+        ]
+      },
+      {
+        "name": "recursive",
+        "kind": "option",
+        "flags": [
+          "--recursive"
+        ],
+        "help": "Include sessions recorded in descendant directories",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-RECURSIVE"
+        ]
+      },
+      {
+        "name": "worktrees",
+        "kind": "option",
+        "flags": [
+          "--worktrees"
+        ],
+        "help": "Include registered Git worktrees of the selected repository",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-WORKTREES"
+        ]
+      },
+      {
+        "name": "claude_roots",
+        "kind": "option",
+        "flags": [
+          "--claude-root"
+        ],
+        "help": "Claude config root to search; repeat for multiple profiles",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x103785810>",
+        "required": false,
+        "multiple": true,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PROFILES"
+        ]
+      },
+      {
+        "name": "include_agents",
+        "kind": "option",
+        "flags": [
+          "--include-agents"
+        ],
+        "help": "Include nested Claude agent transcripts",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-CHILDREN"
+        ]
+      },
+      {
+        "name": "archives",
+        "kind": "option",
+        "flags": [
+          "--archives"
+        ],
+        "help": "Include Codex archived_sessions alongside active sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-ARCHIVES"
+        ]
+      },
+      {
+        "name": "coverage",
+        "kind": "option",
+        "flags": [
+          "--coverage"
+        ],
+        "help": "Report searched/unavailable roots and discovered sources on stderr",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-COVERAGE"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "show",
+    "parser": "typer",
+    "hidden": false,
+    "help": "Transcript skeleton; zooms (--around/--range/--type) print whole text.",
+    "parameters": [
+      {
+        "name": "arg",
+        "kind": "argument",
+        "flags": [],
+        "help": "Session: @N, @A:@B, id prefix, or name",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SELECT-HANDLES"
+        ]
+      },
+      {
+        "name": "around",
+        "kind": "option",
+        "flags": [
+          "--around"
+        ],
+        "help": "Zoom to +/-context of event #N",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SHOW-AROUND"
+        ]
+      },
+      {
+        "name": "context",
+        "kind": "option",
+        "flags": [
+          "--context"
+        ],
+        "help": "Zoom window half-width",
+        "default": 10,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SHOW-AROUND"
+        ]
+      },
+      {
+        "name": "range_",
+        "kind": "option",
+        "flags": [
+          "--range"
+        ],
+        "help": "Event span A:B",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SHOW-RANGE"
+        ]
+      },
+      {
+        "name": "type_",
+        "kind": "option",
+        "flags": [
+          "--type"
+        ],
+        "help": "Record type filter",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SHOW-FILTERS"
+        ]
+      },
+      {
+        "name": "tail",
+        "kind": "option",
+        "flags": [
+          "--tail"
+        ],
+        "help": "Last N selected events, whole text",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SHOW-TAIL"
+        ]
+      },
+      {
+        "name": "thinking",
+        "kind": "option",
+        "flags": [
+          "--thinking"
+        ],
+        "help": null,
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SHOW-FILTERS"
+        ]
+      },
+      {
+        "name": "tools",
+        "kind": "option",
+        "flags": [
+          "--tools"
+        ],
+        "help": null,
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SHOW-FILTERS"
+        ]
+      },
+      {
+        "name": "errors",
+        "kind": "option",
+        "flags": [
+          "--errors"
+        ],
+        "help": null,
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SHOW-FILTERS"
+        ]
+      },
+      {
+        "name": "full",
+        "kind": "option",
+        "flags": [
+          "--full"
+        ],
+        "help": null,
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SHOW-FULL"
+        ]
+      },
+      {
+        "name": "budget",
+        "kind": "option",
+        "flags": [
+          "--budget"
+        ],
+        "help": "Chars before scan views trim (0 = never; env SXR_BUDGET)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SHOW-BUDGET"
+        ]
+      },
+      {
+        "name": "line_cap",
+        "kind": "option",
+        "flags": [
+          "--line-limit"
+        ],
+        "help": "Per-line char cap when trimming (env SXR_LINE_LIMIT)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SHOW-BUDGET"
+        ]
+      },
+      {
+        "name": "use_codex",
+        "kind": "option",
+        "flags": [
+          "--codex"
+        ],
+        "help": "Read Codex sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-CODEX",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "use_claude",
+        "kind": "option",
+        "flags": [
+          "--claude"
+        ],
+        "help": "Read Claude Code sessions (default)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-DEFAULT",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "path",
+        "kind": "option",
+        "flags": [
+          "--path"
+        ],
+        "help": "Inspect DIR instead of cwd",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x103603820>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PATH"
+        ]
+      },
+      {
+        "name": "json_out",
+        "kind": "option",
+        "flags": [
+          "--json"
+        ],
+        "help": "Raw JSONL records, never truncated",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FORMAT-JSON"
+        ]
+      },
+      {
+        "name": "limit",
+        "kind": "option",
+        "flags": [
+          "--limit",
+          "-n"
+        ],
+        "help": "Cap printed rows (0 = all)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "OUTPUT-LIMIT-JSON",
+          "CLI-NEGATIVE-LIMIT"
+        ]
+      },
+      {
+        "name": "file",
+        "kind": "option",
+        "flags": [
+          "--file"
+        ],
+        "help": "Read this JSONL file directly; detect Claude or Codex",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x103603100>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-FILE",
+          "SCOPE-FILE-VALIDATION"
+        ]
+      },
+      {
+        "name": "recursive",
+        "kind": "option",
+        "flags": [
+          "--recursive"
+        ],
+        "help": "Include sessions recorded in descendant directories",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-RECURSIVE"
+        ]
+      },
+      {
+        "name": "worktrees",
+        "kind": "option",
+        "flags": [
+          "--worktrees"
+        ],
+        "help": "Include registered Git worktrees of the selected repository",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-WORKTREES"
+        ]
+      },
+      {
+        "name": "claude_roots",
+        "kind": "option",
+        "flags": [
+          "--claude-root"
+        ],
+        "help": "Claude config root to search; repeat for multiple profiles",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1036c0cb0>",
+        "required": false,
+        "multiple": true,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PROFILES"
+        ]
+      },
+      {
+        "name": "include_agents",
+        "kind": "option",
+        "flags": [
+          "--include-agents"
+        ],
+        "help": "Include nested Claude agent transcripts",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-CHILDREN"
+        ]
+      },
+      {
+        "name": "archives",
+        "kind": "option",
+        "flags": [
+          "--archives"
+        ],
+        "help": "Include Codex archived_sessions alongside active sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-ARCHIVES"
+        ]
+      },
+      {
+        "name": "coverage",
+        "kind": "option",
+        "flags": [
+          "--coverage"
+        ],
+        "help": "Report searched/unavailable roots and discovered sources on stderr",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-COVERAGE"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "serve",
+    "parser": "typer",
+    "hidden": false,
+    "help": "Show status or stop the local find worker (bundled installs start it automatically).",
+    "parameters": [
+      {
+        "name": "action",
+        "kind": "argument",
+        "flags": [],
+        "help": null,
+        "default": "status",
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "WORKER-CONTROL"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "prompts",
+    "parser": "typer",
+    "hidden": false,
+    "help": "Human prompts in order, excluding records labelled as injected context.",
+    "parameters": [
+      {
+        "name": "arg",
+        "kind": "argument",
+        "flags": [],
+        "help": "Session: @N, @A:@B, id prefix, or name",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SELECT-HANDLES"
+        ]
+      },
+      {
+        "name": "include_all",
+        "kind": "option",
+        "flags": [
+          "--all"
+        ],
+        "help": "Include injected context and tool results",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "PROMPTS-ALL"
+        ]
+      },
+      {
+        "name": "budget",
+        "kind": "option",
+        "flags": [
+          "--budget"
+        ],
+        "help": "Chars before scan views trim (0 = never; env SXR_BUDGET)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SHOW-BUDGET"
+        ]
+      },
+      {
+        "name": "line_cap",
+        "kind": "option",
+        "flags": [
+          "--line-limit"
+        ],
+        "help": "Per-line char cap when trimming (env SXR_LINE_LIMIT)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SHOW-BUDGET"
+        ]
+      },
+      {
+        "name": "use_codex",
+        "kind": "option",
+        "flags": [
+          "--codex"
+        ],
+        "help": "Read Codex sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-CODEX",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "use_claude",
+        "kind": "option",
+        "flags": [
+          "--claude"
+        ],
+        "help": "Read Claude Code sessions (default)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-DEFAULT",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "path",
+        "kind": "option",
+        "flags": [
+          "--path"
+        ],
+        "help": "Inspect DIR instead of cwd",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1036ad480>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PATH"
+        ]
+      },
+      {
+        "name": "json_out",
+        "kind": "option",
+        "flags": [
+          "--json"
+        ],
+        "help": "Raw JSONL records, never truncated",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FORMAT-JSON"
+        ]
+      },
+      {
+        "name": "limit",
+        "kind": "option",
+        "flags": [
+          "--limit",
+          "-n"
+        ],
+        "help": "Cap printed rows (0 = all)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "OUTPUT-LIMIT-JSON",
+          "CLI-NEGATIVE-LIMIT"
+        ]
+      },
+      {
+        "name": "file",
+        "kind": "option",
+        "flags": [
+          "--file"
+        ],
+        "help": "Read this JSONL file directly; detect Claude or Codex",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1036ad370>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-FILE",
+          "SCOPE-FILE-VALIDATION"
+        ]
+      },
+      {
+        "name": "recursive",
+        "kind": "option",
+        "flags": [
+          "--recursive"
+        ],
+        "help": "Include sessions recorded in descendant directories",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-RECURSIVE"
+        ]
+      },
+      {
+        "name": "worktrees",
+        "kind": "option",
+        "flags": [
+          "--worktrees"
+        ],
+        "help": "Include registered Git worktrees of the selected repository",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-WORKTREES"
+        ]
+      },
+      {
+        "name": "claude_roots",
+        "kind": "option",
+        "flags": [
+          "--claude-root"
+        ],
+        "help": "Claude config root to search; repeat for multiple profiles",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x103695850>",
+        "required": false,
+        "multiple": true,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PROFILES"
+        ]
+      },
+      {
+        "name": "include_agents",
+        "kind": "option",
+        "flags": [
+          "--include-agents"
+        ],
+        "help": "Include nested Claude agent transcripts",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-CHILDREN"
+        ]
+      },
+      {
+        "name": "archives",
+        "kind": "option",
+        "flags": [
+          "--archives"
+        ],
+        "help": "Include Codex archived_sessions alongside active sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-ARCHIVES"
+        ]
+      },
+      {
+        "name": "coverage",
+        "kind": "option",
+        "flags": [
+          "--coverage"
+        ],
+        "help": "Report searched/unavailable roots and discovered sources on stderr",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-COVERAGE"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "errors",
+    "parser": "typer",
+    "hidden": false,
+    "help": "Records with error properties (is_error, nonzero exit_code).",
+    "parameters": [
+      {
+        "name": "arg",
+        "kind": "argument",
+        "flags": [],
+        "help": "Session: @N, @A:@B, id prefix, or name",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SELECT-HANDLES"
+        ]
+      },
+      {
+        "name": "use_codex",
+        "kind": "option",
+        "flags": [
+          "--codex"
+        ],
+        "help": "Read Codex sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-CODEX",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "use_claude",
+        "kind": "option",
+        "flags": [
+          "--claude"
+        ],
+        "help": "Read Claude Code sessions (default)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-DEFAULT",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "path",
+        "kind": "option",
+        "flags": [
+          "--path"
+        ],
+        "help": "Inspect DIR instead of cwd",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x103695750>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PATH"
+        ]
+      },
+      {
+        "name": "json_out",
+        "kind": "option",
+        "flags": [
+          "--json"
+        ],
+        "help": "Raw JSONL records, never truncated",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FORMAT-JSON"
+        ]
+      },
+      {
+        "name": "limit",
+        "kind": "option",
+        "flags": [
+          "--limit",
+          "-n"
+        ],
+        "help": "Cap printed rows (0 = all)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "ERRORS-LIMIT",
+          "CLI-NEGATIVE-LIMIT"
+        ]
+      },
+      {
+        "name": "file",
+        "kind": "option",
+        "flags": [
+          "--file"
+        ],
+        "help": "Read this JSONL file directly; detect Claude or Codex",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x103655f40>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-FILE",
+          "SCOPE-FILE-VALIDATION"
+        ]
+      },
+      {
+        "name": "recursive",
+        "kind": "option",
+        "flags": [
+          "--recursive"
+        ],
+        "help": "Include sessions recorded in descendant directories",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-RECURSIVE"
+        ]
+      },
+      {
+        "name": "worktrees",
+        "kind": "option",
+        "flags": [
+          "--worktrees"
+        ],
+        "help": "Include registered Git worktrees of the selected repository",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-WORKTREES"
+        ]
+      },
+      {
+        "name": "claude_roots",
+        "kind": "option",
+        "flags": [
+          "--claude-root"
+        ],
+        "help": "Claude config root to search; repeat for multiple profiles",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x103656030>",
+        "required": false,
+        "multiple": true,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PROFILES"
+        ]
+      },
+      {
+        "name": "include_agents",
+        "kind": "option",
+        "flags": [
+          "--include-agents"
+        ],
+        "help": "Include nested Claude agent transcripts",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-CHILDREN"
+        ]
+      },
+      {
+        "name": "archives",
+        "kind": "option",
+        "flags": [
+          "--archives"
+        ],
+        "help": "Include Codex archived_sessions alongside active sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-ARCHIVES"
+        ]
+      },
+      {
+        "name": "coverage",
+        "kind": "option",
+        "flags": [
+          "--coverage"
+        ],
+        "help": "Report searched/unavailable roots and discovered sources on stderr",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-COVERAGE"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "tools",
+    "parser": "typer",
+    "hidden": false,
+    "help": "Per-tool call and error counts.",
+    "parameters": [
+      {
+        "name": "arg",
+        "kind": "argument",
+        "flags": [],
+        "help": "Session: @N, @A:@B, id prefix, or name",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SELECT-HANDLES"
+        ]
+      },
+      {
+        "name": "use_codex",
+        "kind": "option",
+        "flags": [
+          "--codex"
+        ],
+        "help": "Read Codex sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-CODEX",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "use_claude",
+        "kind": "option",
+        "flags": [
+          "--claude"
+        ],
+        "help": "Read Claude Code sessions (default)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-DEFAULT",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "path",
+        "kind": "option",
+        "flags": [
+          "--path"
+        ],
+        "help": "Inspect DIR instead of cwd",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x103675b70>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PATH"
+        ]
+      },
+      {
+        "name": "json_out",
+        "kind": "option",
+        "flags": [
+          "--json"
+        ],
+        "help": "Raw JSONL records, never truncated",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FORMAT-JSON"
+        ]
+      },
+      {
+        "name": "limit",
+        "kind": "option",
+        "flags": [
+          "--limit",
+          "-n"
+        ],
+        "help": "Cap printed rows (0 = all)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "OUTPUT-LIMIT-AGGREGATES",
+          "CLI-NEGATIVE-LIMIT"
+        ]
+      },
+      {
+        "name": "file",
+        "kind": "option",
+        "flags": [
+          "--file"
+        ],
+        "help": "Read this JSONL file directly; detect Claude or Codex",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1036760b0>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-FILE",
+          "SCOPE-FILE-VALIDATION"
+        ]
+      },
+      {
+        "name": "recursive",
+        "kind": "option",
+        "flags": [
+          "--recursive"
+        ],
+        "help": "Include sessions recorded in descendant directories",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-RECURSIVE"
+        ]
+      },
+      {
+        "name": "worktrees",
+        "kind": "option",
+        "flags": [
+          "--worktrees"
+        ],
+        "help": "Include registered Git worktrees of the selected repository",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-WORKTREES"
+        ]
+      },
+      {
+        "name": "claude_roots",
+        "kind": "option",
+        "flags": [
+          "--claude-root"
+        ],
+        "help": "Claude config root to search; repeat for multiple profiles",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x103790e20>",
+        "required": false,
+        "multiple": true,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PROFILES"
+        ]
+      },
+      {
+        "name": "include_agents",
+        "kind": "option",
+        "flags": [
+          "--include-agents"
+        ],
+        "help": "Include nested Claude agent transcripts",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-CHILDREN"
+        ]
+      },
+      {
+        "name": "archives",
+        "kind": "option",
+        "flags": [
+          "--archives"
+        ],
+        "help": "Include Codex archived_sessions alongside active sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-ARCHIVES"
+        ]
+      },
+      {
+        "name": "coverage",
+        "kind": "option",
+        "flags": [
+          "--coverage"
+        ],
+        "help": "Report searched/unavailable roots and discovered sources on stderr",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-COVERAGE"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "stats",
+    "parser": "typer",
+    "hidden": false,
+    "help": "Counts by record property: the elevation view.",
+    "parameters": [
+      {
+        "name": "arg",
+        "kind": "argument",
+        "flags": [],
+        "help": "Session: @N, @A:@B, id prefix, or name",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SELECT-HANDLES"
+        ]
+      },
+      {
+        "name": "use_codex",
+        "kind": "option",
+        "flags": [
+          "--codex"
+        ],
+        "help": "Read Codex sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-CODEX",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "use_claude",
+        "kind": "option",
+        "flags": [
+          "--claude"
+        ],
+        "help": "Read Claude Code sessions (default)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-DEFAULT",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "path",
+        "kind": "option",
+        "flags": [
+          "--path"
+        ],
+        "help": "Inspect DIR instead of cwd",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x103653710>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PATH"
+        ]
+      },
+      {
+        "name": "json_out",
+        "kind": "option",
+        "flags": [
+          "--json"
+        ],
+        "help": "Raw JSONL records, never truncated",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FORMAT-JSON"
+        ]
+      },
+      {
+        "name": "limit",
+        "kind": "option",
+        "flags": [
+          "--limit",
+          "-n"
+        ],
+        "help": "Cap printed rows (0 = all)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "OUTPUT-LIMIT-AGGREGATES",
+          "CLI-NEGATIVE-LIMIT"
+        ]
+      },
+      {
+        "name": "file",
+        "kind": "option",
+        "flags": [
+          "--file"
+        ],
+        "help": "Read this JSONL file directly; detect Claude or Codex",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1036537d0>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-FILE",
+          "SCOPE-FILE-VALIDATION"
+        ]
+      },
+      {
+        "name": "recursive",
+        "kind": "option",
+        "flags": [
+          "--recursive"
+        ],
+        "help": "Include sessions recorded in descendant directories",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-RECURSIVE"
+        ]
+      },
+      {
+        "name": "worktrees",
+        "kind": "option",
+        "flags": [
+          "--worktrees"
+        ],
+        "help": "Include registered Git worktrees of the selected repository",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-WORKTREES"
+        ]
+      },
+      {
+        "name": "claude_roots",
+        "kind": "option",
+        "flags": [
+          "--claude-root"
+        ],
+        "help": "Claude config root to search; repeat for multiple profiles",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x103788aa0>",
+        "required": false,
+        "multiple": true,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PROFILES"
+        ]
+      },
+      {
+        "name": "include_agents",
+        "kind": "option",
+        "flags": [
+          "--include-agents"
+        ],
+        "help": "Include nested Claude agent transcripts",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-CHILDREN"
+        ]
+      },
+      {
+        "name": "archives",
+        "kind": "option",
+        "flags": [
+          "--archives"
+        ],
+        "help": "Include Codex archived_sessions alongside active sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-ARCHIVES"
+        ]
+      },
+      {
+        "name": "coverage",
+        "kind": "option",
+        "flags": [
+          "--coverage"
+        ],
+        "help": "Report searched/unavailable roots and discovered sources on stderr",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-COVERAGE"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "path",
+    "parser": "typer",
+    "hidden": false,
+    "help": "Print session file paths; feed them straight to jq.",
+    "parameters": [
+      {
+        "name": "arg",
+        "kind": "argument",
+        "flags": [],
+        "help": "Session: @N, @A:@B, id prefix, or name",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SELECT-HANDLES"
+        ]
+      },
+      {
+        "name": "use_codex",
+        "kind": "option",
+        "flags": [
+          "--codex"
+        ],
+        "help": "Read Codex sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-CODEX",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "use_claude",
+        "kind": "option",
+        "flags": [
+          "--claude"
+        ],
+        "help": "Read Claude Code sessions (default)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-DEFAULT",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "path",
+        "kind": "option",
+        "flags": [
+          "--path"
+        ],
+        "help": "Inspect DIR instead of cwd",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x103788d60>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PATH"
+        ]
+      },
+      {
+        "name": "json_out",
+        "kind": "option",
+        "flags": [
+          "--json"
+        ],
+        "help": "Raw JSONL records, never truncated",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FORMAT-PATH-JSON"
+        ]
+      },
+      {
+        "name": "limit",
+        "kind": "option",
+        "flags": [
+          "--limit",
+          "-n"
+        ],
+        "help": "Cap printed rows (0 = all)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "OUTPUT-LIMIT-AGGREGATES",
+          "CLI-NEGATIVE-LIMIT"
+        ]
+      },
+      {
+        "name": "file",
+        "kind": "option",
+        "flags": [
+          "--file"
+        ],
+        "help": "Read this JSONL file directly; detect Claude or Codex",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8230>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-FILE",
+          "SCOPE-FILE-VALIDATION"
+        ]
+      },
+      {
+        "name": "recursive",
+        "kind": "option",
+        "flags": [
+          "--recursive"
+        ],
+        "help": "Include sessions recorded in descendant directories",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-RECURSIVE"
+        ]
+      },
+      {
+        "name": "worktrees",
+        "kind": "option",
+        "flags": [
+          "--worktrees"
+        ],
+        "help": "Include registered Git worktrees of the selected repository",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-WORKTREES"
+        ]
+      },
+      {
+        "name": "claude_roots",
+        "kind": "option",
+        "flags": [
+          "--claude-root"
+        ],
+        "help": "Claude config root to search; repeat for multiple profiles",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a82d0>",
+        "required": false,
+        "multiple": true,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PROFILES"
+        ]
+      },
+      {
+        "name": "include_agents",
+        "kind": "option",
+        "flags": [
+          "--include-agents"
+        ],
+        "help": "Include nested Claude agent transcripts",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-CHILDREN"
+        ]
+      },
+      {
+        "name": "archives",
+        "kind": "option",
+        "flags": [
+          "--archives"
+        ],
+        "help": "Include Codex archived_sessions alongside active sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-ARCHIVES"
+        ]
+      },
+      {
+        "name": "coverage",
+        "kind": "option",
+        "flags": [
+          "--coverage"
+        ],
+        "help": "Report searched/unavailable roots and discovered sources on stderr",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-COVERAGE"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "grep",
+    "parser": "typer",
+    "hidden": false,
+    "help": "Search event text across all sessions in scope; -c ranks matches.\n\n--since/--before narrow the sessions; -n 0 lifts row and budget limits.",
+    "parameters": [
+      {
+        "name": "pattern",
+        "kind": "argument",
+        "flags": [],
+        "help": "Regex (smart-case; -F for literal)",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "GREP-MATCH"
+        ]
+      },
+      {
+        "name": "arg",
+        "kind": "argument",
+        "flags": [],
+        "help": "Session: @N, @A:@B, id prefix, or name",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SELECT-HANDLES"
+        ]
+      },
+      {
+        "name": "count",
+        "kind": "option",
+        "flags": [
+          "--count",
+          "-c"
+        ],
+        "help": "Rank sessions: matches, first seq, started, title",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "GREP-COUNT"
+        ]
+      },
+      {
+        "name": "fixed",
+        "kind": "option",
+        "flags": [
+          "--fixed",
+          "-F"
+        ],
+        "help": "Fixed string, not a regex",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "GREP-MATCH"
+        ]
+      },
+      {
+        "name": "context",
+        "kind": "option",
+        "flags": [
+          "--context",
+          "-C"
+        ],
+        "help": "Events around each match",
+        "default": 0,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "GREP-CONTEXT"
+        ]
+      },
+      {
+        "name": "ignore_case",
+        "kind": "option",
+        "flags": [
+          "--ignore-case",
+          "-i"
+        ],
+        "help": "Match any case (default: smart-case)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "GREP-MATCH"
+        ]
+      },
+      {
+        "name": "ids_only",
+        "kind": "option",
+        "flags": [
+          "--files-with-matches",
+          "-l"
+        ],
+        "help": "Print only ids of matching sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "GREP-IDS"
+        ]
+      },
+      {
+        "name": "expr",
+        "kind": "option",
+        "flags": [
+          "--regexp",
+          "-e"
+        ],
+        "help": "Pattern (allows a leading dash)",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "GREP-MATCH"
+        ]
+      },
+      {
+        "name": "include_all",
+        "kind": "option",
+        "flags": [
+          "--all"
+        ],
+        "help": "-c: keep zero-match rows",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "GREP-COUNT"
+        ]
+      },
+      {
+        "name": "sort",
+        "kind": "option",
+        "flags": [
+          "--sort"
+        ],
+        "help": "-c order: matches (default) or started (oldest first)",
+        "default": "matches",
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "GREP-ORDER"
+        ]
+      },
+      {
+        "name": "after_ctx",
+        "kind": "option",
+        "flags": [
+          "-A",
+          "--after-context"
+        ],
+        "help": null,
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": true,
+        "feature_ids": [
+          "GREP-CONTEXT"
+        ]
+      },
+      {
+        "name": "before_ctx",
+        "kind": "option",
+        "flags": [
+          "-B",
+          "--before-context"
+        ],
+        "help": null,
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": true,
+        "feature_ids": [
+          "GREP-CONTEXT"
+        ]
+      },
+      {
+        "name": "since",
+        "kind": "option",
+        "flags": [
+          "--since"
+        ],
+        "help": "Sessions started on/after DATE (YYYY-MM-DD, ISO, today, @N)",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "before",
+        "kind": "option",
+        "flags": [
+          "--before"
+        ],
+        "help": "Sessions started before DATE; --before today skips today's",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "budget",
+        "kind": "option",
+        "flags": [
+          "--budget"
+        ],
+        "help": "Chars of match rows before grep stops (0 = all; env SXR_BUDGET)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "GREP-LIMIT"
+        ]
+      },
+      {
+        "name": "use_codex",
+        "kind": "option",
+        "flags": [
+          "--codex"
+        ],
+        "help": "Read Codex sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-CODEX",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "use_claude",
+        "kind": "option",
+        "flags": [
+          "--claude"
+        ],
+        "help": "Read Claude Code sessions (default)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-DEFAULT",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "path",
+        "kind": "option",
+        "flags": [
+          "--path"
+        ],
+        "help": "Inspect DIR instead of cwd",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8370>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PATH"
+        ]
+      },
+      {
+        "name": "json_out",
+        "kind": "option",
+        "flags": [
+          "--json"
+        ],
+        "help": "Raw JSONL records, never truncated",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FORMAT-JSON"
+        ]
+      },
+      {
+        "name": "limit",
+        "kind": "option",
+        "flags": [
+          "--limit",
+          "-n"
+        ],
+        "help": "Cap printed rows (0 = all)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "GREP-LIMIT",
+          "CLI-NEGATIVE-LIMIT"
+        ]
+      },
+      {
+        "name": "file",
+        "kind": "option",
+        "flags": [
+          "--file"
+        ],
+        "help": "Read this JSONL file directly; detect Claude or Codex",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8410>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-FILE",
+          "SCOPE-FILE-VALIDATION"
+        ]
+      },
+      {
+        "name": "recursive",
+        "kind": "option",
+        "flags": [
+          "--recursive"
+        ],
+        "help": "Include sessions recorded in descendant directories",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-RECURSIVE"
+        ]
+      },
+      {
+        "name": "worktrees",
+        "kind": "option",
+        "flags": [
+          "--worktrees"
+        ],
+        "help": "Include registered Git worktrees of the selected repository",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-WORKTREES"
+        ]
+      },
+      {
+        "name": "claude_roots",
+        "kind": "option",
+        "flags": [
+          "--claude-root"
+        ],
+        "help": "Claude config root to search; repeat for multiple profiles",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a84b0>",
+        "required": false,
+        "multiple": true,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PROFILES"
+        ]
+      },
+      {
+        "name": "include_agents",
+        "kind": "option",
+        "flags": [
+          "--include-agents"
+        ],
+        "help": "Include nested Claude agent transcripts",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-CHILDREN"
+        ]
+      },
+      {
+        "name": "archives",
+        "kind": "option",
+        "flags": [
+          "--archives"
+        ],
+        "help": "Include Codex archived_sessions alongside active sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-ARCHIVES"
+        ]
+      },
+      {
+        "name": "coverage",
+        "kind": "option",
+        "flags": [
+          "--coverage"
+        ],
+        "help": "Report searched/unavailable roots and discovered sources on stderr",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-COVERAGE"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "cmds",
+    "parser": "typer",
+    "hidden": false,
+    "help": "Tool commands with ok/err state; --grep searches all sessions in scope.\n\n--since/--before narrow the scope by session start date.",
+    "parameters": [
+      {
+        "name": "arg",
+        "kind": "argument",
+        "flags": [],
+        "help": "Session: @N, @A:@B, id prefix, or name",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SELECT-HANDLES"
+        ]
+      },
+      {
+        "name": "grep_",
+        "kind": "option",
+        "flags": [
+          "--grep"
+        ],
+        "help": "Only commands matching regex (smart-case)",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "CMDS-GREP"
+        ]
+      },
+      {
+        "name": "since",
+        "kind": "option",
+        "flags": [
+          "--since"
+        ],
+        "help": "Sessions started on/after DATE (YYYY-MM-DD, ISO, today, @N)",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "before",
+        "kind": "option",
+        "flags": [
+          "--before"
+        ],
+        "help": "Sessions started before DATE; --before today skips today's",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "use_codex",
+        "kind": "option",
+        "flags": [
+          "--codex"
+        ],
+        "help": "Read Codex sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-CODEX",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "use_claude",
+        "kind": "option",
+        "flags": [
+          "--claude"
+        ],
+        "help": "Read Claude Code sessions (default)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-DEFAULT",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "path",
+        "kind": "option",
+        "flags": [
+          "--path"
+        ],
+        "help": "Inspect DIR instead of cwd",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8550>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PATH"
+        ]
+      },
+      {
+        "name": "json_out",
+        "kind": "option",
+        "flags": [
+          "--json"
+        ],
+        "help": "Raw JSONL records, never truncated",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FORMAT-JSON"
+        ]
+      },
+      {
+        "name": "limit",
+        "kind": "option",
+        "flags": [
+          "--limit",
+          "-n"
+        ],
+        "help": "Cap printed rows (0 = all)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "CMDS-LIMIT",
+          "CLI-NEGATIVE-LIMIT"
+        ]
+      },
+      {
+        "name": "file",
+        "kind": "option",
+        "flags": [
+          "--file"
+        ],
+        "help": "Read this JSONL file directly; detect Claude or Codex",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a85f0>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-FILE",
+          "SCOPE-FILE-VALIDATION"
+        ]
+      },
+      {
+        "name": "recursive",
+        "kind": "option",
+        "flags": [
+          "--recursive"
+        ],
+        "help": "Include sessions recorded in descendant directories",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-RECURSIVE"
+        ]
+      },
+      {
+        "name": "worktrees",
+        "kind": "option",
+        "flags": [
+          "--worktrees"
+        ],
+        "help": "Include registered Git worktrees of the selected repository",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-WORKTREES"
+        ]
+      },
+      {
+        "name": "claude_roots",
+        "kind": "option",
+        "flags": [
+          "--claude-root"
+        ],
+        "help": "Claude config root to search; repeat for multiple profiles",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8690>",
+        "required": false,
+        "multiple": true,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PROFILES"
+        ]
+      },
+      {
+        "name": "include_agents",
+        "kind": "option",
+        "flags": [
+          "--include-agents"
+        ],
+        "help": "Include nested Claude agent transcripts",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-CHILDREN"
+        ]
+      },
+      {
+        "name": "archives",
+        "kind": "option",
+        "flags": [
+          "--archives"
+        ],
+        "help": "Include Codex archived_sessions alongside active sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-ARCHIVES"
+        ]
+      },
+      {
+        "name": "coverage",
+        "kind": "option",
+        "flags": [
+          "--coverage"
+        ],
+        "help": "Report searched/unavailable roots and discovered sources on stderr",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-COVERAGE"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "init",
+    "parser": "typer",
+    "hidden": false,
+    "help": "Print the primer that teaches agents sxr, or install it in a context file.\n\nBare init writes the block to stdout. --write inserts or replaces it\nbetween <!-- sxr:primer vX.Y.Z --> markers in FILE (default: the nearest\nAGENTS.md walking up from cwd; --global for the user file), so running it\ntwice changes nothing. --check exits 1 when the block is missing or\nstamped another version. Unbalanced markers are never rewritten: exit 2.",
+    "parameters": [
+      {
+        "name": "file",
+        "kind": "argument",
+        "flags": [],
+        "help": "Target file; default: nearest AGENTS.md",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8730>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "INIT-TARGET"
+        ]
+      },
+      {
+        "name": "write",
+        "kind": "option",
+        "flags": [
+          "--write"
+        ],
+        "help": "Insert or replace the primer in FILE",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "INIT-IDEMPOTENT"
+        ]
+      },
+      {
+        "name": "check",
+        "kind": "option",
+        "flags": [
+          "--check"
+        ],
+        "help": "Is the installed primer this version?",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "INIT-CHECK"
+        ]
+      },
+      {
+        "name": "use_global",
+        "kind": "option",
+        "flags": [
+          "--global"
+        ],
+        "help": "Target the user AGENTS.md/CLAUDE.md",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "INIT-GLOBAL"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "index",
+    "parser": "typer",
+    "hidden": false,
+    "help": "Build or refresh the search index for a scope; --clear removes its cached data.",
+    "parameters": [
+      {
+        "name": "clear_",
+        "kind": "option",
+        "flags": [
+          "--clear"
+        ],
+        "help": "Remove the whole local search index",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "INDEX-PREPARE"
+        ]
+      },
+      {
+        "name": "use_codex",
+        "kind": "option",
+        "flags": [
+          "--codex"
+        ],
+        "help": "Read Codex sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-CODEX",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "use_claude",
+        "kind": "option",
+        "flags": [
+          "--claude"
+        ],
+        "help": "Read Claude Code sessions (default)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-DEFAULT",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "path",
+        "kind": "option",
+        "flags": [
+          "--path"
+        ],
+        "help": "Inspect DIR instead of cwd",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a87d0>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PATH"
+        ]
+      },
+      {
+        "name": "since",
+        "kind": "option",
+        "flags": [
+          "--since"
+        ],
+        "help": "Sessions started on/after DATE (YYYY-MM-DD, ISO, today, @N)",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "before",
+        "kind": "option",
+        "flags": [
+          "--before"
+        ],
+        "help": "Sessions started before DATE; --before today skips today's",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "file",
+        "kind": "option",
+        "flags": [
+          "--file"
+        ],
+        "help": "Read this JSONL file directly; detect Claude or Codex",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8870>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-FILE",
+          "SCOPE-FILE-VALIDATION"
+        ]
+      },
+      {
+        "name": "recursive",
+        "kind": "option",
+        "flags": [
+          "--recursive"
+        ],
+        "help": "Include sessions recorded in descendant directories",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-RECURSIVE"
+        ]
+      },
+      {
+        "name": "worktrees",
+        "kind": "option",
+        "flags": [
+          "--worktrees"
+        ],
+        "help": "Include registered Git worktrees of the selected repository",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-WORKTREES"
+        ]
+      },
+      {
+        "name": "claude_roots",
+        "kind": "option",
+        "flags": [
+          "--claude-root"
+        ],
+        "help": "Claude config root to search; repeat for multiple profiles",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8910>",
+        "required": false,
+        "multiple": true,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PROFILES"
+        ]
+      },
+      {
+        "name": "include_agents",
+        "kind": "option",
+        "flags": [
+          "--include-agents"
+        ],
+        "help": "Include nested Claude agent transcripts",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-CHILDREN"
+        ]
+      },
+      {
+        "name": "archives",
+        "kind": "option",
+        "flags": [
+          "--archives"
+        ],
+        "help": "Include Codex archived_sessions alongside active sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-ARCHIVES"
+        ]
+      },
+      {
+        "name": "coverage",
+        "kind": "option",
+        "flags": [
+          "--coverage"
+        ],
+        "help": "Report searched/unavailable roots and discovered sources on stderr",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-COVERAGE"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "find",
+    "parser": "typer",
+    "hidden": false,
+    "help": "Find ranked sessions with evidence. Both providers, children and archives are included.\n\nUse a few distinctive clues. All must occur somewhere in the session;\n--any broadens this. Quoted phrases stay together. Default scope is cwd.",
+    "parameters": [
+      {
+        "name": "query",
+        "kind": "argument",
+        "flags": [],
+        "help": "Words or quoted phrases identifying a session",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FIND-CLUES"
+        ]
+      },
+      {
+        "name": "all_projects",
+        "kind": "option",
+        "flags": [
+          "--all-projects"
+        ],
+        "help": "Search every project in selected stores",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FIND-DEFAULT"
+        ]
+      },
+      {
+        "name": "any_term",
+        "kind": "option",
+        "flags": [
+          "--any"
+        ],
+        "help": "Match any clue instead of requiring all clues",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FIND-CLUES"
+        ]
+      },
+      {
+        "name": "index",
+        "kind": "option",
+        "flags": [
+          "--index"
+        ],
+        "help": "Prepare the ranked index without a query",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FIND-INDEX"
+        ]
+      },
+      {
+        "name": "use_codex",
+        "kind": "option",
+        "flags": [
+          "--codex"
+        ],
+        "help": "Read Codex sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FIND-DEFAULT"
+        ]
+      },
+      {
+        "name": "use_claude",
+        "kind": "option",
+        "flags": [
+          "--claude"
+        ],
+        "help": "Read Claude Code sessions (default)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FIND-DEFAULT"
+        ]
+      },
+      {
+        "name": "path",
+        "kind": "option",
+        "flags": [
+          "--path"
+        ],
+        "help": "Inspect DIR instead of cwd",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a89b0>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PATH"
+        ]
+      },
+      {
+        "name": "json_out",
+        "kind": "option",
+        "flags": [
+          "--json"
+        ],
+        "help": "Structured results and coverage",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FIND-EVIDENCE"
+        ]
+      },
+      {
+        "name": "limit",
+        "kind": "option",
+        "flags": [
+          "--limit",
+          "-n"
+        ],
+        "help": "Cap printed rows (0 = all)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FIND-LIMIT",
+          "CLI-NEGATIVE-LIMIT"
+        ]
+      },
+      {
+        "name": "since",
+        "kind": "option",
+        "flags": [
+          "--since"
+        ],
+        "help": "Sessions started on/after DATE (YYYY-MM-DD, ISO, today, @N)",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "before",
+        "kind": "option",
+        "flags": [
+          "--before"
+        ],
+        "help": "Sessions started before DATE; --before today skips today's",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "include_current",
+        "kind": "option",
+        "flags": [
+          "--include-current"
+        ],
+        "help": "Include the invoking Codex session",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FIND-CURRENT"
+        ]
+      },
+      {
+        "name": "exclude_sessions",
+        "kind": "option",
+        "flags": [
+          "--exclude-session"
+        ],
+        "help": "Exclude a full session ID; repeat for several",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": true,
+        "hidden": false,
+        "feature_ids": [
+          "FIND-EXCLUDE"
+        ]
+      },
+      {
+        "name": "paths_only",
+        "kind": "option",
+        "flags": [
+          "--paths"
+        ],
+        "help": "All matching source paths, without ranking or excerpts",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FIND-PATHS"
+        ]
+      },
+      {
+        "name": "file",
+        "kind": "option",
+        "flags": [
+          "--file"
+        ],
+        "help": "Read this JSONL file directly; detect Claude or Codex",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8a50>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-FILE",
+          "SCOPE-FILE-VALIDATION"
+        ]
+      },
+      {
+        "name": "recursive",
+        "kind": "option",
+        "flags": [
+          "--recursive"
+        ],
+        "help": "Include sessions recorded in descendant directories",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-RECURSIVE"
+        ]
+      },
+      {
+        "name": "worktrees",
+        "kind": "option",
+        "flags": [
+          "--worktrees"
+        ],
+        "help": "Include registered Git worktrees of the selected repository",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-WORKTREES"
+        ]
+      },
+      {
+        "name": "claude_roots",
+        "kind": "option",
+        "flags": [
+          "--claude-root"
+        ],
+        "help": "Claude config root to search; repeat for multiple profiles",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8af0>",
+        "required": false,
+        "multiple": true,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PROFILES"
+        ]
+      },
+      {
+        "name": "include_agents",
+        "kind": "option",
+        "flags": [
+          "--include-agents"
+        ],
+        "help": "Include nested Claude agent transcripts",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FIND-DEFAULT"
+        ]
+      },
+      {
+        "name": "archives",
+        "kind": "option",
+        "flags": [
+          "--archives"
+        ],
+        "help": "Include Codex archived_sessions alongside active sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FIND-DEFAULT"
+        ]
+      },
+      {
+        "name": "coverage",
+        "kind": "option",
+        "flags": [
+          "--coverage"
+        ],
+        "help": "Report searched/unavailable roots and discovered sources on stderr",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FIND-COMPLETENESS"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "skills",
+    "parser": "typer",
+    "hidden": false,
+    "help": "Find installed SKILL.md files by name or path; sxr skills --help lists options.",
+    "parameters": []
+  },
+  {
+    "command": "secrets",
+    "parser": "typer",
+    "hidden": false,
+    "help": "Audit leaked credentials, showing fingerprints only. Use clean to redact them.\n\nWith no subcommand, audit the scope. A session ID, @N handle or name narrows\nthe audit: sxr secrets @2. Cleaning previews changes unless --apply is set.",
+    "parameters": [
+      {
+        "name": "candidates",
+        "kind": "option",
+        "flags": [
+          "--candidates"
+        ],
+        "help": "Include entropy review candidates",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SECRETS-CANDIDATES"
+        ]
+      },
+      {
+        "name": "since",
+        "kind": "option",
+        "flags": [
+          "--since"
+        ],
+        "help": "Sessions started on/after DATE (YYYY-MM-DD, ISO, today, @N)",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "before",
+        "kind": "option",
+        "flags": [
+          "--before"
+        ],
+        "help": "Sessions started before DATE; --before today skips today's",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "use_codex",
+        "kind": "option",
+        "flags": [
+          "--codex"
+        ],
+        "help": "Read Codex sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-CODEX",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "use_claude",
+        "kind": "option",
+        "flags": [
+          "--claude"
+        ],
+        "help": "Read Claude Code sessions (default)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-DEFAULT",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "path",
+        "kind": "option",
+        "flags": [
+          "--path"
+        ],
+        "help": "Inspect DIR instead of cwd",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8f50>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PATH"
+        ]
+      },
+      {
+        "name": "json_out",
+        "kind": "option",
+        "flags": [
+          "--json"
+        ],
+        "help": "Raw JSONL records, never truncated",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SECRETS-MASKING"
+        ]
+      },
+      {
+        "name": "limit",
+        "kind": "option",
+        "flags": [
+          "--limit",
+          "-n"
+        ],
+        "help": "Cap printed rows (0 = all)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SECRETS-LIMIT",
+          "CLI-NEGATIVE-LIMIT"
+        ]
+      },
+      {
+        "name": "file",
+        "kind": "option",
+        "flags": [
+          "--file"
+        ],
+        "help": "Read this JSONL file directly; detect Claude or Codex",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8ff0>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-FILE",
+          "SCOPE-FILE-VALIDATION"
+        ]
+      },
+      {
+        "name": "recursive",
+        "kind": "option",
+        "flags": [
+          "--recursive"
+        ],
+        "help": "Include sessions recorded in descendant directories",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-RECURSIVE"
+        ]
+      },
+      {
+        "name": "worktrees",
+        "kind": "option",
+        "flags": [
+          "--worktrees"
+        ],
+        "help": "Include registered Git worktrees of the selected repository",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-WORKTREES"
+        ]
+      },
+      {
+        "name": "claude_roots",
+        "kind": "option",
+        "flags": [
+          "--claude-root"
+        ],
+        "help": "Claude config root to search; repeat for multiple profiles",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a9090>",
+        "required": false,
+        "multiple": true,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PROFILES"
+        ]
+      },
+      {
+        "name": "include_agents",
+        "kind": "option",
+        "flags": [
+          "--include-agents"
+        ],
+        "help": "Include nested Claude agent transcripts",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-CHILDREN"
+        ]
+      },
+      {
+        "name": "archives",
+        "kind": "option",
+        "flags": [
+          "--archives"
+        ],
+        "help": "Include Codex archived_sessions alongside active sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-ARCHIVES"
+        ]
+      },
+      {
+        "name": "coverage",
+        "kind": "option",
+        "flags": [
+          "--coverage"
+        ],
+        "help": "Report searched/unavailable roots and discovered sources on stderr",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-COVERAGE"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "secrets audit",
+    "parser": "typer",
+    "hidden": true,
+    "help": "Audit sessions for leaked keys and passwords, masked; a rotation worklist.\n\nWith no session arg the whole directory scope is scanned. Output is one\nrow per distinct secret (kind, salted fingerprint, spread); the value\nitself is never printed, in --json mode included.",
+    "parameters": [
+      {
+        "name": "arg",
+        "kind": "argument",
+        "flags": [],
+        "help": "Session: @N, @A:@B, id prefix, or name",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SELECT-HANDLES"
+        ]
+      },
+      {
+        "name": "candidates",
+        "kind": "option",
+        "flags": [
+          "--candidates"
+        ],
+        "help": "Include high-entropy review candidates (noisy)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SECRETS-CANDIDATES"
+        ]
+      },
+      {
+        "name": "since",
+        "kind": "option",
+        "flags": [
+          "--since"
+        ],
+        "help": "Sessions started on/after DATE (YYYY-MM-DD, ISO, today, @N)",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "before",
+        "kind": "option",
+        "flags": [
+          "--before"
+        ],
+        "help": "Sessions started before DATE; --before today skips today's",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "use_codex",
+        "kind": "option",
+        "flags": [
+          "--codex"
+        ],
+        "help": "Read Codex sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-CODEX",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "use_claude",
+        "kind": "option",
+        "flags": [
+          "--claude"
+        ],
+        "help": "Read Claude Code sessions (default)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-DEFAULT",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "path",
+        "kind": "option",
+        "flags": [
+          "--path"
+        ],
+        "help": "Inspect DIR instead of cwd",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8b90>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PATH"
+        ]
+      },
+      {
+        "name": "json_out",
+        "kind": "option",
+        "flags": [
+          "--json"
+        ],
+        "help": "Raw JSONL records, never truncated",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SECRETS-MASKING"
+        ]
+      },
+      {
+        "name": "limit",
+        "kind": "option",
+        "flags": [
+          "--limit",
+          "-n"
+        ],
+        "help": "Cap printed rows (0 = all)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SECRETS-LIMIT",
+          "CLI-NEGATIVE-LIMIT"
+        ]
+      },
+      {
+        "name": "file",
+        "kind": "option",
+        "flags": [
+          "--file"
+        ],
+        "help": "Read this JSONL file directly; detect Claude or Codex",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8c30>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-FILE",
+          "SCOPE-FILE-VALIDATION"
+        ]
+      },
+      {
+        "name": "recursive",
+        "kind": "option",
+        "flags": [
+          "--recursive"
+        ],
+        "help": "Include sessions recorded in descendant directories",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-RECURSIVE"
+        ]
+      },
+      {
+        "name": "worktrees",
+        "kind": "option",
+        "flags": [
+          "--worktrees"
+        ],
+        "help": "Include registered Git worktrees of the selected repository",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-WORKTREES"
+        ]
+      },
+      {
+        "name": "claude_roots",
+        "kind": "option",
+        "flags": [
+          "--claude-root"
+        ],
+        "help": "Claude config root to search; repeat for multiple profiles",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8cd0>",
+        "required": false,
+        "multiple": true,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PROFILES"
+        ]
+      },
+      {
+        "name": "include_agents",
+        "kind": "option",
+        "flags": [
+          "--include-agents"
+        ],
+        "help": "Include nested Claude agent transcripts",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-CHILDREN"
+        ]
+      },
+      {
+        "name": "archives",
+        "kind": "option",
+        "flags": [
+          "--archives"
+        ],
+        "help": "Include Codex archived_sessions alongside active sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-ARCHIVES"
+        ]
+      },
+      {
+        "name": "coverage",
+        "kind": "option",
+        "flags": [
+          "--coverage"
+        ],
+        "help": "Report searched/unavailable roots and discovered sources on stderr",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-COVERAGE"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "secrets clean",
+    "parser": "typer",
+    "hidden": false,
+    "help": "Replace leaked secrets in session files with masked markers. DRY RUN unless --apply.\n\nOnly certain/probable findings are rewritten, never entropy candidates.\nChanged lines are validated as JSON and files replaced atomically;\n(live) sessions are skipped. No backup is kept: a backup keeps the\nsecrets. Run without --apply first to preview the same cleaning scope.",
+    "parameters": [
+      {
+        "name": "arg",
+        "kind": "argument",
+        "flags": [],
+        "help": "Session: @N, @A:@B, id prefix, or name",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SELECT-HANDLES"
+        ]
+      },
+      {
+        "name": "apply",
+        "kind": "option",
+        "flags": [
+          "--apply"
+        ],
+        "help": "Write the changes; without it this is a dry run",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "CLEAN-APPLY"
+        ]
+      },
+      {
+        "name": "since",
+        "kind": "option",
+        "flags": [
+          "--since"
+        ],
+        "help": "Sessions started on/after DATE (YYYY-MM-DD, ISO, today, @N)",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "before",
+        "kind": "option",
+        "flags": [
+          "--before"
+        ],
+        "help": "Sessions started before DATE; --before today skips today's",
+        "default": null,
+        "type": "STRING",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "use_codex",
+        "kind": "option",
+        "flags": [
+          "--codex"
+        ],
+        "help": "Read Codex sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-CODEX",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "use_claude",
+        "kind": "option",
+        "flags": [
+          "--claude"
+        ],
+        "help": "Read Claude Code sessions (default)",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "LIST-DEFAULT",
+          "CLI-CONFLICTS"
+        ]
+      },
+      {
+        "name": "path",
+        "kind": "option",
+        "flags": [
+          "--path"
+        ],
+        "help": "Inspect DIR instead of cwd",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8d70>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PATH"
+        ]
+      },
+      {
+        "name": "json_out",
+        "kind": "option",
+        "flags": [
+          "--json"
+        ],
+        "help": "Raw JSONL records, never truncated",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "FORMAT-CLEAN-JSON"
+        ]
+      },
+      {
+        "name": "limit",
+        "kind": "option",
+        "flags": [
+          "--limit",
+          "-n"
+        ],
+        "help": "Cap printed rows (0 = all)",
+        "default": null,
+        "type": "INT",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "OUTPUT-LIMIT-AGGREGATES",
+          "CLI-NEGATIVE-LIMIT"
+        ]
+      },
+      {
+        "name": "file",
+        "kind": "option",
+        "flags": [
+          "--file"
+        ],
+        "help": "Read this JSONL file directly; detect Claude or Codex",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8e10>",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-FILE",
+          "SCOPE-FILE-VALIDATION"
+        ]
+      },
+      {
+        "name": "recursive",
+        "kind": "option",
+        "flags": [
+          "--recursive"
+        ],
+        "help": "Include sessions recorded in descendant directories",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-RECURSIVE"
+        ]
+      },
+      {
+        "name": "worktrees",
+        "kind": "option",
+        "flags": [
+          "--worktrees"
+        ],
+        "help": "Include registered Git worktrees of the selected repository",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-WORKTREES"
+        ]
+      },
+      {
+        "name": "claude_roots",
+        "kind": "option",
+        "flags": [
+          "--claude-root"
+        ],
+        "help": "Claude config root to search; repeat for multiple profiles",
+        "default": null,
+        "type": "<typer.models.TyperPath object at 0x1037a8eb0>",
+        "required": false,
+        "multiple": true,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-PROFILES"
+        ]
+      },
+      {
+        "name": "include_agents",
+        "kind": "option",
+        "flags": [
+          "--include-agents"
+        ],
+        "help": "Include nested Claude agent transcripts",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-CHILDREN"
+        ]
+      },
+      {
+        "name": "archives",
+        "kind": "option",
+        "flags": [
+          "--archives"
+        ],
+        "help": "Include Codex archived_sessions alongside active sessions",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-ARCHIVES"
+        ]
+      },
+      {
+        "name": "coverage",
+        "kind": "option",
+        "flags": [
+          "--coverage"
+        ],
+        "help": "Report searched/unavailable roots and discovered sources on stderr",
+        "default": false,
+        "type": "BOOL",
+        "required": false,
+        "multiple": false,
+        "hidden": false,
+        "feature_ids": [
+          "SCOPE-COVERAGE"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "find",
+    "parser": "argparse",
+    "hidden": false,
+    "help": "Find sessions with source evidence across Claude and Codex. Use a few distinctive words or quoted phrases; default scope is cwd.",
+    "parameters": [
+      {
+        "name": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "kind": "option",
+        "default": "==SUPPRESS==",
+        "required": false,
+        "help": "show this help message and exit",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "CLI-HELP"
+        ]
+      },
+      {
+        "name": "query",
+        "flags": [],
+        "kind": "argument",
+        "default": null,
+        "required": false,
+        "help": "Required words or quoted phrases",
+        "choices": null,
+        "type": "None",
+        "nargs": "?",
+        "feature_ids": [
+          "FIND-CLUES"
+        ]
+      },
+      {
+        "name": "all_projects",
+        "flags": [
+          "--all-projects"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Search every project",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "FIND-DEFAULT"
+        ]
+      },
+      {
+        "name": "any_term",
+        "flags": [
+          "--any"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Match any clue",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "FIND-CLUES"
+        ]
+      },
+      {
+        "name": "index",
+        "flags": [
+          "--index"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Prepare the ranked search index",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "FIND-INDEX"
+        ]
+      },
+      {
+        "name": "use_codex",
+        "flags": [
+          "--codex"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Only Codex",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "FIND-DEFAULT"
+        ]
+      },
+      {
+        "name": "use_claude",
+        "flags": [
+          "--claude"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Only Claude",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "FIND-DEFAULT"
+        ]
+      },
+      {
+        "name": "path",
+        "flags": [
+          "--path"
+        ],
+        "kind": "option",
+        "default": null,
+        "required": false,
+        "help": "Project directory (default: cwd)",
+        "choices": null,
+        "type": "<class 'pathlib.Path'>",
+        "nargs": null,
+        "feature_ids": [
+          "SCOPE-PATH"
+        ]
+      },
+      {
+        "name": "json_out",
+        "flags": [
+          "--json"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Structured results",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "FIND-EVIDENCE"
+        ]
+      },
+      {
+        "name": "paths_only",
+        "flags": [
+          "--paths"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Matching source paths, without ranking or excerpts (default: all)",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "FIND-PATHS"
+        ]
+      },
+      {
+        "name": "limit",
+        "flags": [
+          "--limit",
+          "-n"
+        ],
+        "kind": "option",
+        "default": null,
+        "required": false,
+        "help": "Session result limit (default: 5; 0: all)",
+        "choices": null,
+        "type": "<class 'int'>",
+        "nargs": null,
+        "feature_ids": [
+          "FIND-LIMIT",
+          "CLI-NEGATIVE-LIMIT"
+        ]
+      },
+      {
+        "name": "since",
+        "flags": [
+          "--since"
+        ],
+        "kind": "option",
+        "default": null,
+        "required": false,
+        "help": "Session start on/after DATE",
+        "choices": null,
+        "type": "None",
+        "nargs": null,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "before",
+        "flags": [
+          "--before"
+        ],
+        "kind": "option",
+        "default": null,
+        "required": false,
+        "help": "Session start before DATE",
+        "choices": null,
+        "type": "None",
+        "nargs": null,
+        "feature_ids": [
+          "TIME-WINDOW",
+          "TIME-HANDLES",
+          "TIME-VALIDATION"
+        ]
+      },
+      {
+        "name": "file",
+        "flags": [
+          "--file"
+        ],
+        "kind": "option",
+        "default": null,
+        "required": false,
+        "help": "Search one verified transcript",
+        "choices": null,
+        "type": "<class 'pathlib.Path'>",
+        "nargs": null,
+        "feature_ids": [
+          "SCOPE-FILE",
+          "SCOPE-FILE-VALIDATION"
+        ]
+      },
+      {
+        "name": "claude_roots",
+        "flags": [
+          "--claude-root"
+        ],
+        "kind": "option",
+        "default": null,
+        "required": false,
+        "help": "Claude config profile; repeat for several",
+        "choices": null,
+        "type": "<class 'pathlib.Path'>",
+        "nargs": null,
+        "feature_ids": [
+          "SCOPE-PROFILES"
+        ]
+      },
+      {
+        "name": "recursive",
+        "flags": [
+          "--recursive"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Include descendant projects",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "SCOPE-RECURSIVE"
+        ]
+      },
+      {
+        "name": "worktrees",
+        "flags": [
+          "--worktrees"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Include registered worktrees",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "SCOPE-WORKTREES"
+        ]
+      },
+      {
+        "name": "include_agents",
+        "flags": [
+          "--include-agents"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Children are included by default",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "FIND-DEFAULT"
+        ]
+      },
+      {
+        "name": "archives",
+        "flags": [
+          "--archives"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Archives are included by default",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "FIND-DEFAULT"
+        ]
+      },
+      {
+        "name": "coverage",
+        "flags": [
+          "--coverage"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Include source coverage",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "FIND-COMPLETENESS"
+        ]
+      },
+      {
+        "name": "include_current",
+        "flags": [
+          "--include-current"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Include the invoking Codex session",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "FIND-CURRENT"
+        ]
+      },
+      {
+        "name": "exclude_sessions",
+        "flags": [
+          "--exclude-session"
+        ],
+        "kind": "option",
+        "default": null,
+        "required": false,
+        "help": "Exclude a full session ID; repeat for several",
+        "choices": null,
+        "type": "None",
+        "nargs": null,
+        "feature_ids": [
+          "FIND-EXCLUDE"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "skills",
+    "parser": "argparse",
+    "hidden": false,
+    "help": "Find installed SKILL.md files by directory name or path clues.",
+    "parameters": [
+      {
+        "name": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "kind": "option",
+        "default": "==SUPPRESS==",
+        "required": false,
+        "help": "show this help message and exit",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "CLI-HELP"
+        ]
+      },
+      {
+        "name": "query",
+        "flags": [],
+        "kind": "argument",
+        "default": "",
+        "required": false,
+        "help": "Skill name or qualified path clues",
+        "choices": null,
+        "type": "None",
+        "nargs": "?",
+        "feature_ids": [
+          "SKILLS-QUERY"
+        ]
+      },
+      {
+        "name": "index",
+        "flags": [
+          "--index"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Discover SKILL.md files (default: all of HOME)",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "SKILLS-DISCOVERY"
+        ]
+      },
+      {
+        "name": "root",
+        "flags": [
+          "--root"
+        ],
+        "kind": "option",
+        "default": null,
+        "required": false,
+        "help": "Discover below this directory; repeat for more",
+        "choices": null,
+        "type": "<class 'pathlib.Path'>",
+        "nargs": null,
+        "feature_ids": [
+          "SKILLS-ROOTS"
+        ]
+      },
+      {
+        "name": "defaults",
+        "flags": [
+          "--defaults"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "With --index, restore discovery across HOME",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "SKILLS-ROOTS"
+        ]
+      },
+      {
+        "name": "paths",
+        "flags": [
+          "--paths"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Print only canonical SKILL.md paths",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "SKILLS-PATHS"
+        ]
+      },
+      {
+        "name": "aliases",
+        "flags": [
+          "--aliases"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "With --paths, include symlinked paths",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "SKILLS-PATHS"
+        ]
+      },
+      {
+        "name": "copies",
+        "flags": [
+          "--copies"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Show every matching file instead of grouping by SHA-256",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "SKILLS-GROUP"
+        ]
+      },
+      {
+        "name": "exact",
+        "flags": [
+          "--exact"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Match the whole skill directory name",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "SKILLS-QUERY"
+        ]
+      },
+      {
+        "name": "json",
+        "flags": [
+          "--json"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Include paths, aliases, roots, and completeness",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "SKILLS-JSON"
+        ]
+      },
+      {
+        "name": "limit",
+        "flags": [
+          "--limit",
+          "-n"
+        ],
+        "kind": "option",
+        "default": null,
+        "required": false,
+        "help": "Maximum skills (default: 20; --paths: all; 0: all)",
+        "choices": null,
+        "type": "<class 'int'>",
+        "nargs": null,
+        "feature_ids": [
+          "SKILLS-LIMIT",
+          "CLI-NEGATIVE-LIMIT"
+        ]
+      },
+      {
+        "name": "clear",
+        "flags": [
+          "--clear"
+        ],
+        "kind": "option",
+        "default": false,
+        "required": false,
+        "help": "Remove the default map and remembered roots",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "SKILLS-CLEAR"
+        ]
+      }
+    ]
+  },
+  {
+    "command": "serve",
+    "parser": "argparse",
+    "hidden": false,
+    "help": null,
+    "parameters": [
+      {
+        "name": "help",
+        "flags": [
+          "-h",
+          "--help"
+        ],
+        "kind": "option",
+        "default": "==SUPPRESS==",
+        "required": false,
+        "help": "show this help message and exit",
+        "choices": null,
+        "type": "None",
+        "nargs": 0,
+        "feature_ids": [
+          "CLI-HELP"
+        ]
+      },
+      {
+        "name": "action",
+        "flags": [],
+        "kind": "argument",
+        "default": "status",
+        "required": false,
+        "help": null,
+        "choices": [
+          "status",
+          "stop"
+        ],
+        "type": "None",
+        "nargs": "?",
+        "feature_ids": [
+          "WORKER-CONTROL"
+        ]
+      },
+      {
+        "name": "foreground",
+        "flags": [
+          "--foreground"
+        ],
+        "kind": "option",
+        "default": null,
+        "required": false,
+        "help": "==SUPPRESS==",
+        "choices": null,
+        "type": "<class 'pathlib.Path'>",
+        "nargs": null,
+        "feature_ids": [
+          "WORKER-CONTROL"
+        ]
+      },
+      {
+        "name": "idle",
+        "flags": [
+          "--idle"
+        ],
+        "kind": "option",
+        "default": 300,
+        "required": false,
+        "help": "==SUPPRESS==",
+        "choices": null,
+        "type": "<class 'float'>",
+        "nargs": null,
+        "feature_ids": [
+          "WORKER-CONTROL"
+        ]
+      }
+    ]
+  }
+]

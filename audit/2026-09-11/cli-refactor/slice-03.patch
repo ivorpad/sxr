@@ -1,0 +1,1031 @@
+diff a/README.md b/README.md
+--- a/README.md	2026-09-11 13:42:25
++++ b/README.md	2026-09-11 15:20:53
+@@ -246,6 +246,8 @@
+ sxr show @2 --around 1247      # zoom to event #1247, text untruncated
+ sxr show @2 --tail 5           # how a session ended, whole text
+ sxr show @2 --type ai-title    # select events by record type
++sxr show @2 --full --errors    # every error record, whole text
++sxr show @2 --type tool --around 1247   # tool calls inside that window
+ sxr show @1:@3                 # every session in the range, each one headed
+ sxr show --file /path/session.jsonl --around 1247 # skip discovery, either provider
+ sxr prompts                    # complete human prompts of the newest session
+@@ -263,6 +265,20 @@
+ sxr errors @6 --json | jq .    # the original records, untouched
+ sxr init --write               # teach agents sxr before their first call
+ ```
++
++`show`'s selectors compose in one documented order, so none of them can discard
++another: a window first (`--around N` plus or minus `--context`, or `--range
++A:B` — never both), then kind (`--type K`, else the default skeleton widened by
++`--thinking` and `--tool-results`, else every kind once a window, `--full` or
++`--errors` asked for more), then `--errors`, then `--tail N`, then `-n`. So
++`--type tool --around 1247` is the tool calls inside that window, and `--full
++--errors` is every error record with its text whole. `--tools` is still accepted
++as the older spelling of `--tool-results`. Windows that cannot mean anything are
++usage errors rather than a quiet empty result: `--around` below 1, a negative
++`--context`, `--context` without `--around`, `--range` outside `0 < A <= B`,
++`--around` together with `--range`, and a negative `--budget`/`--line-limit`
++(`0` remains the explicit "never trim" value). An empty selection still exits 1,
++and says on stderr which selectors emptied it.
+ 
+ `prompts --codex` uses explicit user-message events when present. Otherwise,
+ it reads user-role text and uses recorded content labels to exclude injected
+diff a/src/sxr/flags.py b/src/sxr/flags.py
+--- a/src/sxr/flags.py	2026-09-11 13:37:01
++++ b/src/sxr/flags.py	2026-09-11 15:13:23
+@@ -21,11 +21,17 @@
+ ]
+ BudgetF = Annotated[
+     int | None,
+-    typer.Option("--budget", help="Chars before scan views trim (0 = never; env SXR_BUDGET)"),
++    typer.Option(
++        "--budget", min=0, help="Chars before scan views trim (0 = never; env SXR_BUDGET)"
++    ),
+ ]
+ LineLimitF = Annotated[
+     int | None,
+-    typer.Option("--line-limit", help="Per-line char cap when trimming (env SXR_LINE_LIMIT)"),
++    typer.Option(
++        "--line-limit",
++        min=0,
++        help="Per-line char cap when trimming (0 = never; env SXR_LINE_LIMIT)",
++    ),
+ ]
+ PromptAllF = Annotated[
+     bool, typer.Option("--all", help="Lift every row and character limit (complete output)")
+diff a/src/sxr/onboard.py b/src/sxr/onboard.py
+--- a/src/sxr/onboard.py	2026-09-11 13:42:04
++++ b/src/sxr/onboard.py	2026-09-11 15:21:14
+@@ -23,10 +23,18 @@
+ \b
+ budgets: show prints whole text whenever it fits --budget chars (default
+ 40k; env SXR_BUDGET); over budget it trims lines to --line-limit chars
+-(default 200; env SXR_LINE_LIMIT) and says so. --budget 0 disables trimming.
+-prompts has no default budget: it prints complete human input, and only
+---budget/--line-limit ask for compact text. --all lifts every limit.
++(default 200; env SXR_LINE_LIMIT) and says so. --budget 0 disables trimming;
++negative values are a usage error. prompts has no default budget: it prints
++complete human input, and only --budget/--line-limit ask for compact text.
++--all lifts every limit.
+ \b
++show selection: one order, so no flag discards another -- window (--around
+++/- --context, or --range A:B, never both), then kind (--type, else the
++skeleton widened by --thinking/--tool-results, else every kind once a window,
++--full or --errors asked for more), then --errors, then --tail, then -n. So
++--type tool --around 1247 intersects, and --full --errors is every error
++record whole. --tools still means --tool-results. Impossible windows exit 2.
++\b
+ secrets: sxr secrets audits the scope for leaked keys and passwords
+ (vendored gitleaks rules + structural checks). Rows are kind, severity,
+ and salted fingerprint; the value itself is never printed, --json included,
+@@ -51,6 +59,7 @@
+   sxr grep -c x --before today history only: not your own (live) session
+   sxr show @2 --around 1247    untruncated window around event #1247
+   sxr show @2 --tail 5         how a session ended, whole text
++  sxr show @2 --full --errors  every error record, whole text
+   sxr prompts                  complete human prompts of the newest session
+   sxr errors @2                is_error records with event indexes
+   sxr init --write             install the primer in the nearest AGENTS.md
+diff a/src/sxr/read_positions.py b/src/sxr/read_positions.py
+--- a/src/sxr/read_positions.py	2026-09-09 11:04:37
++++ b/src/sxr/read_positions.py	2026-09-11 15:13:09
+@@ -5,7 +5,7 @@
+ 
+ from sxr.index_records import signature
+ from sxr.model import Event
+-from sxr.views_read import _selected
++from sxr.show_select import selected
+ 
+ FIELDS = ("ts", "role", "kind", "text", "tool", "is_error", "tag")
+ 
+@@ -126,13 +126,13 @@
+         )
+         for r in rows
+     ]
+-    selected, _zoom = _selected(stubs, opts)
++    picked, _zoom = selected(stubs, opts)
+     # Individual indexed lookups avoid SQLite's bound-parameter limit for --type.
+     return [
+         db.execute(
+             "SELECT * FROM read_events WHERE file=? AND ordinal=?", (identity, e.raw["ordinal"])
+         ).fetchone()
+-        for e in selected
++        for e in picked
+     ]
+ 
+ 
+diff a/src/sxr/show_command.py b/src/sxr/show_command.py
+--- a/src/sxr/show_command.py	2026-09-11 13:44:41
++++ b/src/sxr/show_command.py	2026-09-11 15:13:18
+@@ -8,24 +8,44 @@
+ from sxr.handles import resolve
+ from sxr.read_cache import read_window
+ from sxr.session_scope import render as render_scope
+-from sxr.views_read import ShowOpts
++from sxr.show_select import KNOWN_KINDS, ShowOpts, validate
+ 
++KINDS = ", ".join(KNOWN_KINDS)
+ 
++
+ def show(
+     ctx: typer.Context,
+     arg: flags.Arg = None,
+-    around: Annotated[int | None, typer.Option(help="Zoom to +/-context of event #N")] = None,
+-    context: Annotated[int, typer.Option(help="Zoom window half-width")] = 10,
+-    range_: Annotated[str | None, typer.Option("--range", help="Event span A:B")] = None,
+-    type_: Annotated[str | None, typer.Option("--type", help="Record type filter")] = None,
++    around: Annotated[
++        int | None, typer.Option(min=1, help="Window on record #N, plus or minus --context")
++    ] = None,
++    context: Annotated[
++        int | None, typer.Option(min=0, help="Half-width of the --around window (default: 10)")
++    ] = None,
++    range_: Annotated[
++        str | None, typer.Option("--range", help="Window on records A:B, inclusive, 0 < A <= B")
++    ] = None,
++    type_: Annotated[
++        str | None,
++        typer.Option("--type", help=f"Keep one event kind ({KINDS}, or a provider record type)"),
++    ] = None,
+     tail: Annotated[
+         int | None,
+         typer.Option("--tail", min=0, help="Last N selected events, whole text (0 = none)"),
+     ] = None,
+-    thinking: Annotated[bool, typer.Option("--thinking")] = False,
+-    tools: Annotated[bool, typer.Option("--tools")] = False,
+-    errors: Annotated[bool, typer.Option("--errors")] = False,
+-    full: Annotated[bool, typer.Option("--full")] = False,
++    thinking: Annotated[
++        bool, typer.Option("--thinking", help="Widen the skeleton with thinking")
++    ] = False,
++    tools: Annotated[
++        bool,
++        typer.Option("--tool-results", "--tools", help="Widen the skeleton with tool results"),
++    ] = False,
++    errors: Annotated[
++        bool, typer.Option("--errors", help="Keep only records with error properties")
++    ] = False,
++    full: Annotated[
++        bool, typer.Option("--full", help="Every kind, whole text; filters still narrow it")
++    ] = False,
+     budget: flags.BudgetF = None,
+     line_cap: flags.LineLimitF = None,
+     use_codex: flags.CodexF = False,
+@@ -34,30 +54,36 @@
+     json_out: flags.JsonF = False,
+     limit: flags.LimitF = None,
+ ) -> None:
+-    """Transcript skeleton; zooms (--around/--range/--type) print whole text.
++    """Transcript skeleton, or an explicit selection; selectors compose, never override.
+ 
+-    An @A:@B range renders every selected session under one -n allowance.
++    Selection runs in one order: window (--around or --range, never both), then
++    kind (--type, else the skeleton widened by --thinking/--tool-results, else
++    every kind once a window/--full/--errors asked for more), then --errors, then
++    --tail, then -n. Text prints whole for any explicit selector and for --full;
++    otherwise it trims above --budget. An @A:@B range renders every session.
+     """
+-    provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
+-    refs = resolve(arg, flags.sessions(ctx, provider, cwd))
+     opts = ShowOpts(
+         thinking=thinking,
+         tools=tools,
+         errors=errors,
+         full=full,
+         around=around,
+-        context=context,
++        context=10 if context is None else context,
+         range_=range_,
+         type_=type_,
+         tail=tail,
+-        limit=limit,
+         json_out=json_out,
+         budget=budget,
+         line_limit=line_cap,
+     )
++    validate(opts, context_given=context is not None)
++    provider, cwd, opts.json_out, opts.limit = flags.merge(
++        ctx, use_codex, use_claude, path, json_out, limit
++    )
++    refs = resolve(arg, flags.sessions(ctx, provider, cwd))
+ 
+     def render(ref, rows):
+         events, total = read_window(ref, provider, opts)
+         return views_read.show(ref, events, opts, total_events=total, rows=rows)
+ 
+-    raise typer.Exit(render_scope(refs, render, limit, "events", json_out=json_out))
++    raise typer.Exit(render_scope(refs, render, opts.limit, "events", json_out=opts.json_out))
+diff a/src/sxr/show_select.py b/src/sxr/show_select.py
+--- a/src/sxr/show_select.py	1970-01-01 01:00:00
++++ b/src/sxr/show_select.py	2026-09-11 15:16:57
+@@ -0,0 +1,163 @@
++"""One selection pipeline for show, so no flag silently discards another.
++
++Four stages, always in this order, each narrowing the one before:
++
++1. **window** — `--around N` (plus or minus `--context`) or `--range A:B`, never
++   both. Without either, every record in the transcript.
++2. **kind** — `--type K` when given. Otherwise every kind, because a window,
++   `--full` or `--errors` all mean the caller asked for something other than the
++   default reading view. Otherwise the skeleton, which `--thinking` and
++   `--tool-results` widen.
++3. **errors** — `--errors` keeps only records carrying error properties.
++4. **tail** — `--tail N` keeps the last N of whatever survived.
++
++Row count and text trimming are display concerns and happen after all four, in
++`views_read.show`. Combinations that name two different windows, or a window
++half-width without a window, are usage errors rather than a silent winner.
++"""
++
++import re
++from dataclasses import dataclass
++from typing import NoReturn
++
++from sxr.handles import fail
++from sxr.model import Event
++
++SKELETON = ("text", "tool", "turn_context")
++KNOWN_KINDS = ("text", "thinking", "tool", "result", "turn_context", "user_message")
++
++
++@dataclass
++class ShowOpts:
++    """Selection and display flags for the show view."""
++
++    thinking: bool = False
++    tools: bool = False
++    errors: bool = False
++    full: bool = False
++    around: int | None = None
++    context: int = 10
++    range_: str | None = None
++    type_: str | None = None
++    tail: int | None = None
++    limit: int | None = None
++    json_out: bool = False
++    budget: int | None = None
++    line_limit: int | None = None
++
++
++def _bad_range(text: str) -> NoReturn:
++    """Reject a range spec, teaching both the format and the bounds."""
++    fail(
++        f"bad range '{text}'; format is A:B, e.g. --range 10:50",
++        "A and B are physical record numbers, 0 < A <= B",
++    )
++
++
++def parse_range(text: str) -> tuple[int, int]:
++    """Inclusive physical record bounds from A:B, or from the A-B grep habit."""
++    spec = text.replace("-", ":") if re.fullmatch(r"\d+-\d+", text) else text
++    low, high = (spec.split(":", 1) + ["0"])[:2]
++    try:
++        start, end = int(low), int(high)
++    except ValueError:
++        _bad_range(text)
++    if not 0 < start <= end:
++        _bad_range(text)
++    return start, end
++
++
++def validate(opts: ShowOpts, context_given: bool = False) -> None:
++    """Reject the flag combinations that used to discard each other in silence."""
++    if opts.around is not None and opts.range_:
++        fail(
++            "--around and --range are two different windows; use one",
++            "--around <seq> zooms around a record, --range A:B spans records",
++        )
++    if context_given and opts.around is None:
++        fail("--context only widens --around", "add --around <seq>, or drop --context")
++    if opts.range_:
++        parse_range(opts.range_)  # bad bounds are a usage error, not an empty result
++
++
++def window(events: list[Event], opts: ShowOpts) -> list[Event]:
++    """Stage 1: the records a --around or --range window admits."""
++    if opts.around is not None:
++        low, high = opts.around - opts.context, opts.around + opts.context
++        return [e for e in events if low <= e.seq <= high]
++    if opts.range_:
++        low, high = parse_range(opts.range_)
++        return [e for e in events if low <= e.seq <= high]
++    return events
++
++
++def windowed(opts: ShowOpts) -> bool:
++    """Whether stage 1 narrows anything."""
++    return opts.around is not None or bool(opts.range_)
++
++
++def kept_kind(event: Event, opts: ShowOpts) -> bool:
++    """Stage 2: whether one record's kind survives --type or the skeleton."""
++    if opts.type_:
++        return event.kind == opts.type_ or event.kind.startswith(opts.type_ + ".")
++    if opts.full or opts.errors or windowed(opts):
++        return True
++    if event.kind in SKELETON:
++        return True
++    if event.kind == "thinking":
++        return opts.thinking
++    if event.kind == "result":
++        return opts.tools
++    return False
++
++
++def is_error(event: Event) -> bool:
++    """Stage 3 predicate: the record carries recorded error properties."""
++    return event.is_error or event.tag == "err"
++
++
++def is_zoom(opts: ShowOpts) -> bool:
++    """An explicit selector was named, so text prints whole rather than trimmed."""
++    return windowed(opts) or bool(opts.type_) or opts.tail is not None
++
++
++def is_skeleton(opts: ShowOpts) -> bool:
++    """The default reading view: the only one with records worth calling hidden."""
++    return not (is_zoom(opts) or opts.full or opts.errors)
++
++
++def selected(events: list[Event], opts: ShowOpts) -> tuple[list[Event], bool]:
++    """All four stages: (records to print, whether whole text was asked for)."""
++    picked = [event for event in window(events, opts) if kept_kind(event, opts)]
++    if opts.errors:
++        picked = [event for event in picked if is_error(event)]
++    if opts.tail is not None:
++        picked = picked[-opts.tail :] if opts.tail else []
++    return picked, is_zoom(opts)
++
++
++def empty_reason(opts: ShowOpts, total: int) -> str:
++    """Why the selection came out empty, naming the selectors that emptied it.
++
++    The cached zoom path hands the view only the records it already selected, so
++    this reads the flags and the session's event count rather than the records.
++    A mistyped `--type` is the easy mistake, so that case says where the kinds a
++    session recorded are listed.
++    """
++    if not total:
++        return "the transcript has no records"
++    if opts.tail == 0:
++        return "--tail 0 selects no records"
++    asked = []
++    if opts.around is not None:
++        asked.append(f"--around {opts.around} within +/-{opts.context}")
++    if opts.range_:
++        asked.append(f"--range {opts.range_}")
++    if opts.type_:
++        asked.append(f"--type {opts.type_}")
++    if opts.errors:
++        asked.append("--errors")
++    if not asked:
++        return f"none of the {total} events are text, tool calls or turn context"
++    hint = "; sxr stats lists the kinds a session recorded" if opts.type_ else ""
++    return f"none of the {total} events satisfy {' and '.join(asked)}{hint}"
+diff a/src/sxr/views_read.py b/src/sxr/views_read.py
+--- a/src/sxr/views_read.py	2026-09-11 13:34:51
++++ b/src/sxr/views_read.py	2026-09-11 15:17:05
+@@ -1,87 +1,15 @@
+ """Transcript views: show, prompts, errors. Selection only, no judgment."""
+ 
+ import json
+-import re
+ import sys
+-from dataclasses import dataclass
+ 
+ from sxr.model import Event, SessionRef
+ from sxr.navigation import command
+ from sxr.output import RowBudget, print_records, record_events
++from sxr.show_select import ShowOpts, empty_reason, is_skeleton, selected
+ from sxr.util import clock, day, middle_trim, one_line
+ 
+ 
+-@dataclass
+-class ShowOpts:
+-    """Selection flags for the show view."""
+-
+-    thinking: bool = False
+-    tools: bool = False
+-    errors: bool = False
+-    full: bool = False
+-    around: int | None = None
+-    context: int = 10
+-    range_: str | None = None
+-    type_: str | None = None
+-    tail: int | None = None
+-    limit: int | None = None
+-    json_out: bool = False
+-    budget: int | None = None
+-    line_limit: int | None = None
+-
+-
+-def _selected(events: list[Event], opts: ShowOpts) -> tuple[list[Event], bool]:
+-    """(events to print, whether the selection is an explicit zoom).
+-
+-    --tail keeps the last N of whatever the other flags selected, and is
+-    itself a zoom: how a session ended prints whole, never trimmed.
+-    """
+-    picked, zoom = _base_selection(events, opts)
+-    if opts.tail is not None:
+-        return (picked[-opts.tail :] if opts.tail else []), True
+-    return picked, zoom
+-
+-
+-def _base_selection(events: list[Event], opts: ShowOpts) -> tuple[list[Event], bool]:
+-    """Selection before --tail applies: zooms, type filter, or skeleton."""
+-    if opts.type_:
+-        prefix = opts.type_ + "."
+-        return [e for e in events if e.kind == opts.type_ or e.kind.startswith(prefix)], True
+-    if opts.around is not None:
+-        lo, hi = opts.around - opts.context, opts.around + opts.context
+-        return [e for e in events if lo <= e.seq <= hi], True
+-    if opts.range_:
+-        text = opts.range_
+-        if re.fullmatch(r"\d+-\d+", text):
+-            text = text.replace("-", ":")  # the grep habit: 10-50 means 10:50
+-        lo, hi = (text.split(":", 1) + ["0"])[:2]
+-        try:
+-            a, b = int(lo), int(hi)
+-        except ValueError:
+-            print(
+-                f"error: bad range '{opts.range_}'; format is A:B, e.g. --range 10:50",
+-                file=sys.stderr,
+-            )
+-            raise SystemExit(2) from None
+-        return [e for e in events if a <= e.seq <= b], True
+-    return [e for e in events if _default_pick(e, opts)], False
+-
+-
+-def _default_pick(event: Event, opts: ShowOpts) -> bool:
+-    """Default skeleton membership for one event."""
+-    if opts.full:
+-        return True
+-    if opts.errors:
+-        return event.is_error or event.tag == "err"
+-    if event.kind in ("text", "tool", "turn_context"):
+-        return True
+-    if event.kind == "thinking":
+-        return opts.thinking
+-    if event.kind == "result":
+-        return opts.tools
+-    return False
+-
+-
+ def event_line(event: Event, trim: bool, cap: int = 0) -> str:
+     """One printable line (untrimmed text when trim is False)."""
+     body = " ".join(event.text.split()) if trim else event.text
+@@ -165,32 +93,39 @@
+     total_events: int | None = None,
+     rows: RowBudget | None = None,
+ ) -> int:
+-    """Render a transcript skeleton or an explicit zoom; exit 1 when empty.
++    """Render a transcript skeleton or an explicit selection; exit 1 when empty.
+ 
+-    Text prints whole whenever the view fits the char budget; only
++    Selection order lives in `show_select`; this function only displays what
++    survived it. Text prints whole whenever the view fits the char budget; only
+     over-budget scans trim, and they say so with the recovery commands. rows is
+     the allowance a session range shares; None means this session owns it.
+     """
+     from sxr.util import human_num, line_limit
+ 
+-    selected, zoom = _selected(events, opts)
++    picked, zoom = selected(events, opts)
++    count = len(events) if total_events is None else total_events
++    if not picked:
++        print(
++            f"nothing selected in {ref.short_id}: {empty_reason(opts, count)}",
++            file=sys.stderr,
++        )
+     if opts.json_out:
+-        print_records(selected, opts.limit, budget=rows)
+-        return 0 if selected else 1
+-    trim, total, budget = _trim_decision(selected, opts.limit, opts.budget)
++        print_records(picked, opts.limit, budget=rows)
++        return 0 if picked else 1
++    trim, total, budget = _trim_decision(picked, opts.limit, opts.budget)
+     trim = trim and not (zoom or opts.full)
+-    _header(ref, len(events) if total_events is None else total_events)
++    _header(ref, count)
+     cap = line_limit(opts.line_limit)
+-    print_events(selected, trim=trim, limit=opts.limit, cap=cap, budget=rows)
++    print_events(picked, trim=trim, limit=opts.limit, cap=cap, budget=rows)
+     if trim:
+         print(
+             f"# trimmed to {cap}-char lines ({human_num(total)} chars > "
+             f"{human_num(budget)} budget); whole text: --around <seq>, "
+             f"--range A:B, --budget 0, or --json"
+         )
+-    if not zoom:
+-        _hidden_note(events, selected)
+-    return 0 if selected else 1
++    if is_skeleton(opts):
++        _hidden_note(events, picked)
++    return 0 if picked else 1
+ 
+ 
+ def _hidden_note(events: list[Event], selected: list[Event]) -> None:
+@@ -206,7 +141,7 @@
+     if hidden.get("thinking"):
+         parts.append(f"{hidden.pop('thinking')} thinking (--thinking)")
+     if hidden.get("result"):
+-        parts.append(f"{hidden.pop('result')} tool results (--tools)")
++        parts.append(f"{hidden.pop('result')} tool results (--tool-results)")
+     if hidden:
+         parts.append(f"{sum(hidden.values())} meta/attachments (--full)")
+     print(f"# hidden: {', '.join(parts)}; zoom: --around <seq>; by kind: --type <kind>")
+diff a/tests/test_codex_outcomes.py b/tests/test_codex_outcomes.py
+--- a/tests/test_codex_outcomes.py	2026-09-08 19:38:04
++++ b/tests/test_codex_outcomes.py	2026-09-11 15:14:09
+@@ -4,9 +4,10 @@
+ from pathlib import Path
+ 
+ from sxr.providers import codex
++from sxr.show_select import ShowOpts
+ from sxr.views_grep import GrepOpts, grep_view
+ from sxr.views_info import cmds_view, tools_view
+-from sxr.views_read import ShowOpts, errors, show
++from sxr.views_read import errors, show
+ 
+ 
+ def _record(kind: str, **payload) -> dict:
+diff a/tests/test_read_cache.py b/tests/test_read_cache.py
+--- a/tests/test_read_cache.py	2026-09-09 11:07:00
++++ b/tests/test_read_cache.py	2026-09-11 15:14:03
+@@ -9,7 +9,8 @@
+ from sxr.file_selection import reference
+ from sxr.index_store import clear, connect, index_path
+ from sxr.read_cache import read_window
+-from sxr.views_read import ShowOpts, _selected, show
++from sxr.show_select import ShowOpts, selected
++from sxr.views_read import show
+ from test_codex_outcomes import _command, _record, _rollout
+ from test_providers import _write_claude, _write_codex
+ 
+@@ -54,11 +55,11 @@
+ def test_cold_and_warm_match_full_parser(source, opts, monkeypatch, capsys):
+     provider, direct_ref = reference(source)
+     direct = direct_ref.read(provider.parse)
+-    expected, _ = _selected(direct, opts)
++    expected, _ = selected(direct, opts)
+     for _ in range(2):
+         ref, events, total = _read(source, opts)
+-        selected, _ = _selected(events, opts)
+-        assert [asdict(e) for e in selected] == [asdict(e) for e in expected]
++        picked, _ = selected(events, opts)
++        assert [asdict(e) for e in picked] == [asdict(e) for e in expected]
+         assert total == len(direct)
+         for json_out in (False, True):
+             opts.json_out = json_out
+@@ -130,7 +131,7 @@
+     expected = ref.read(provider.parse)
+     for _ in range(2):
+         _, events, total = _read(source, opts)
+-        assert [asdict(e) for e in events] == [asdict(e) for e in _selected(expected, opts)[0]]
++        assert [asdict(e) for e in events] == [asdict(e) for e in selected(expected, opts)[0]]
+         assert total == len(expected)
+ 
+ 
+@@ -154,7 +155,7 @@
+     opts = ShowOpts(around=2, context=0)
+     _read(source, opts)
+     provider, ref = reference(source)
+-    expected = _selected(ref.read(provider.parse), opts)[0]
++    expected = selected(ref.read(provider.parse), opts)[0]
+     db = None
+     if failure == "corrupt":
+         index_path().write_bytes(b"broken database")
+@@ -175,7 +176,7 @@
+         monkeypatch.setenv("SXR_NO_CACHE", "1")
+     try:
+         _, events, _ = _read(source, opts)
+-        assert [asdict(e) for e in _selected(events, opts)[0]] == [asdict(e) for e in expected]
++        assert [asdict(e) for e in selected(events, opts)[0]] == [asdict(e) for e in expected]
+     finally:
+         if db:
+             db.close()
+@@ -187,7 +188,7 @@
+     opts = ShowOpts(range_="2:4")
+     _read(source, opts)
+     provider, ref = reference(source)
+-    expected = _selected(ref.read(provider.parse), opts)[0]
++    expected = selected(ref.read(provider.parse), opts)[0]
+     assert [asdict(e) for e in _read(source, opts)[1]] == [asdict(e) for e in expected]
+     clear()
+     assert not index_path().exists()
+@@ -227,8 +228,8 @@
+     monkeypatch.setattr(cache, "load_events", changed)
+     _, events, _ = _read(source, opts)
+     provider, ref = reference(source)
+-    expected = _selected(ref.read(provider.parse), opts)[0]
+-    assert [asdict(e) for e in _selected(events, opts)[0]] == [asdict(e) for e in expected]
++    expected = selected(ref.read(provider.parse), opts)[0]
++    assert [asdict(e) for e in selected(events, opts)[0]] == [asdict(e) for e in expected]
+ 
+ 
+ def test_mutation_during_build_does_not_publish_snapshot(source, monkeypatch):
+diff a/tests/test_show_pipeline.py b/tests/test_show_pipeline.py
+--- a/tests/test_show_pipeline.py	1970-01-01 01:00:00
++++ b/tests/test_show_pipeline.py	2026-09-11 15:19:52
+@@ -0,0 +1,376 @@
++"""show composes its selectors in one order instead of letting one win silently.
++
++Window (--around xor --range), then kind (--type, else the skeleton, else every
++kind), then --errors, then --tail, then -n. Combinations that used to discard a
++requested window or filter now intersect, and windows that cannot mean anything
++are usage errors rather than a quiet empty success.
++"""
++
++import json
++
++import pytest
++from typer.testing import CliRunner
++
++from sxr.cli import app
++
++runner = CliRunner()
++LONG = "a long assistant answer that repeats itself. " * 1200 + "unique ending"
++
++
++def _claude(root):
++    """One Claude transcript holding every kind the pipeline distinguishes."""
++    stamp = "2026-08-01T08:00:0"
++
++    def asst(second, block):
++        return {
++            "type": "assistant",
++            "cwd": "/w",
++            "timestamp": f"{stamp}{second}Z",
++            "message": {"role": "assistant", "content": [block]},
++        }
++
++    def result(second, call, content, failed=False):
++        block = {"type": "tool_result", "tool_use_id": call, "content": content}
++        if failed:
++            block["is_error"] = True
++        return {
++            "type": "user",
++            "cwd": "/w",
++            "timestamp": f"{stamp}{second}Z",
++            "message": {"role": "user", "content": [block]},
++        }
++
++    records = [
++        {
++            "type": "user",
++            "cwd": "/w",
++            "timestamp": f"{stamp}0Z",
++            "message": {"role": "user", "content": "human ask one"},
++        },
++        asst(1, {"type": "thinking", "thinking": "weighing options"}),
++        asst(2, {"type": "text", "text": "short answer"}),
++        asst(3, {"type": "tool_use", "name": "Bash", "id": "ok-1", "input": {"command": "true"}}),
++        result(4, "ok-1", "fine"),
++        asst(5, {"type": "tool_use", "name": "Bash", "id": "bad-1", "input": {"command": "false"}}),
++        result(6, "bad-1", "exploded on purpose", failed=True),
++        {"type": "system", "cwd": "/w", "timestamp": f"{stamp}7Z", "content": "a meta record"},
++        asst(8, {"type": "text", "text": LONG}),
++    ]
++    path = root / "cccc1111-2222-3333-4444-555566667777.jsonl"
++    path.write_text("\n".join(map(json.dumps, records)))
++    return path
++
++
++def _codex(root):
++    """One Codex rollout with the same kind coverage, through the other parser."""
++    stamp = "2026-08-01T08:00:0"
++
++    def item(second, payload):
++        return {"type": "response_item", "timestamp": f"{stamp}{second}Z", "payload": payload}
++
++    def shell(second, call, command):
++        return item(
++            second,
++            {
++                "type": "function_call",
++                "call_id": call,
++                "name": "shell",
++                "arguments": json.dumps({"command": ["bash", "-lc", command]}),
++            },
++        )
++
++    def output(second, call, text, code):
++        return item(
++            second,
++            {
++                "type": "function_call_output",
++                "call_id": call,
++                "output": json.dumps({"output": text, "metadata": {"exit_code": code}}),
++            },
++        )
++
++    def message(second, role, text, kinds=None):
++        payload = {
++            "type": "message",
++            "role": role,
++            "content": [{"type": "input_text", "text": text}],
++        }
++        if kinds is not None:
++            payload["internal_chat_message_metadata_passthrough"] = {"content_item_kinds": kinds}
++        return item(second, payload)
++
++    records = [
++        {
++            "type": "session_meta",
++            "timestamp": f"{stamp}0Z",
++            "payload": {"id": "019f9520-5499-7000-8000-00000000cccc", "cwd": "/w"},
++        },
++        message(0, "user", "human ask one", ["user.text"]),
++        item(1, {"type": "reasoning", "summary": [{"type": "summary_text", "text": "weighing"}]}),
++        message(2, "assistant", "short answer"),
++        shell(3, "ok-1", "true"),
++        output(4, "ok-1", "fine", 0),
++        shell(5, "bad-1", "false"),
++        output(6, "bad-1", "exploded on purpose", 1),
++        {"type": "turn_context", "timestamp": f"{stamp}7Z", "payload": {"cwd": "/w"}},
++        message(8, "assistant", LONG),
++    ]
++    day = root / "sessions" / "2026" / "08" / "01"
++    day.mkdir(parents=True)
++    path = day / "rollout-2026-08-01T08-00-00-019f9520.jsonl"
++    path.write_text("\n".join(map(json.dumps, records)))
++    return path
++
++
++@pytest.fixture(params=["claude", "codex"])
++def session(request, tmp_path, monkeypatch):
++    """One session of one provider under a temporary root, plus its CLI flag."""
++    monkeypatch.setenv("SXR_CACHE_DIR", str(tmp_path / "cache"))
++    if request.param == "claude":
++        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / ".claude"))
++        root = tmp_path / ".claude" / "projects" / "-w"
++        root.mkdir(parents=True)
++        _claude(root)
++        return ["--claude"]
++    monkeypatch.setenv("CODEX_HOME", str(tmp_path / ".codex"))
++    _codex(tmp_path / ".codex")
++    return ["--codex"]
++
++
++def _run(session, *args):
++    return runner.invoke(app, ["show", *session, "--path", "/w", *args])
++
++
++def _rows(stdout):
++    return [line for line in stdout.splitlines() if line.startswith("#0")]
++
++
++def _seqs(stdout):
++    """The physical record numbers a view printed, in order."""
++    return [int(row[1:5]) for row in _rows(stdout)]
++
++
++def _errors_only(rows):
++    return rows and all("is_error" in row or "-> err" in row for row in rows)
++
++
++def test_full_and_errors_keeps_only_error_records_untrimmed(session):
++    """--full used to disable the error filter; now it only lifts kind and trim."""
++    result = _run(session, "--full", "--errors")
++    assert result.exit_code == 0
++    rows = _rows(result.stdout)
++    assert _errors_only(rows), rows
++    assert "exploded on purpose" in result.stdout
++    assert "chars]" not in result.stdout and "unique ending" not in result.stdout
++
++
++def test_errors_alone_still_reaches_every_kind(session):
++    """--errors names error results, which the default skeleton would have hidden."""
++    rows = _rows(_run(session, "--errors").stdout)
++    assert _errors_only(rows), rows
++    assert any("result" in row for row in rows), rows
++
++
++def test_type_intersects_a_window_instead_of_replacing_it(session):
++    """--type used to discard --around outright."""
++    every = _seqs(_run(session, "--type", "tool").stdout)
++    assert len(every) == 2, every
++    inside = _run(session, "--type", "tool", "--around", str(every[-1]), "--context", "0")
++    assert inside.exit_code == 0
++    assert _seqs(inside.stdout) == every[-1:]
++    assert "false" in inside.stdout and "true" not in inside.stdout
++
++
++def test_type_intersects_a_range(session):
++    """--range narrows --type the same way --around does."""
++    every = _seqs(_run(session, "--type", "result").stdout)
++    assert len(every) == 2, every
++    result = _run(session, "--type", "result", "--range", f"1:{every[0]}")
++    assert _seqs(result.stdout) == every[:1]
++    assert "fine" in result.stdout and "exploded" not in result.stdout
++
++
++def test_errors_narrows_a_window(session):
++    """A window used to discard --errors."""
++    result = _run(session, "--around", "7", "--context", "3", "--errors")
++    assert result.exit_code == 0
++    assert _errors_only(_rows(result.stdout)), result.stdout
++
++
++def test_a_window_without_errors_stays_empty_rather_than_widening(session):
++    """Intersecting is real: a window holding no error exits 1, it does not fall back."""
++    result = _run(session, "--range", "1:5", "--errors")
++    assert result.exit_code == 1
++    assert _rows(result.stdout) == []
++    assert "--range 1:5 and --errors" in result.stderr
++
++
++def test_full_still_narrows_to_an_explicit_kind(session):
++    """--full means every kind, and --type is still allowed to pick one of them."""
++    rows = _rows(_run(session, "--full", "--type", "thinking").stdout)
++    assert len(rows) == 1 and "think" in rows[0], rows
++
++
++def test_tail_applies_after_the_other_stages(session):
++    """--tail keeps the last of what survived, not the last of the transcript."""
++    every = _rows(_run(session, "--errors").stdout)
++    tailed = _rows(_run(session, "--errors", "--tail", "1").stdout)
++    assert len(every) > 1 and tailed == every[-1:]
++
++
++def test_a_window_shows_every_kind_it_contains(session):
++    """A zoom is for reading; it must not apply the skeleton's kind filter."""
++    rows = _rows(_run(session, "--around", "5", "--context", "1").stdout)
++    assert any("result" in row for row in rows), rows
++
++
++def test_skeleton_still_hides_thinking_and_results_by_default(session):
++    """The default reading view is unchanged, and says which flag reveals each kind."""
++    result = _run(session)
++    assert result.exit_code == 0
++    rows = _rows(result.stdout)
++    assert not any("think" in row or "result " in row for row in rows), rows
++    assert "(--thinking)" in result.stdout and "(--tool-results)" in result.stdout
++
++
++@pytest.mark.parametrize("flag", ["--tools", "--tool-results"])
++def test_both_result_spellings_select_the_same_records(session, flag):
++    """--tools keeps working; --tool-results is the name that says what it does."""
++    rows = _rows(_run(session, flag).stdout)
++    assert any("result" in row for row in rows), rows
++    assert rows == _rows(_run(session, "--tool-results").stdout)
++
++
++@pytest.mark.parametrize(
++    "selection",
++    [
++        ["--around", "0"],
++        ["--around", "-3"],
++        ["--around", "5", "--context", "-1"],
++        ["--context", "3"],
++        ["--range", "6:3"],
++        ["--range", "0:4"],
++        ["--range", "4:0"],
++        ["--range", "junk"],
++        ["--around", "5", "--range", "1:3"],
++        ["--budget", "-1"],
++        ["--line-limit", "-5"],
++        ["--tail", "-1"],
++    ],
++)
++def test_meaningless_selections_are_usage_errors(session, selection):
++    """Each of these used to succeed quietly, or silently pick a winner."""
++    result = _run(session, *selection)
++    assert result.exit_code == 2, result.output
++    assert "Traceback" not in result.output
++    assert _rows(result.stdout) == []
++
++
++def test_conflicting_windows_name_both_flags(session):
++    """The error has to say which two flags conflict, not just that one failed."""
++    result = _run(session, "--around", "5", "--range", "1:3")
++    assert "--around" in result.stderr and "--range" in result.stderr
++
++
++def test_context_is_rejected_before_discovery(session, monkeypatch):
++    """Usage errors must not depend on finding any session first."""
++
++    def refuse(*args, **kwargs):
++        raise AssertionError("discovery ran before the flags were validated")
++
++    monkeypatch.setattr("sxr.flags.sessions", refuse)
++    assert _run(session, "--context", "3").exit_code == 2
++
++
++def test_range_still_accepts_the_grep_habit(session):
++    """A-B keeps meaning A:B."""
++    assert _rows(_run(session, "--range", "3-6").stdout) == _rows(
++        _run(session, "--range", "3:6").stdout
++    )
++
++
++def test_tail_zero_selects_nothing_and_exits_one(session):
++    """SXR-AUD-011: --tail 0 is a valid request for no records."""
++    result = _run(session, "--tail", "0")
++    assert result.exit_code == 1
++    assert _rows(result.stdout) == []
++    assert "--tail 0" in result.stderr
++
++
++def test_an_empty_selection_says_which_selectors_emptied_it(session):
++    """An unknown kind is the easy mistake; the notice has to be actionable."""
++    result = _run(session, "--type", "nosuchkind")
++    assert result.exit_code == 1
++    assert "--type nosuchkind" in result.stderr and "sxr stats" in result.stderr
++
++
++def test_empty_notices_never_reach_json_stdout(session):
++    """--json stdout is a record contract: it stays empty or stays parseable."""
++    result = _run(session, "--type", "nosuchkind", "--json")
++    assert result.exit_code == 1
++    assert result.stdout == "" and "nosuchkind" in result.stderr
++
++
++def test_json_prints_whole_physical_records_once(session):
++    """Every --json line is one complete source record, and no record repeats."""
++    result = _run(session, "--full", "--errors", "--json")
++    assert result.exit_code == 0
++    lines = [line for line in result.stdout.splitlines() if line]
++    assert lines and len(lines) == len(set(lines))
++    for line in lines:
++        assert isinstance(json.loads(line), dict)
++
++
++def test_json_selection_matches_the_text_selection(session):
++    """The pipeline decides; the format only changes how the result is printed."""
++    text = _rows(_run(session, "--full", "--errors").stdout)
++    raw = [
++        line for line in _run(session, "--full", "--errors", "--json").stdout.splitlines() if line
++    ]
++    assert len(text) == len(raw) > 0
++
++
++@pytest.mark.parametrize(
++    "selection",
++    [
++        ["--full", "--errors"],
++        ["--type", "tool", "--around", "6", "--context", "2"],
++        ["--range", "1:8", "--errors"],
++        ["--errors", "--tail", "1"],
++        ["--type", "result", "--range", "1:5"],
++    ],
++)
++def test_cached_and_uncached_selections_agree(session, monkeypatch, selection):
++    """The cache reuses the same pipeline over event metadata, so it must match."""
++    warm = _run(session, *selection)
++    again = _run(session, *selection)
++    monkeypatch.setenv("SXR_NO_CACHE", "1")
++    cold = _run(session, *selection)
++    assert warm.stdout == again.stdout == cold.stdout
++    assert warm.exit_code == again.exit_code == cold.exit_code
++
++
++def test_row_limit_applies_after_selection(session):
++    """-n is the last stage: it caps rows without changing which ones qualified."""
++    every = _rows(_run(session, "--full").stdout)
++    capped = _run(session, "--full", "-n", "2")
++    assert len(every) > 2
++    assert _rows(capped.stdout) == every[:2]
++    assert f"{len(every) - 2} more events" in capped.stdout
++
++
++def test_budget_zero_and_line_limit_zero_mean_no_trimming(session):
++    """0 stays the explicit "never trim" value now that negatives are rejected."""
++    result = _run(session, "--budget", "0")
++    assert result.exit_code == 0
++    assert "unique ending" in result.stdout and "chars]" not in result.stdout
++    assert "chars]" not in _run(session, "--budget", "1", "--line-limit", "0").stdout
++
++
++def test_help_prints_the_implemented_order(session):
++    """The documented precedence is part of the contract, so help must carry it."""
++    out = runner.invoke(app, ["show", "--help"]).stdout
++    flat = " ".join(out.split())
++    assert "window (--around or --range, never both)" in flat
++    assert "then --errors, then --tail, then -n" in flat
++    assert "--tool-results" in flat and "--tools" in flat
+diff a/tests/test_views.py b/tests/test_views.py
+--- a/tests/test_views.py	2026-09-11 06:03:24
++++ b/tests/test_views.py	2026-09-11 15:14:28
+@@ -5,9 +5,10 @@
+ import pytest
+ 
+ from sxr.model import Event, SessionRef
++from sxr.show_select import ShowOpts
+ from sxr.views_info import cmds_view
+ from sxr.views_prompts import PromptOpts, prompts
+-from sxr.views_read import ShowOpts, show
++from sxr.views_read import show
+ 
+ 
+ def _ref(provider: str = "claude") -> SessionRef:
+@@ -58,7 +59,7 @@
+     assert show(_ref(), events, ShowOpts()) == 0
+     out = capsys.readouterr().out
+     assert "1 thinking (--thinking)" in out
+-    assert "1 tool results (--tools)" in out
++    assert "1 tool results (--tool-results)" in out
+ 
+ 
+ def test_show_tail_keeps_last_selected_events(capsys) -> None:

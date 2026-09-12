@@ -1,0 +1,18 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "audit/2026-09-10/verify_cli.py",
+    "--output",
+    "audit/2026-09-10/remediation/final-contracts.json"
+  ],
+  "started": "2026-09-10T11:11:03.290918+00:00",
+  "ended": "2026-09-10T11:11:10.052905+00:00",
+  "exit_code": 0,
+  "source_identity": "source-9795519e2aaa2fa7.json",
+  "source_unchanged": true,
+  "evidence": "final-contracts.log",
+  "artifacts": {
+    "final-contracts.log": "cb2196900aec49534f9fd1d769e1b0bba04e7fa9e3476207541944562fd42af8",
+    "final-contracts.json": "689422f3880de158a96aaa8b121e912a388ffd92db607b20706bb0baf61dabb1"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "audit/2026-09-10/build_report.py"
+  ],
+  "started": "2026-09-10T11:15:14.135274+00:00",
+  "ended": "2026-09-10T11:15:14.307497+00:00",
+  "exit_code": 1,
+  "source_identity": "source-e3c3deb911732ffd.json",
+  "source_unchanged": true,
+  "evidence": "original-freshness-guard.log",
+  "artifacts": {
+    "original-freshness-guard.log": "346a4646737196d483e73aa90afbb7249797545dc6c24a2f1e2db7af3c39a6f0"
+  }
+}

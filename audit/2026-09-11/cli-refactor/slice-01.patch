@@ -1,0 +1,769 @@
+diff -ruN --color=never -x .ruff_cache /tmp/sxr-baseline-clean/README.md /tmp/sxr-after-0911/README.md
+--- /tmp/sxr-baseline-clean/README.md	2026-09-10 13:04:43
++++ /tmp/sxr-after-0911/README.md	2026-09-11 06:08:03
+@@ -240,7 +240,7 @@
+ sxr show @2 --tail 5           # how a session ended, whole text
+ sxr show @2 --type ai-title    # select events by record type
+ sxr show --file /path/session.jsonl --around 1247 # skip discovery, either provider
+-sxr prompts                    # user messages of the newest session, as stored
++sxr prompts                    # complete human prompts of the newest session
+ sxr cmds @6                    # every command a session ran, with ok/err
+ sxr cmds --grep "git push"     # commands that did X, across all sessions
+ sxr errors @6                  # records flagged is_error, with denial kinds
+@@ -259,10 +259,23 @@
+ `prompts --codex` uses explicit user-message events when present. Otherwise,
+ it reads user-role text and uses recorded content labels to exclude injected
+ instructions, environment context and internal reminders. Older transcripts
+-without those labels retain the user-role text fallback. `prompts --all`
+-includes every user-role record, including injected context and tool results.
+-For Claude, the default also excludes records marked as metadata or compaction
+-summaries.
++without those labels retain the user-role text fallback. For Claude, the
++default also excludes records marked as metadata or compaction summaries.
++
++Selection and completeness are separate flags. Plain `sxr prompts` prints the
++selected human input in full: it has no default character budget, so
++`SXR_BUDGET` and `SXR_LINE_LIMIT` cannot trim it. `--budget CHARS` or
++`--line-limit CHARS` asks for compact text (`--budget 0` asks for whole text
++and wins over `--line-limit`); negative values never truncate. `--all` lifts
++every row and character limit, in text and `--json` alike, and overrides an
++explicit `-n`/`--budget` supplied at either flag position. `--include-context`
++is the flag that widens selection to the other user-role records — injected
++instructions, environment context, compaction summaries and tool results —
++each labelled with its recorded provenance. Codex compaction boundary records
++are never replayed into either view.
++
++Migration: `--all` changed meaning. It used to widen selection to injected
++context and tool results; that behavior is now `--include-context`.
+ 
+ `--path` accepts absolute paths, relative paths and `~`. Both the requested
+ path and the recorded cwd resolve symlinks to their physical path. The default
+diff -ruN --color=never -x .ruff_cache /tmp/sxr-baseline-clean/src/sxr/cli.py /tmp/sxr-after-0911/src/sxr/cli.py
+--- /tmp/sxr-baseline-clean/src/sxr/cli.py	2026-09-10 12:59:36
++++ /tmp/sxr-after-0911/src/sxr/cli.py	2026-09-11 06:02:49
+@@ -4,7 +4,7 @@
+ 
+ import typer
+ 
+-from sxr import flags, onboard, skills_command, views_grep, views_info, views_read
++from sxr import flags, onboard, skills_command, views_grep, views_info, views_prompts, views_read
+ from sxr.find_command import find_cmd
+ from sxr.handles import fail, resolve
+ from sxr.onboard import EPILOG
+@@ -97,24 +97,33 @@
+ def prompts(
+     ctx: typer.Context,
+     arg: flags.Arg = None,
+-    include_all: Annotated[
+-        bool, typer.Option("--all", help="Include injected context and tool results")
+-    ] = False,
+-    budget: flags.BudgetF = None,
+-    line_cap: flags.LineLimitF = None,
++    include_all: flags.PromptAllF = False,
++    include_context: flags.IncludeContextF = False,
++    budget: flags.PromptBudgetF = None,
++    line_cap: flags.PromptLineLimitF = None,
+     use_codex: flags.CodexF = False,
+     use_claude: flags.ClaudeF = False,
+     path: flags.PathF = None,
+     json_out: flags.JsonF = False,
+     limit: flags.LimitF = None,
+ ) -> None:
+-    """Human prompts in order, excluding records labelled as injected context."""
++    """Complete human prompts in order, excluding records labelled injected context.
++
++    Text prints whole: no environment budget trims it. --budget/--line-limit ask
++    for compact text, --all lifts every limit, --include-context widens selection.
++    """
+     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
+     ref = resolve(arg, flags.sessions(ctx, provider, cwd))[0]
+     events = provider.parse(ref.path)
+-    raise typer.Exit(
+-        views_read.prompts(ref, events, include_all, json_out, limit, budget, line_cap)
++    opts = views_prompts.PromptOpts(
++        include_all=include_all,
++        include_context=include_context,
++        json_out=json_out,
++        limit=limit,
++        budget=budget,
++        line_cap=line_cap,
+     )
++    raise typer.Exit(views_prompts.prompts(ref, events, opts))
+ 
+ 
+ @app.command()
+diff -ruN --color=never -x .ruff_cache /tmp/sxr-baseline-clean/src/sxr/flags.py /tmp/sxr-after-0911/src/sxr/flags.py
+--- /tmp/sxr-baseline-clean/src/sxr/flags.py	2026-09-10 12:59:36
++++ /tmp/sxr-after-0911/src/sxr/flags.py	2026-09-11 06:02:33
+@@ -27,6 +27,24 @@
+     int | None,
+     typer.Option("--line-limit", help="Per-line char cap when trimming (env SXR_LINE_LIMIT)"),
+ ]
++PromptAllF = Annotated[
++    bool, typer.Option("--all", help="Lift every row and character limit (complete output)")
++]
++IncludeContextF = Annotated[
++    bool,
++    typer.Option(
++        "--include-context",
++        help="Also print injected context and tool results, labelled by provenance",
++    ),
++]
++PromptBudgetF = Annotated[
++    int | None,
++    typer.Option("--budget", help="Ask for compact text above CHARS (0 = complete; default: none)"),
++]
++PromptLineLimitF = Annotated[
++    int | None,
++    typer.Option("--line-limit", help="Per-line cap; supplying it asks for compact text"),
++]
+ SinceF = Annotated[
+     str | None,
+     typer.Option("--since", help="Sessions started on/after DATE (YYYY-MM-DD, ISO, today, @N)"),
+diff -ruN --color=never -x .ruff_cache /tmp/sxr-baseline-clean/src/sxr/onboard.py /tmp/sxr-after-0911/src/sxr/onboard.py
+--- /tmp/sxr-baseline-clean/src/sxr/onboard.py	2026-09-10 13:03:22
++++ /tmp/sxr-after-0911/src/sxr/onboard.py	2026-09-11 06:07:34
+@@ -19,10 +19,11 @@
+ emits original JSONL in read views; find emits ranked evidence and coverage. ...[+N chars] marks a
+ display trim; zooms (--around, --range, --type) and --full print whole text.
+ \b
+-budgets: scan views (show, prompts) print whole text whenever they fit
+---budget chars (default 40k; env SXR_BUDGET); over budget they trim lines
+-to --line-limit chars (default 200; env SXR_LINE_LIMIT) and say so.
+---budget 0 disables trimming entirely.
++budgets: show prints whole text whenever it fits --budget chars (default
++40k; env SXR_BUDGET); over budget it trims lines to --line-limit chars
++(default 200; env SXR_LINE_LIMIT) and says so. --budget 0 disables trimming.
++prompts has no default budget: it prints complete human input, and only
++--budget/--line-limit ask for compact text. --all lifts every limit.
+ \b
+ secrets: sxr secrets audits the scope for leaked keys and passwords
+ (vendored gitleaks rules + structural checks). Rows are kind, severity,
+@@ -48,7 +49,7 @@
+   sxr grep -c x --before today history only: not your own (live) session
+   sxr show @2 --around 1247    untruncated window around event #1247
+   sxr show @2 --tail 5         how a session ended, whole text
+-  sxr prompts                  user messages of the newest session, as stored
++  sxr prompts                  complete human prompts of the newest session
+   sxr errors @2                is_error records with event indexes
+   sxr init --write             install the primer in the nearest AGENTS.md
+   sxr init --check             is the installed primer this version?
+diff -ruN --color=never -x .ruff_cache /tmp/sxr-baseline-clean/src/sxr/views_prompts.py /tmp/sxr-after-0911/src/sxr/views_prompts.py
+--- /tmp/sxr-baseline-clean/src/sxr/views_prompts.py	1970-01-01 01:00:00
++++ /tmp/sxr-after-0911/src/sxr/views_prompts.py	2026-09-11 06:20:02
+@@ -0,0 +1,159 @@
++"""The prompts view: complete human input by default, compact only on request.
++
++Selection and presentation are separate concerns here. Which records count as
++human input comes from the transcript's own provenance properties; whether the
++view is complete or compact comes from the caller's limit flags. `--all` only
++lifts limits, `--include-context` only widens selection.
++"""
++
++import sys
++from dataclasses import dataclass
++
++from sxr.model import Event, SessionRef
++from sxr.output import print_records
++from sxr.util import human_num, line_limit, scan_budget
++from sxr.views_read import print_events
++
++
++@dataclass
++class PromptOpts:
++    """Selection and presentation flags for the prompts view."""
++
++    include_all: bool = False
++    include_context: bool = False
++    json_out: bool = False
++    limit: int | None = None
++    budget: int | None = None
++    line_cap: int | None = None
++
++
++@dataclass
++class Display:
++    """The resolved presentation: how many rows, and whether text is trimmed."""
++
++    limit: int | None = None
++    trim: bool = False
++    budget: int = 0
++    cap: int = 0
++
++
++def human_prompt(event: Event, kind: str) -> bool:
++    """Select human input using the transcript's recorded content provenance."""
++    if event.kind != kind:
++        return False
++    record = event.raw.get("line", {})
++    if record.get("isMeta") or record.get("isCompactSummary"):
++        return False
++    kinds = _content_item_kinds(record)
++    if kinds is None:
++        return True  # Legacy rollouts do not label response-item content.
++    return any(value.startswith("user.") for value in kinds)
++
++
++def context_label(event: Event) -> str:
++    """The recorded provenance of a non-human user-role record.
++
++    Only properties already present in the record are reported; nothing here
++    infers authorship from wording. Records carrying no label at all fall back
++    to their event kind, so the display never invents a source.
++    """
++    record = event.raw.get("line", {})
++    if record.get("isCompactSummary"):
++        return "compact"
++    if record.get("isMeta"):
++        return "meta"
++    kinds = _content_item_kinds(record)
++    if kinds:
++        return kinds[0]
++    return "tool_result" if event.kind == "result" else "context"
++
++
++def _content_item_kinds(record: dict) -> list[str] | None:
++    """Codex content-item labels for a record, or None when unlabelled."""
++    payload = record.get("payload") or {}
++    metadata = payload.get("internal_chat_message_metadata_passthrough") or {}
++    kinds = metadata.get("content_item_kinds")
++    if not isinstance(kinds, list):
++        return None
++    return [value for value in kinds if isinstance(value, str)]
++
++
++def _prompt_kind(events: list[Event]) -> str:
++    """Explicit Codex user_message events win over user-role text when present."""
++    return "user_message" if any(e.kind == "user_message" for e in events) else "text"
++
++
++def _selected(events: list[Event], include_context: bool) -> tuple[list[Event], int]:
++    """(records to print in source order, how many user records were excluded)."""
++    kind = _prompt_kind(events)
++    picked: list[Event] = []
++    excluded = 0
++    for event in events:
++        if event.role != "user":
++            continue
++        if human_prompt(event, kind):
++            picked.append(event)
++        elif include_context:
++            event.tag = event.tag or context_label(event)
++            picked.append(event)
++        else:
++            excluded += 1
++    return picked, excluded
++
++
++def display(opts: PromptOpts, picked: list[Event]) -> Display:
++    """Resolve row and character limits; complete output unless asked otherwise.
++
++    `--all` lifts every limit. Otherwise a positive `--budget` or `--line-limit`
++    is what requests compact text; no environment default can trim on its own,
++    so a plain run always prints whole prompts.
++    """
++    if opts.include_all:
++        return Display()
++    limit = opts.limit or None
++    if opts.budget is not None and opts.budget <= 0:
++        return Display(limit=limit)  # --budget 0 asks for whole text, and wins.
++    compact = opts.budget is not None or (opts.line_cap is not None and opts.line_cap > 0)
++    if not compact:
++        return Display(limit=limit)
++    budget = opts.budget if opts.budget is not None else scan_budget(None)
++    shown = picked if limit is None else picked[:limit]
++    total = sum(len(event.text) for event in shown)
++    return Display(limit=limit, trim=total > budget, budget=budget, cap=line_limit(opts.line_cap))
++
++
++def prompts(ref: SessionRef, events: list[Event], opts: PromptOpts) -> int:
++    """Print the session's human prompts in order; exit 1 when there are none."""
++    picked, excluded = _selected(events, opts.include_context)
++    view = display(opts, picked)
++    if opts.json_out:
++        print_records(picked, view.limit)
++        return 0 if picked else 1
++    if not picked:
++        print(f"no user text records in {ref.short_id}", file=sys.stderr)
++        return 1
++    shown = picked if view.limit is None else picked[: view.limit]
++    print_events(shown, trim=view.trim, limit=None, cap=view.cap)
++    _summary(len(shown), picked, excluded, opts)
++    if view.trim:
++        total = sum(len(event.text) for event in shown)
++        print(
++            f"# trimmed to {view.cap}-char lines ({human_num(total)} chars > "
++            f"{human_num(view.budget)} requested budget); whole text: "
++            f"--all, --budget 0, or --json"
++        )
++    return 0
++
++
++def _summary(shown: int, picked: list[Event], excluded: int, opts: PromptOpts) -> None:
++    """One line naming what was printed, what was left out, and how to get it."""
++    label = "user records" if opts.include_context else "human prompts"
++    line = f"# {shown} of {len(picked)} {label} shown"
++    if shown < len(picked):
++        line += " (raise -n, or -n 0/--all for all)"
++    if excluded and not opts.include_context:
++        line += (
++            f"; {excluded} other user-role records hidden "
++            f"(injected context, tool results): --include-context"
++        )
++    print(line)
+diff -ruN --color=never -x .ruff_cache /tmp/sxr-baseline-clean/src/sxr/views_read.py /tmp/sxr-after-0911/src/sxr/views_read.py
+--- /tmp/sxr-baseline-clean/src/sxr/views_read.py	2026-09-10 13:02:04
++++ /tmp/sxr-after-0911/src/sxr/views_read.py	2026-09-11 06:02:24
+@@ -97,7 +97,7 @@
+     return one_line(body, cap) if trim else event.text
+ 
+ 
+-def _print_events(events: list[Event], trim: bool, limit: int | None, cap: int = 0) -> None:
++def print_events(events: list[Event], trim: bool, limit: int | None, cap: int = 0) -> None:
+     """Print event lines with the shared #seq/time/role/kind prefix; -n 0 = all."""
+     shown = events if not limit else events[:limit]
+     for event in shown:
+@@ -157,7 +157,7 @@
+     trim = trim and not (zoom or opts.full)
+     _header(ref, len(events) if total_events is None else total_events)
+     cap = line_limit(opts.line_limit)
+-    _print_events(selected, trim=trim, limit=opts.limit, cap=cap)
++    print_events(selected, trim=trim, limit=opts.limit, cap=cap)
+     if trim:
+         print(
+             f"# trimmed to {cap}-char lines ({human_num(total)} chars > "
+@@ -186,61 +186,6 @@
+     if hidden:
+         parts.append(f"{sum(hidden.values())} meta/attachments (--full)")
+     print(f"# hidden: {', '.join(parts)}; zoom: --around <seq>; by kind: --type <kind>")
+-
+-
+-def _prompt_record(event: Event, kind: str) -> bool:
+-    """Select human input using the transcript's recorded content provenance."""
+-    if event.kind != kind:
+-        return False
+-    record = event.raw.get("line", {})
+-    if record.get("isMeta") or record.get("isCompactSummary"):
+-        return False
+-    payload = record.get("payload") or {}
+-    metadata = payload.get("internal_chat_message_metadata_passthrough") or {}
+-    kinds = metadata.get("content_item_kinds")
+-    if not isinstance(kinds, list):
+-        return True  # Legacy rollouts do not label response-item content.
+-    return any(isinstance(value, str) and value.startswith("user.") for value in kinds)
+-
+-
+-def prompts(
+-    ref: SessionRef,
+-    events: list[Event],
+-    include_all: bool,
+-    json_out: bool,
+-    limit: int | None,
+-    budget: int | None = None,
+-    cap_flag: int | None = None,
+-) -> int:
+-    """Human prompts, or all user-role records with --all; exit 1 when empty."""
+-    from sxr.util import human_num, line_limit
+-
+-    has_user_message = any(e.kind == "user_message" for e in events)
+-    kind = "user_message" if has_user_message else "text"
+-    picked = [e for e in events if e.role == "user" and (include_all or _prompt_record(e, kind))]
+-    rest = sum(1 for e in events if e.role == "user") - len(picked)
+-    if json_out:
+-        print_records(picked, limit)
+-        return 0 if picked else 1
+-    if not picked:
+-        print(f"no user text records in {ref.short_id}", file=sys.stderr)
+-        return 1
+-    trim, total, eff_budget = _trim_decision(picked, limit, budget)
+-    cap = line_limit(cap_flag)
+-    _print_events(picked, trim=trim, limit=limit, cap=cap)
+-    note = (
+-        f" ({rest} more user-role records: tool results or injected texts; --all includes them)"
+-        if rest
+-        else ""
+-    )
+-    shown = min(limit, len(picked)) if limit else len(picked)
+-    print(f"# {shown} of {len(picked)} user records shown{note}")
+-    if trim:
+-        print(
+-            f"# trimmed to {cap}-char lines ({human_num(total)} chars > "
+-            f"{human_num(eff_budget)} budget); whole text: --budget 0 or --json"
+-        )
+-    return 0
+ 
+ 
+ def errors(refs: list[SessionRef], parse, json_out: bool, limit: int | None) -> int:
+diff -ruN --color=never -x .ruff_cache /tmp/sxr-baseline-clean/tests/test_prompt_limits.py /tmp/sxr-after-0911/tests/test_prompt_limits.py
+--- /tmp/sxr-baseline-clean/tests/test_prompt_limits.py	1970-01-01 01:00:00
++++ /tmp/sxr-after-0911/tests/test_prompt_limits.py	2026-09-11 06:07:09
+@@ -0,0 +1,220 @@
++"""Row and character limits of the prompts view, and their precedence.
++
++The transcripts here are synthetic but shaped like real ones: Claude isMeta and
++isCompactSummary records, Codex content_item_kinds labels observed in rollouts
++(agents_md.instructions, hooks.additional_context, generic.turn_aborted,
++user.text), tool results, unlabelled legacy messages and a Codex compaction
++boundary carrying replacement_history.
++"""
++
++import json
++
++import pytest
++from typer.testing import CliRunner
++
++from sxr.cli import app
++
++runner = CliRunner()
++
++LONG = "human request\n" * 4000 + "human ending"
++LEGACY = "legacy human ask"
++REPLAYED = "replayed history text"
++CONTEXT_TEXTS = ("Injected rules", "hook context", "aborted notice", "tool output")
++
++
++def _claude(path):
++    """A Claude session with two human prompts and four context records."""
++
++    def user(content, **flags):
++        return {
++            "type": "user",
++            "cwd": "/w",
++            "message": {"role": "user", "content": content},
++            **flags,
++        }
++
++    records = [
++        user("Injected rules", isMeta=True),
++        user("hook context", isMeta=True),
++        user("aborted notice", isCompactSummary=True),
++        user(LEGACY),
++        user(LONG),
++        user([{"type": "tool_result", "tool_use_id": "t1", "content": "tool output"}]),
++        {"type": "assistant", "cwd": "/w", "message": {"role": "assistant", "content": "reply"}},
++    ]
++    path.write_text("\n".join(map(json.dumps, records)))
++    return records
++
++
++def _codex(path):
++    """A Codex rollout with the same two human prompts and four context records."""
++
++    def message(text, kinds=None):
++        payload = {
++            "type": "message",
++            "role": "user",
++            "content": [{"type": "input_text", "text": text}],
++        }
++        if kinds is not None:
++            payload["internal_chat_message_metadata_passthrough"] = {"content_item_kinds": kinds}
++        return {"type": "response_item", "payload": payload}
++
++    records = [
++        {"type": "session_meta", "payload": {"id": "limits-fixture", "cwd": "/w"}},
++        message("Injected rules", ["agents_md.instructions"]),
++        message("hook context", ["hooks.additional_context"]),
++        message("aborted notice", ["generic.turn_aborted"]),
++        message(LEGACY),
++        message(LONG, ["user.text"]),
++        {
++            "type": "response_item",
++            "payload": {"type": "function_call_output", "call_id": "t1", "output": "tool output"},
++        },
++        {
++            "type": "compacted",
++            "payload": {
++                "message": "compaction boundary",
++                "replacement_history": [message(REPLAYED, ["user.text"])],
++            },
++        },
++    ]
++    path.write_text("\n".join(map(json.dumps, records)))
++    return records
++
++
++@pytest.fixture(params=["claude", "codex"])
++def session(request, tmp_path):
++    path = tmp_path / f"{request.param}.jsonl"
++    (_claude if request.param == "claude" else _codex)(path)
++    return path
++
++
++def run(session, *args, env=None, monkeypatch=None):
++    """Invoke prompts against one synthetic file, optionally with env defaults."""
++    for name, value in (env or {}).items():
++        monkeypatch.setenv(name, value)
++    return runner.invoke(app, ["prompts", "--file", str(session), *args])
++
++
++def test_plain_prints_complete_prompts_under_environment_budget(session, monkeypatch):
++    result = run(session, env={"SXR_BUDGET": "1", "SXR_LINE_LIMIT": "5"}, monkeypatch=monkeypatch)
++    assert result.exit_code == 0, result.output
++    assert LONG in result.stdout and LEGACY in result.stdout
++    assert "chars]" not in result.stdout
++    for text in CONTEXT_TEXTS:
++        assert text not in result.stdout
++    assert "2 of 2 human prompts shown" in result.stdout
++    assert "4 other user-role records hidden" in result.stdout
++
++
++def test_line_limit_alone_requests_compact(session):
++    result = run(session, "--line-limit", "20")
++    assert result.exit_code == 0, result.output
++    assert LONG not in result.stdout
++    assert "chars]" in result.stdout
++    assert "--all, --budget 0, or --json" in result.stdout
++
++
++def test_budget_zero_wins_over_line_limit(session):
++    result = run(session, "--budget", "0", "--line-limit", "20")
++    assert result.exit_code == 0, result.output
++    assert LONG in result.stdout and "chars]" not in result.stdout
++
++
++@pytest.mark.parametrize("option", [["--budget", "-1"], ["--line-limit", "-5"]])
++def test_negative_character_limits_never_truncate(session, option):
++    result = run(session, *option)
++    assert result.exit_code == 0, result.output
++    assert LONG in result.stdout and "chars]" not in result.stdout
++
++
++@pytest.mark.parametrize("position", ["root", "command"])
++def test_negative_row_limit_is_a_usage_error(session, position):
++    command = ["prompts", "--file", str(session)]
++    args = ["-n", "-1", *command] if position == "root" else [*command, "-n", "-1"]
++    result = runner.invoke(app, args)
++    assert result.exit_code == 2
++
++
++def test_environment_line_limit_applies_only_to_compact_output(session, monkeypatch):
++    monkeypatch.setenv("SXR_LINE_LIMIT", "5")
++    result = run(session, "--budget", "1")
++    assert result.exit_code == 0, result.output
++    assert "trimmed to 5-char lines" in result.stdout
++
++
++def test_row_limit_placement_is_equivalent(session):
++    command = ["prompts", "--file", str(session)]
++    root = runner.invoke(app, ["-n", "1", *command])
++    local = runner.invoke(app, [*command, "-n", "1"])
++    assert (root.exit_code, root.stdout, root.stderr) == (
++        local.exit_code,
++        local.stdout,
++        local.stderr,
++    )
++    assert "1 of 2 human prompts shown" in root.stdout
++    assert "-n 0/--all for all" in root.stdout
++
++
++@pytest.mark.parametrize("position", ["root", "command"])
++def test_all_overrides_explicit_limits(session, position):
++    command = ["prompts", "--file", str(session), "--budget", "1", "--all"]
++    args = ["-n", "1", *command] if position == "root" else [*command, "-n", "1"]
++    result = runner.invoke(app, args)
++    assert result.exit_code == 0, result.output
++    assert result.stdout.count(LONG) == 1 and LEGACY in result.stdout
++    assert "chars]" not in result.stdout
++    for text in CONTEXT_TEXTS:
++        assert text not in result.stdout
++
++
++def test_zero_row_limit_is_unlimited(session):
++    result = run(session, "-n", "0")
++    assert result.exit_code == 0, result.output
++    assert "2 of 2 human prompts shown" in result.stdout
++
++
++def test_all_lifts_the_json_row_limit(session):
++    limited = run(session, "--json", "-n", "1")
++    lifted = run(session, "--json", "-n", "1", "--all")
++    assert (limited.exit_code, lifted.exit_code) == (0, 0)
++    assert len(limited.stdout.splitlines()) == 1
++    assert "shown 1 of 2" in limited.stderr
++    assert len(lifted.stdout.splitlines()) == 2
++    assert REPLAYED not in lifted.stdout
++
++
++def test_include_context_adds_labelled_records_only(session):
++    result = run(session, "--include-context")
++    assert result.exit_code == 0, result.output
++    for text in (LONG, LEGACY, *CONTEXT_TEXTS):
++        assert text in result.stdout
++    assert "6 of 6 user records shown" in result.stdout
++    assert "hidden" not in result.stdout
++    assert "reply" not in result.stdout
++    assert REPLAYED not in result.stdout
++
++
++def test_include_context_json_limits_distinct_physical_records(session):
++    result = run(session, "--include-context", "--json", "-n", "2")
++    assert result.exit_code == 0, result.output
++    assert len(result.stdout.splitlines()) == 2
++    assert "shown 2 of 6" in result.stderr
++
++
++def test_compaction_boundary_is_not_replayed(tmp_path):
++    path = tmp_path / "codex.jsonl"
++    _codex(path)
++    result = runner.invoke(
++        app, ["prompts", "--file", str(path), "--include-context", "--all", "--json"]
++    )
++    assert result.exit_code == 0, result.output
++    assert REPLAYED not in result.stdout
++    assert "compaction boundary" not in result.stdout
++
++
++def test_legacy_unlabelled_records_stay_human(session):
++    result = run(session, "--json")
++    assert result.exit_code == 0, result.output
++    texts = json.dumps([json.loads(line) for line in result.stdout.splitlines()])
++    assert LEGACY in texts
+diff -ruN --color=never -x .ruff_cache /tmp/sxr-baseline-clean/tests/test_prompts.py /tmp/sxr-after-0911/tests/test_prompts.py
+--- /tmp/sxr-baseline-clean/tests/test_prompts.py	2026-09-09 20:24:17
++++ /tmp/sxr-after-0911/tests/test_prompts.py	2026-09-11 06:08:26
+@@ -1,4 +1,4 @@
+-"""Human prompt selection from Codex transcripts with content provenance."""
++"""Human prompt selection by content provenance; --include-context widens it."""
+ 
+ import json
+ 
+@@ -28,9 +28,9 @@
+     return path
+ 
+ 
+-@pytest.mark.parametrize("include_all", [False, True])
++@pytest.mark.parametrize("include_context", [False, True])
+ @pytest.mark.parametrize("json_out", [False, True])
+-def test_codex_prompts_excludes_injected_records(tmp_path, include_all, json_out):
++def test_codex_prompts_excludes_injected_records(tmp_path, include_context, json_out):
+     instructions = _message("# AGENTS.md instructions\nInjected rules", ["agents_md.instructions"])
+     environment = _message(
+         "<environment_context>/w</environment_context>", ["environments.environment_context"]
+@@ -46,15 +46,15 @@
+     records = [instructions, environment, first, tool, goal, second]
+     path = _rollout(tmp_path, records)
+     args = ["prompts", "--codex", "--file", str(path)]
+-    if include_all:
+-        args.append("--all")
++    if include_context:
++        args.append("--include-context")
+     if json_out:
+         args.append("--json")
+     result = runner.invoke(app, args)
+     assert result.exit_code == 0, result.output
+     if json_out:
+         assert [json.loads(line) for line in result.stdout.splitlines()] == (
+-            records if include_all else [first, second]
++            records if include_context else [first, second]
+         )
+     else:
+         assert "Please explain this file" in result.stdout
+@@ -65,9 +65,19 @@
+             "Internal goal reminder",
+             "Tool output",
+         ):
+-            assert (text in result.stdout) == include_all
++            assert (text in result.stdout) == include_context
+ 
+ 
++def test_include_context_labels_recorded_provenance(tmp_path):
++    instructions = _message("Injected rules", ["agents_md.instructions"])
++    human = _message("real request", ["user.text"])
++    path = _rollout(tmp_path, [instructions, human])
++    result = runner.invoke(app, ["prompts", "--file", str(path), "--include-context"])
++    assert result.exit_code == 0, result.output
++    assert '(agents_md.instructions) "Injected rules"' in result.stdout
++    assert "2 of 2 user records shown" in result.stdout
++
++
+ def test_codex_prompts_keeps_unlabelled_legacy_messages(tmp_path):
+     records = [_message("legacy human prompt")]
+     path = _rollout(tmp_path, records)
+@@ -83,8 +93,8 @@
+     assert result.stdout == ""
+ 
+ 
+-@pytest.mark.parametrize("include_all", [False, True])
+-def test_codex_legacy_user_events_are_not_duplicated(tmp_path, include_all):
++@pytest.mark.parametrize("include_context", [False, True])
++def test_codex_legacy_user_events_are_not_duplicated(tmp_path, include_context):
+     human = {"type": "event_msg", "payload": {"type": "user_message", "message": "hello"}}
+     records = [
+         _message("<environment_context>injected</environment_context>"),
+@@ -93,12 +103,12 @@
+     ]
+     path = _rollout(tmp_path, records)
+     args = ["prompts", "--file", str(path), "--json"]
+-    if include_all:
+-        args.append("--all")
++    if include_context:
++        args.append("--include-context")
+     result = runner.invoke(app, args)
+     assert result.exit_code == 0, result.output
+     assert [json.loads(line) for line in result.stdout.splitlines()] == (
+-        records if include_all else [human]
++        records if include_context else [human]
+     )
+ 
+ 
+@@ -111,9 +121,11 @@
+     assert json.loads(result.stdout) == record
+ 
+ 
+-@pytest.mark.parametrize("include_all", [False, True])
++@pytest.mark.parametrize("include_context", [False, True])
+ @pytest.mark.parametrize("as_blocks", [False, True])
+-def test_claude_prompts_excludes_marked_metadata_and_summaries(tmp_path, include_all, as_blocks):
++def test_claude_prompts_excludes_marked_metadata_and_summaries(
++    tmp_path, include_context, as_blocks
++):
+     records = []
+     for text, flags in [
+         ("human request", {}),
+@@ -127,10 +139,10 @@
+     path = tmp_path / "claude.jsonl"
+     path.write_text("\n".join(json.dumps(record) for record in records))
+     args = ["prompts", "--file", str(path), "--json"]
+-    if include_all:
+-        args.append("--all")
++    if include_context:
++        args.append("--include-context")
+     result = runner.invoke(app, args)
+     assert result.exit_code == 0, result.output
+     assert [json.loads(line) for line in result.stdout.splitlines()] == (
+-        records if include_all else records[:1]
++        records if include_context else records[:1]
+     )
+diff -ruN --color=never -x .ruff_cache /tmp/sxr-baseline-clean/tests/test_views.py /tmp/sxr-after-0911/tests/test_views.py
+--- /tmp/sxr-baseline-clean/tests/test_views.py	2026-07-27 07:15:41
++++ /tmp/sxr-after-0911/tests/test_views.py	2026-09-11 06:03:24
+@@ -6,7 +6,8 @@
+ 
+ from sxr.model import Event, SessionRef
+ from sxr.views_info import cmds_view
+-from sxr.views_read import ShowOpts, prompts, show
++from sxr.views_prompts import PromptOpts, prompts
++from sxr.views_read import ShowOpts, show
+ 
+ 
+ def _ref(provider: str = "claude") -> SessionRef:
+@@ -19,16 +20,16 @@
+         Event(2, "", "user", "user_message", "the actual human prompt"),
+         Event(3, "", "user", "result", "tool output"),
+     ]
+-    assert prompts(_ref("codex"), events, False, False, None) == 0
++    assert prompts(_ref("codex"), events, PromptOpts()) == 0
+     out = capsys.readouterr().out
+     assert "actual human prompt" in out
+     assert "injected environment blob" not in out
+-    assert "--all includes them" in out
++    assert "--include-context" in out
+ 
+ 
+ def test_prompts_claude_uses_text(capsys) -> None:
+     events = [Event(1, "", "user", "text", "hola"), Event(2, "", "user", "result", "x")]
+-    assert prompts(_ref(), events, False, False, None) == 0
++    assert prompts(_ref(), events, PromptOpts()) == 0
+     assert "hola" in capsys.readouterr().out
+ 
+ 

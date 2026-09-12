@@ -1,0 +1,2443 @@
+{
+  "command_surfaces": 21,
+  "distinct_commands": 18,
+  "current_parameters": 305,
+  "additional_rows": 82,
+  "total_rows": 408,
+  "covered_parameters": [
+    {
+      "command": "root",
+      "parser": "typer",
+      "name": "use_codex",
+      "flags": [
+        "--codex"
+      ]
+    },
+    {
+      "command": "root",
+      "parser": "typer",
+      "name": "use_claude",
+      "flags": [
+        "--claude"
+      ]
+    },
+    {
+      "command": "root",
+      "parser": "typer",
+      "name": "path",
+      "flags": [
+        "--path"
+      ]
+    },
+    {
+      "command": "root",
+      "parser": "typer",
+      "name": "json_out",
+      "flags": [
+        "--json"
+      ]
+    },
+    {
+      "command": "root",
+      "parser": "typer",
+      "name": "limit",
+      "flags": [
+        "--limit",
+        "-n"
+      ]
+    },
+    {
+      "command": "root",
+      "parser": "typer",
+      "name": "since",
+      "flags": [
+        "--since"
+      ]
+    },
+    {
+      "command": "root",
+      "parser": "typer",
+      "name": "before",
+      "flags": [
+        "--before"
+      ]
+    },
+    {
+      "command": "root",
+      "parser": "typer",
+      "name": "version",
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "command": "root",
+      "parser": "typer",
+      "name": "file",
+      "flags": [
+        "--file"
+      ]
+    },
+    {
+      "command": "root",
+      "parser": "typer",
+      "name": "recursive",
+      "flags": [
+        "--recursive"
+      ]
+    },
+    {
+      "command": "root",
+      "parser": "typer",
+      "name": "worktrees",
+      "flags": [
+        "--worktrees"
+      ]
+    },
+    {
+      "command": "root",
+      "parser": "typer",
+      "name": "claude_roots",
+      "flags": [
+        "--claude-root"
+      ]
+    },
+    {
+      "command": "root",
+      "parser": "typer",
+      "name": "include_agents",
+      "flags": [
+        "--include-agents"
+      ]
+    },
+    {
+      "command": "root",
+      "parser": "typer",
+      "name": "archives",
+      "flags": [
+        "--archives"
+      ]
+    },
+    {
+      "command": "root",
+      "parser": "typer",
+      "name": "coverage",
+      "flags": [
+        "--coverage"
+      ]
+    },
+    {
+      "command": "root",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "list",
+      "parser": "typer",
+      "name": "use_codex",
+      "flags": [
+        "--codex"
+      ]
+    },
+    {
+      "command": "list",
+      "parser": "typer",
+      "name": "use_claude",
+      "flags": [
+        "--claude"
+      ]
+    },
+    {
+      "command": "list",
+      "parser": "typer",
+      "name": "path",
+      "flags": [
+        "--path"
+      ]
+    },
+    {
+      "command": "list",
+      "parser": "typer",
+      "name": "json_out",
+      "flags": [
+        "--json"
+      ]
+    },
+    {
+      "command": "list",
+      "parser": "typer",
+      "name": "limit",
+      "flags": [
+        "--limit",
+        "-n"
+      ]
+    },
+    {
+      "command": "list",
+      "parser": "typer",
+      "name": "since",
+      "flags": [
+        "--since"
+      ]
+    },
+    {
+      "command": "list",
+      "parser": "typer",
+      "name": "before",
+      "flags": [
+        "--before"
+      ]
+    },
+    {
+      "command": "list",
+      "parser": "typer",
+      "name": "file",
+      "flags": [
+        "--file"
+      ]
+    },
+    {
+      "command": "list",
+      "parser": "typer",
+      "name": "recursive",
+      "flags": [
+        "--recursive"
+      ]
+    },
+    {
+      "command": "list",
+      "parser": "typer",
+      "name": "worktrees",
+      "flags": [
+        "--worktrees"
+      ]
+    },
+    {
+      "command": "list",
+      "parser": "typer",
+      "name": "claude_roots",
+      "flags": [
+        "--claude-root"
+      ]
+    },
+    {
+      "command": "list",
+      "parser": "typer",
+      "name": "include_agents",
+      "flags": [
+        "--include-agents"
+      ]
+    },
+    {
+      "command": "list",
+      "parser": "typer",
+      "name": "archives",
+      "flags": [
+        "--archives"
+      ]
+    },
+    {
+      "command": "list",
+      "parser": "typer",
+      "name": "coverage",
+      "flags": [
+        "--coverage"
+      ]
+    },
+    {
+      "command": "list",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "arg",
+      "flags": []
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "around",
+      "flags": [
+        "--around"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "context",
+      "flags": [
+        "--context"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "range_",
+      "flags": [
+        "--range"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "type_",
+      "flags": [
+        "--type"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "tail",
+      "flags": [
+        "--tail"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "thinking",
+      "flags": [
+        "--thinking"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "tools",
+      "flags": [
+        "--tools"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "errors",
+      "flags": [
+        "--errors"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "full",
+      "flags": [
+        "--full"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "budget",
+      "flags": [
+        "--budget"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "line_cap",
+      "flags": [
+        "--line-limit"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "use_codex",
+      "flags": [
+        "--codex"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "use_claude",
+      "flags": [
+        "--claude"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "path",
+      "flags": [
+        "--path"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "json_out",
+      "flags": [
+        "--json"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "limit",
+      "flags": [
+        "--limit",
+        "-n"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "file",
+      "flags": [
+        "--file"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "recursive",
+      "flags": [
+        "--recursive"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "worktrees",
+      "flags": [
+        "--worktrees"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "claude_roots",
+      "flags": [
+        "--claude-root"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "include_agents",
+      "flags": [
+        "--include-agents"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "archives",
+      "flags": [
+        "--archives"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "coverage",
+      "flags": [
+        "--coverage"
+      ]
+    },
+    {
+      "command": "show",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "serve",
+      "parser": "typer",
+      "name": "action",
+      "flags": []
+    },
+    {
+      "command": "serve",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "arg",
+      "flags": []
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "include_all",
+      "flags": [
+        "--all"
+      ]
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "budget",
+      "flags": [
+        "--budget"
+      ]
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "line_cap",
+      "flags": [
+        "--line-limit"
+      ]
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "use_codex",
+      "flags": [
+        "--codex"
+      ]
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "use_claude",
+      "flags": [
+        "--claude"
+      ]
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "path",
+      "flags": [
+        "--path"
+      ]
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "json_out",
+      "flags": [
+        "--json"
+      ]
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "limit",
+      "flags": [
+        "--limit",
+        "-n"
+      ]
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "file",
+      "flags": [
+        "--file"
+      ]
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "recursive",
+      "flags": [
+        "--recursive"
+      ]
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "worktrees",
+      "flags": [
+        "--worktrees"
+      ]
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "claude_roots",
+      "flags": [
+        "--claude-root"
+      ]
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "include_agents",
+      "flags": [
+        "--include-agents"
+      ]
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "archives",
+      "flags": [
+        "--archives"
+      ]
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "coverage",
+      "flags": [
+        "--coverage"
+      ]
+    },
+    {
+      "command": "prompts",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "errors",
+      "parser": "typer",
+      "name": "arg",
+      "flags": []
+    },
+    {
+      "command": "errors",
+      "parser": "typer",
+      "name": "use_codex",
+      "flags": [
+        "--codex"
+      ]
+    },
+    {
+      "command": "errors",
+      "parser": "typer",
+      "name": "use_claude",
+      "flags": [
+        "--claude"
+      ]
+    },
+    {
+      "command": "errors",
+      "parser": "typer",
+      "name": "path",
+      "flags": [
+        "--path"
+      ]
+    },
+    {
+      "command": "errors",
+      "parser": "typer",
+      "name": "json_out",
+      "flags": [
+        "--json"
+      ]
+    },
+    {
+      "command": "errors",
+      "parser": "typer",
+      "name": "limit",
+      "flags": [
+        "--limit",
+        "-n"
+      ]
+    },
+    {
+      "command": "errors",
+      "parser": "typer",
+      "name": "file",
+      "flags": [
+        "--file"
+      ]
+    },
+    {
+      "command": "errors",
+      "parser": "typer",
+      "name": "recursive",
+      "flags": [
+        "--recursive"
+      ]
+    },
+    {
+      "command": "errors",
+      "parser": "typer",
+      "name": "worktrees",
+      "flags": [
+        "--worktrees"
+      ]
+    },
+    {
+      "command": "errors",
+      "parser": "typer",
+      "name": "claude_roots",
+      "flags": [
+        "--claude-root"
+      ]
+    },
+    {
+      "command": "errors",
+      "parser": "typer",
+      "name": "include_agents",
+      "flags": [
+        "--include-agents"
+      ]
+    },
+    {
+      "command": "errors",
+      "parser": "typer",
+      "name": "archives",
+      "flags": [
+        "--archives"
+      ]
+    },
+    {
+      "command": "errors",
+      "parser": "typer",
+      "name": "coverage",
+      "flags": [
+        "--coverage"
+      ]
+    },
+    {
+      "command": "errors",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "tools",
+      "parser": "typer",
+      "name": "arg",
+      "flags": []
+    },
+    {
+      "command": "tools",
+      "parser": "typer",
+      "name": "use_codex",
+      "flags": [
+        "--codex"
+      ]
+    },
+    {
+      "command": "tools",
+      "parser": "typer",
+      "name": "use_claude",
+      "flags": [
+        "--claude"
+      ]
+    },
+    {
+      "command": "tools",
+      "parser": "typer",
+      "name": "path",
+      "flags": [
+        "--path"
+      ]
+    },
+    {
+      "command": "tools",
+      "parser": "typer",
+      "name": "json_out",
+      "flags": [
+        "--json"
+      ]
+    },
+    {
+      "command": "tools",
+      "parser": "typer",
+      "name": "limit",
+      "flags": [
+        "--limit",
+        "-n"
+      ]
+    },
+    {
+      "command": "tools",
+      "parser": "typer",
+      "name": "file",
+      "flags": [
+        "--file"
+      ]
+    },
+    {
+      "command": "tools",
+      "parser": "typer",
+      "name": "recursive",
+      "flags": [
+        "--recursive"
+      ]
+    },
+    {
+      "command": "tools",
+      "parser": "typer",
+      "name": "worktrees",
+      "flags": [
+        "--worktrees"
+      ]
+    },
+    {
+      "command": "tools",
+      "parser": "typer",
+      "name": "claude_roots",
+      "flags": [
+        "--claude-root"
+      ]
+    },
+    {
+      "command": "tools",
+      "parser": "typer",
+      "name": "include_agents",
+      "flags": [
+        "--include-agents"
+      ]
+    },
+    {
+      "command": "tools",
+      "parser": "typer",
+      "name": "archives",
+      "flags": [
+        "--archives"
+      ]
+    },
+    {
+      "command": "tools",
+      "parser": "typer",
+      "name": "coverage",
+      "flags": [
+        "--coverage"
+      ]
+    },
+    {
+      "command": "tools",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "stats",
+      "parser": "typer",
+      "name": "arg",
+      "flags": []
+    },
+    {
+      "command": "stats",
+      "parser": "typer",
+      "name": "use_codex",
+      "flags": [
+        "--codex"
+      ]
+    },
+    {
+      "command": "stats",
+      "parser": "typer",
+      "name": "use_claude",
+      "flags": [
+        "--claude"
+      ]
+    },
+    {
+      "command": "stats",
+      "parser": "typer",
+      "name": "path",
+      "flags": [
+        "--path"
+      ]
+    },
+    {
+      "command": "stats",
+      "parser": "typer",
+      "name": "json_out",
+      "flags": [
+        "--json"
+      ]
+    },
+    {
+      "command": "stats",
+      "parser": "typer",
+      "name": "limit",
+      "flags": [
+        "--limit",
+        "-n"
+      ]
+    },
+    {
+      "command": "stats",
+      "parser": "typer",
+      "name": "file",
+      "flags": [
+        "--file"
+      ]
+    },
+    {
+      "command": "stats",
+      "parser": "typer",
+      "name": "recursive",
+      "flags": [
+        "--recursive"
+      ]
+    },
+    {
+      "command": "stats",
+      "parser": "typer",
+      "name": "worktrees",
+      "flags": [
+        "--worktrees"
+      ]
+    },
+    {
+      "command": "stats",
+      "parser": "typer",
+      "name": "claude_roots",
+      "flags": [
+        "--claude-root"
+      ]
+    },
+    {
+      "command": "stats",
+      "parser": "typer",
+      "name": "include_agents",
+      "flags": [
+        "--include-agents"
+      ]
+    },
+    {
+      "command": "stats",
+      "parser": "typer",
+      "name": "archives",
+      "flags": [
+        "--archives"
+      ]
+    },
+    {
+      "command": "stats",
+      "parser": "typer",
+      "name": "coverage",
+      "flags": [
+        "--coverage"
+      ]
+    },
+    {
+      "command": "stats",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "path",
+      "parser": "typer",
+      "name": "arg",
+      "flags": []
+    },
+    {
+      "command": "path",
+      "parser": "typer",
+      "name": "use_codex",
+      "flags": [
+        "--codex"
+      ]
+    },
+    {
+      "command": "path",
+      "parser": "typer",
+      "name": "use_claude",
+      "flags": [
+        "--claude"
+      ]
+    },
+    {
+      "command": "path",
+      "parser": "typer",
+      "name": "path",
+      "flags": [
+        "--path"
+      ]
+    },
+    {
+      "command": "path",
+      "parser": "typer",
+      "name": "json_out",
+      "flags": [
+        "--json"
+      ]
+    },
+    {
+      "command": "path",
+      "parser": "typer",
+      "name": "limit",
+      "flags": [
+        "--limit",
+        "-n"
+      ]
+    },
+    {
+      "command": "path",
+      "parser": "typer",
+      "name": "file",
+      "flags": [
+        "--file"
+      ]
+    },
+    {
+      "command": "path",
+      "parser": "typer",
+      "name": "recursive",
+      "flags": [
+        "--recursive"
+      ]
+    },
+    {
+      "command": "path",
+      "parser": "typer",
+      "name": "worktrees",
+      "flags": [
+        "--worktrees"
+      ]
+    },
+    {
+      "command": "path",
+      "parser": "typer",
+      "name": "claude_roots",
+      "flags": [
+        "--claude-root"
+      ]
+    },
+    {
+      "command": "path",
+      "parser": "typer",
+      "name": "include_agents",
+      "flags": [
+        "--include-agents"
+      ]
+    },
+    {
+      "command": "path",
+      "parser": "typer",
+      "name": "archives",
+      "flags": [
+        "--archives"
+      ]
+    },
+    {
+      "command": "path",
+      "parser": "typer",
+      "name": "coverage",
+      "flags": [
+        "--coverage"
+      ]
+    },
+    {
+      "command": "path",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "pattern",
+      "flags": []
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "arg",
+      "flags": []
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "count",
+      "flags": [
+        "--count",
+        "-c"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "fixed",
+      "flags": [
+        "--fixed",
+        "-F"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "context",
+      "flags": [
+        "--context",
+        "-C"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "ignore_case",
+      "flags": [
+        "--ignore-case",
+        "-i"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "ids_only",
+      "flags": [
+        "--files-with-matches",
+        "-l"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "expr",
+      "flags": [
+        "--regexp",
+        "-e"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "include_all",
+      "flags": [
+        "--all"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "sort",
+      "flags": [
+        "--sort"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "after_ctx",
+      "flags": [
+        "-A",
+        "--after-context"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "before_ctx",
+      "flags": [
+        "-B",
+        "--before-context"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "since",
+      "flags": [
+        "--since"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "before",
+      "flags": [
+        "--before"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "budget",
+      "flags": [
+        "--budget"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "use_codex",
+      "flags": [
+        "--codex"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "use_claude",
+      "flags": [
+        "--claude"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "path",
+      "flags": [
+        "--path"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "json_out",
+      "flags": [
+        "--json"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "limit",
+      "flags": [
+        "--limit",
+        "-n"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "file",
+      "flags": [
+        "--file"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "recursive",
+      "flags": [
+        "--recursive"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "worktrees",
+      "flags": [
+        "--worktrees"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "claude_roots",
+      "flags": [
+        "--claude-root"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "include_agents",
+      "flags": [
+        "--include-agents"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "archives",
+      "flags": [
+        "--archives"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "coverage",
+      "flags": [
+        "--coverage"
+      ]
+    },
+    {
+      "command": "grep",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "arg",
+      "flags": []
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "grep_",
+      "flags": [
+        "--grep"
+      ]
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "since",
+      "flags": [
+        "--since"
+      ]
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "before",
+      "flags": [
+        "--before"
+      ]
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "use_codex",
+      "flags": [
+        "--codex"
+      ]
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "use_claude",
+      "flags": [
+        "--claude"
+      ]
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "path",
+      "flags": [
+        "--path"
+      ]
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "json_out",
+      "flags": [
+        "--json"
+      ]
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "limit",
+      "flags": [
+        "--limit",
+        "-n"
+      ]
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "file",
+      "flags": [
+        "--file"
+      ]
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "recursive",
+      "flags": [
+        "--recursive"
+      ]
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "worktrees",
+      "flags": [
+        "--worktrees"
+      ]
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "claude_roots",
+      "flags": [
+        "--claude-root"
+      ]
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "include_agents",
+      "flags": [
+        "--include-agents"
+      ]
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "archives",
+      "flags": [
+        "--archives"
+      ]
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "coverage",
+      "flags": [
+        "--coverage"
+      ]
+    },
+    {
+      "command": "cmds",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "init",
+      "parser": "typer",
+      "name": "file",
+      "flags": []
+    },
+    {
+      "command": "init",
+      "parser": "typer",
+      "name": "write",
+      "flags": [
+        "--write"
+      ]
+    },
+    {
+      "command": "init",
+      "parser": "typer",
+      "name": "check",
+      "flags": [
+        "--check"
+      ]
+    },
+    {
+      "command": "init",
+      "parser": "typer",
+      "name": "use_global",
+      "flags": [
+        "--global"
+      ]
+    },
+    {
+      "command": "init",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "index",
+      "parser": "typer",
+      "name": "clear_",
+      "flags": [
+        "--clear"
+      ]
+    },
+    {
+      "command": "index",
+      "parser": "typer",
+      "name": "use_codex",
+      "flags": [
+        "--codex"
+      ]
+    },
+    {
+      "command": "index",
+      "parser": "typer",
+      "name": "use_claude",
+      "flags": [
+        "--claude"
+      ]
+    },
+    {
+      "command": "index",
+      "parser": "typer",
+      "name": "path",
+      "flags": [
+        "--path"
+      ]
+    },
+    {
+      "command": "index",
+      "parser": "typer",
+      "name": "since",
+      "flags": [
+        "--since"
+      ]
+    },
+    {
+      "command": "index",
+      "parser": "typer",
+      "name": "before",
+      "flags": [
+        "--before"
+      ]
+    },
+    {
+      "command": "index",
+      "parser": "typer",
+      "name": "file",
+      "flags": [
+        "--file"
+      ]
+    },
+    {
+      "command": "index",
+      "parser": "typer",
+      "name": "recursive",
+      "flags": [
+        "--recursive"
+      ]
+    },
+    {
+      "command": "index",
+      "parser": "typer",
+      "name": "worktrees",
+      "flags": [
+        "--worktrees"
+      ]
+    },
+    {
+      "command": "index",
+      "parser": "typer",
+      "name": "claude_roots",
+      "flags": [
+        "--claude-root"
+      ]
+    },
+    {
+      "command": "index",
+      "parser": "typer",
+      "name": "include_agents",
+      "flags": [
+        "--include-agents"
+      ]
+    },
+    {
+      "command": "index",
+      "parser": "typer",
+      "name": "archives",
+      "flags": [
+        "--archives"
+      ]
+    },
+    {
+      "command": "index",
+      "parser": "typer",
+      "name": "coverage",
+      "flags": [
+        "--coverage"
+      ]
+    },
+    {
+      "command": "index",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "query",
+      "flags": []
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "all_projects",
+      "flags": [
+        "--all-projects"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "any_term",
+      "flags": [
+        "--any"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "index",
+      "flags": [
+        "--index"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "use_codex",
+      "flags": [
+        "--codex"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "use_claude",
+      "flags": [
+        "--claude"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "path",
+      "flags": [
+        "--path"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "json_out",
+      "flags": [
+        "--json"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "limit",
+      "flags": [
+        "--limit",
+        "-n"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "since",
+      "flags": [
+        "--since"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "before",
+      "flags": [
+        "--before"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "include_current",
+      "flags": [
+        "--include-current"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "exclude_sessions",
+      "flags": [
+        "--exclude-session"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "paths_only",
+      "flags": [
+        "--paths"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "file",
+      "flags": [
+        "--file"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "recursive",
+      "flags": [
+        "--recursive"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "worktrees",
+      "flags": [
+        "--worktrees"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "claude_roots",
+      "flags": [
+        "--claude-root"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "include_agents",
+      "flags": [
+        "--include-agents"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "archives",
+      "flags": [
+        "--archives"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "coverage",
+      "flags": [
+        "--coverage"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "secrets",
+      "parser": "typer",
+      "name": "candidates",
+      "flags": [
+        "--candidates"
+      ]
+    },
+    {
+      "command": "secrets",
+      "parser": "typer",
+      "name": "since",
+      "flags": [
+        "--since"
+      ]
+    },
+    {
+      "command": "secrets",
+      "parser": "typer",
+      "name": "before",
+      "flags": [
+        "--before"
+      ]
+    },
+    {
+      "command": "secrets",
+      "parser": "typer",
+      "name": "use_codex",
+      "flags": [
+        "--codex"
+      ]
+    },
+    {
+      "command": "secrets",
+      "parser": "typer",
+      "name": "use_claude",
+      "flags": [
+        "--claude"
+      ]
+    },
+    {
+      "command": "secrets",
+      "parser": "typer",
+      "name": "path",
+      "flags": [
+        "--path"
+      ]
+    },
+    {
+      "command": "secrets",
+      "parser": "typer",
+      "name": "json_out",
+      "flags": [
+        "--json"
+      ]
+    },
+    {
+      "command": "secrets",
+      "parser": "typer",
+      "name": "limit",
+      "flags": [
+        "--limit",
+        "-n"
+      ]
+    },
+    {
+      "command": "secrets",
+      "parser": "typer",
+      "name": "file",
+      "flags": [
+        "--file"
+      ]
+    },
+    {
+      "command": "secrets",
+      "parser": "typer",
+      "name": "recursive",
+      "flags": [
+        "--recursive"
+      ]
+    },
+    {
+      "command": "secrets",
+      "parser": "typer",
+      "name": "worktrees",
+      "flags": [
+        "--worktrees"
+      ]
+    },
+    {
+      "command": "secrets",
+      "parser": "typer",
+      "name": "claude_roots",
+      "flags": [
+        "--claude-root"
+      ]
+    },
+    {
+      "command": "secrets",
+      "parser": "typer",
+      "name": "include_agents",
+      "flags": [
+        "--include-agents"
+      ]
+    },
+    {
+      "command": "secrets",
+      "parser": "typer",
+      "name": "archives",
+      "flags": [
+        "--archives"
+      ]
+    },
+    {
+      "command": "secrets",
+      "parser": "typer",
+      "name": "coverage",
+      "flags": [
+        "--coverage"
+      ]
+    },
+    {
+      "command": "secrets",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "arg",
+      "flags": []
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "candidates",
+      "flags": [
+        "--candidates"
+      ]
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "since",
+      "flags": [
+        "--since"
+      ]
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "before",
+      "flags": [
+        "--before"
+      ]
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "use_codex",
+      "flags": [
+        "--codex"
+      ]
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "use_claude",
+      "flags": [
+        "--claude"
+      ]
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "path",
+      "flags": [
+        "--path"
+      ]
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "json_out",
+      "flags": [
+        "--json"
+      ]
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "limit",
+      "flags": [
+        "--limit",
+        "-n"
+      ]
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "file",
+      "flags": [
+        "--file"
+      ]
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "recursive",
+      "flags": [
+        "--recursive"
+      ]
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "worktrees",
+      "flags": [
+        "--worktrees"
+      ]
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "claude_roots",
+      "flags": [
+        "--claude-root"
+      ]
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "include_agents",
+      "flags": [
+        "--include-agents"
+      ]
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "archives",
+      "flags": [
+        "--archives"
+      ]
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "coverage",
+      "flags": [
+        "--coverage"
+      ]
+    },
+    {
+      "command": "secrets audit",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "arg",
+      "flags": []
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "apply",
+      "flags": [
+        "--apply"
+      ]
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "since",
+      "flags": [
+        "--since"
+      ]
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "before",
+      "flags": [
+        "--before"
+      ]
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "use_codex",
+      "flags": [
+        "--codex"
+      ]
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "use_claude",
+      "flags": [
+        "--claude"
+      ]
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "path",
+      "flags": [
+        "--path"
+      ]
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "json_out",
+      "flags": [
+        "--json"
+      ]
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "limit",
+      "flags": [
+        "--limit",
+        "-n"
+      ]
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "file",
+      "flags": [
+        "--file"
+      ]
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "recursive",
+      "flags": [
+        "--recursive"
+      ]
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "worktrees",
+      "flags": [
+        "--worktrees"
+      ]
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "claude_roots",
+      "flags": [
+        "--claude-root"
+      ]
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "include_agents",
+      "flags": [
+        "--include-agents"
+      ]
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "archives",
+      "flags": [
+        "--archives"
+      ]
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "coverage",
+      "flags": [
+        "--coverage"
+      ]
+    },
+    {
+      "command": "secrets clean",
+      "parser": "typer",
+      "name": "help",
+      "flags": [
+        "--help"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "help",
+      "flags": [
+        "-h",
+        "--help"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "query",
+      "flags": []
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "all_projects",
+      "flags": [
+        "--all-projects"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "any_term",
+      "flags": [
+        "--any"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "index",
+      "flags": [
+        "--index"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "use_codex",
+      "flags": [
+        "--codex"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "use_claude",
+      "flags": [
+        "--claude"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "path",
+      "flags": [
+        "--path"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "json_out",
+      "flags": [
+        "--json"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "paths_only",
+      "flags": [
+        "--paths"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "limit",
+      "flags": [
+        "--limit",
+        "-n"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "since",
+      "flags": [
+        "--since"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "before",
+      "flags": [
+        "--before"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "file",
+      "flags": [
+        "--file"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "claude_roots",
+      "flags": [
+        "--claude-root"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "recursive",
+      "flags": [
+        "--recursive"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "worktrees",
+      "flags": [
+        "--worktrees"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "include_agents",
+      "flags": [
+        "--include-agents"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "archives",
+      "flags": [
+        "--archives"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "coverage",
+      "flags": [
+        "--coverage"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "include_current",
+      "flags": [
+        "--include-current"
+      ]
+    },
+    {
+      "command": "find",
+      "parser": "argparse",
+      "name": "exclude_sessions",
+      "flags": [
+        "--exclude-session"
+      ]
+    },
+    {
+      "command": "skills",
+      "parser": "argparse",
+      "name": "help",
+      "flags": [
+        "-h",
+        "--help"
+      ]
+    },
+    {
+      "command": "skills",
+      "parser": "argparse",
+      "name": "query",
+      "flags": []
+    },
+    {
+      "command": "skills",
+      "parser": "argparse",
+      "name": "index",
+      "flags": [
+        "--index"
+      ]
+    },
+    {
+      "command": "skills",
+      "parser": "argparse",
+      "name": "root",
+      "flags": [
+        "--root"
+      ]
+    },
+    {
+      "command": "skills",
+      "parser": "argparse",
+      "name": "defaults",
+      "flags": [
+        "--defaults"
+      ]
+    },
+    {
+      "command": "skills",
+      "parser": "argparse",
+      "name": "paths",
+      "flags": [
+        "--paths"
+      ]
+    },
+    {
+      "command": "skills",
+      "parser": "argparse",
+      "name": "aliases",
+      "flags": [
+        "--aliases"
+      ]
+    },
+    {
+      "command": "skills",
+      "parser": "argparse",
+      "name": "copies",
+      "flags": [
+        "--copies"
+      ]
+    },
+    {
+      "command": "skills",
+      "parser": "argparse",
+      "name": "exact",
+      "flags": [
+        "--exact"
+      ]
+    },
+    {
+      "command": "skills",
+      "parser": "argparse",
+      "name": "json",
+      "flags": [
+        "--json"
+      ]
+    },
+    {
+      "command": "skills",
+      "parser": "argparse",
+      "name": "limit",
+      "flags": [
+        "--limit",
+        "-n"
+      ]
+    },
+    {
+      "command": "skills",
+      "parser": "argparse",
+      "name": "clear",
+      "flags": [
+        "--clear"
+      ]
+    },
+    {
+      "command": "serve",
+      "parser": "argparse",
+      "name": "help",
+      "flags": [
+        "-h",
+        "--help"
+      ]
+    },
+    {
+      "command": "serve",
+      "parser": "argparse",
+      "name": "action",
+      "flags": []
+    },
+    {
+      "command": "serve",
+      "parser": "argparse",
+      "name": "foreground",
+      "flags": [
+        "--foreground"
+      ]
+    },
+    {
+      "command": "serve",
+      "parser": "argparse",
+      "name": "idle",
+      "flags": [
+        "--idle"
+      ]
+    }
+  ],
+  "unmapped_parameters": []
+}

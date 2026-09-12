@@ -1,0 +1,53 @@
+{
+  "generated_at": "2026-09-10T10:57:51.672739+00:00",
+  "passed": 2,
+  "failed": 0,
+  "results": [
+    {
+      "id": "TIME-fraction",
+      "expected": "UTC date filtering compares instants, including fractional-second boundaries.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.105505,
+      "calls": [
+        {
+          "argv": [
+            "list",
+            "--before",
+            "2026-08-01T12:00:00.123001Z",
+            "--json",
+            "--file",
+            "<fixture-root>/extras/fraction.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"session\", \"id\": \"fraction\", \"provider\": \"claude\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T12:00:00Z\", \"live\": false, \"title\": \"needle\", \"name\": \"\", \"kind\": \"\", \"model\": \"\", \"messages\": 1, \"errors\": 0, \"tokens\": 0, \"size_bytes\": 137, \"path\": \"<fixture-root>/extras/fraction.jsonl\", \"parent_id\": \"\", \"archived\": false, \"sources\": [\"<fixture-root>/extras/fraction.jsonl\"]}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    },
+    {
+      "id": "TIME-offset",
+      "expected": "Recorded timestamp offsets are normalized to UTC before filtering.",
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.138065,
+      "calls": [
+        {
+          "argv": [
+            "list",
+            "--before",
+            "2026-08-01T12:00:00Z",
+            "--json",
+            "--file",
+            "<fixture-root>/extras/offset.jsonl"
+          ],
+          "exit_code": 0,
+          "stdout": "{\"type\": \"session\", \"id\": \"offset\", \"provider\": \"claude\", \"cwd\": \"/sxr-audit-project\", \"started\": \"2026-08-01T13:00:00Z\", \"live\": false, \"title\": \"needle\", \"name\": \"\", \"kind\": \"\", \"model\": \"\", \"messages\": 1, \"errors\": 0, \"tokens\": 0, \"size_bytes\": 138, \"path\": \"<fixture-root>/extras/offset.jsonl\", \"parent_id\": \"\", \"archived\": false, \"sources\": [\"<fixture-root>/extras/offset.jsonl\"]}\n",
+          "stderr": "",
+          "environment_overrides": {}
+        }
+      ]
+    }
+  ]
+}

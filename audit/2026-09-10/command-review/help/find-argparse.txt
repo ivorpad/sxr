@@ -1,0 +1,39 @@
+usage: sxr find [-h] [--all-projects] [--any] [--index] [--codex] [--claude]
+                [--path PATH] [--json] [--paths] [--limit LIMIT] [--since SINCE]
+                [--before BEFORE] [--file FILE] [--claude-root CLAUDE_ROOTS]
+                [--recursive] [--worktrees] [--include-agents] [--archives]
+                [--coverage] [--include-current]
+                [--exclude-session EXCLUDE_SESSIONS]
+                [query]
+
+Find sessions with source evidence across Claude and Codex. Use a few
+distinctive words or quoted phrases; default scope is cwd.
+
+positional arguments:
+  query                 Required words or quoted phrases
+
+options:
+  -h, --help            show this help message and exit
+  --all-projects        Search every project
+  --any                 Match any clue
+  --index               Prepare the ranked search index
+  --codex               Only Codex
+  --claude              Only Claude
+  --path PATH           Project directory (default: cwd)
+  --json                Structured results
+  --paths               Matching source paths, without ranking or excerpts
+                        (default: all)
+  --limit, -n LIMIT     Session result limit (default: 5; 0: all)
+  --since SINCE         Session start on/after DATE
+  --before BEFORE       Session start before DATE
+  --file FILE           Search one verified transcript
+  --claude-root CLAUDE_ROOTS
+                        Claude config profile; repeat for several
+  --recursive           Include descendant projects
+  --worktrees           Include registered worktrees
+  --include-agents      Children are included by default
+  --archives            Archives are included by default
+  --coverage            Include source coverage
+  --include-current     Include the invoking Codex session
+  --exclude-session EXCLUDE_SESSIONS
+                        Exclude a full session ID; repeat for several

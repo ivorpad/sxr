@@ -1,0 +1,22 @@
+usage: sxr skills [-h] [--index] [--root ROOT] [--defaults] [--paths]
+                  [--aliases] [--copies] [--exact] [--json] [--limit LIMIT]
+                  [--clear]
+                  [query]
+
+Find installed SKILL.md files by directory name or path clues.
+
+positional arguments:
+  query              Skill name or qualified path clues
+
+options:
+  -h, --help         show this help message and exit
+  --index            Discover SKILL.md files (default: all of HOME)
+  --root ROOT        Discover below this directory; repeat for more
+  --defaults         With --index, restore discovery across HOME
+  --paths            Print only canonical SKILL.md paths
+  --aliases          With --paths, include symlinked paths
+  --copies           Show every matching file instead of grouping by SHA-256
+  --exact            Match the whole skill directory name
+  --json             Include paths, aliases, roots, and completeness
+  --limit, -n LIMIT  Maximum skills (default: 20; --paths: all; 0: all)
+  --clear            Remove the default map and remembered roots

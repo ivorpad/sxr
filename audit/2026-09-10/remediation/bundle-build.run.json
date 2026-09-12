@@ -1,0 +1,21 @@
+{
+  "argv": [
+    "env",
+    "PYTHONPATH=/private/tmp/sxr-audit-packaging-deps:/path/to/sxr/src",
+    "PYINSTALLER_CONFIG_DIR=/private/tmp/sxr-astra-pyinstaller",
+    ".venv/bin/python",
+    "packaging/build.py",
+    "--output",
+    "/private/tmp/sxr-astra-bundle"
+  ],
+  "started": "2026-09-10T11:11:03.290915+00:00",
+  "ended": "2026-09-10T11:11:14.929162+00:00",
+  "exit_code": 0,
+  "source_identity": "source-9795519e2aaa2fa7.json",
+  "source_unchanged": true,
+  "evidence": "bundle-build.log",
+  "artifacts": {
+    "bundle-build.log": "95f036de3f1c59a805addbd0df1f450e75ba7fc31a0b53008bd14ed0b8740fd4",
+    "/private/tmp/sxr-astra-bundle/sxr-0.12.2-macos-arm64.tar.gz": "2476be5a5a49b8cfa7a5f6fa379117d7cc21daa7747c1868888a4a7cf61af657"
+  }
+}
