@@ -127,9 +127,10 @@ Details that affect retrieval:
 - IDs: @N from bare sxr (newest first), @A:@B range, unique ID prefix, or name.
   No ID means newest; prompts reads rather than lists, choosing the newest
   session with human prompts and skipping empty and background ones. --latest
-  says that explicitly; bare sxr is the session list. For an origin,
-  `sxr grep -c "x" --sort started` orders
-  oldest recorded mentions first; history may predate the corpus.
+  says that explicitly; bare sxr is the session list. Released 0.13.0 listed
+  sessions from a bare prompts instead; that default is reversed here. For an
+  origin, `sxr grep -c "x" --sort started` orders oldest recorded mentions
+  first; history may predate the corpus.
 - -> ok/err/? describes the recorded command outcome. Nonzero exits include
   expected empty grep results. Outer exec success does not prove a nested
   command succeeded. Verify external state when the task depends on it.

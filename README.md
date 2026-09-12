@@ -334,10 +334,12 @@ are never replayed into either view.
 Migration, two changes. `--all` used to widen selection to injected context and
 tool results; that behavior is now `--include-context`, and `--all` only lifts
 limits. And a bare `sxr prompts` reads a session rather than listing human
-conversations, reversing the default that 0.13.0 shipped: use `sxr list` for the
-catalog of sessions, `sxr prompts` or `sxr prompts --latest` to read the newest
-human one, and note that a bare `prompts --json` is now that session's records
-rather than session metadata.
+conversations, which reverses the default of the released 0.13.0 -- the version
+Homebrew installs today -- and not merely an internal draft: use `sxr list` for
+the catalog of sessions, `sxr prompts` or `sxr prompts --latest` to read the
+newest human one, and note that a bare `prompts --json` is now that session's
+records rather than session metadata. Anyone scripting against 0.13.0's bare
+`prompts` output, or against `-n` counting session rows there, has to change.
 
 `--path` accepts absolute paths, relative paths and `~`. Both the requested
 path and the recorded cwd resolve symlinks to their physical path. The default

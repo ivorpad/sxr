@@ -39,6 +39,10 @@ def prompts(
     Text prints whole: no environment budget trims it. --budget/--line-limit ask
     for compact text, --all lifts every limit, --include-context widens selection.
     --json emits the original records, never a session projection.
+
+    Migration: the published 0.13.0 release, which Homebrew installs today, made
+    a bare `prompts` list human sessions instead. That default is reversed here;
+    `sxr list` is the session catalog.
     """
     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
     sessions = flags.sessions(ctx, provider, cwd)
