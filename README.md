@@ -231,19 +231,31 @@ $ sxr                    # sessions for this directory, newest first
 @6    1b1fbf4d  2026-07-24T15:52:49Z   691    13  690k    2.7M  some-name
 ```
 
-Address sessions by `@N` from the list, by any unique id prefix, by name,
-or not at all: no id means the newest session. `--codex` switches provider.
+Address sessions by `@N` from the list, by an inclusive `@A:@B` range, by any
+unique id prefix, by name, or not at all: no id means the newest session.
+`--codex` switches provider.
+
+A range reads every session it names. Each session's output is preceded by
+`# session @N  <id>  <file>` so a block is always attributable — on stdout for
+text, on stderr under `--json`, where stdout stays raw JSONL. `-n` is one row
+allowance for the whole range, as it already is for `errors`, `cmds` and
+`stats`. A range naming one session prints no header and is identical to `@N`.
 
 ```bash
 sxr show @2                    # transcript skeleton, one line per event
 sxr show @2 --around 1247      # zoom to event #1247, text untruncated
 sxr show @2 --tail 5           # how a session ended, whole text
 sxr show @2 --type ai-title    # select events by record type
+sxr show @2 --full --errors    # every error record, whole text
+sxr show @2 --type tool --around 1247   # tool calls inside that window
+sxr show @1:@3                 # every session in the range, each one headed
 sxr show --file /path/session.jsonl --around 1247 # skip discovery, either provider
-sxr prompts                    # user messages of the newest session, as stored
+sxr prompts                    # complete human prompts, newest human session
+sxr prompts @2                 # that session's human prompts, however empty
 sxr cmds @6                    # every command a session ran, with ok/err
-sxr cmds --grep "git push"     # commands that did X, across all sessions
-sxr errors @6                  # records flagged is_error, with denial kinds
+sxr cmds --all-sessions --grep "git push"  # commands that did X, whole history
+sxr errors @6                  # is_error records, whole text, each row's session named
+sxr errors @1:@3 --compact     # one trimmed line per error, to scan a range first
 sxr tools @6                   # per-tool call and failure counts
 sxr stats @6                   # counts by record property, tokens, attribution
 sxr path @6                    # file paths, pipe straight to jq
@@ -251,18 +263,81 @@ sxr grep -c "timeout" @1:@5    # which sessions mention it, before reading any
 sxr grep "release" @2 -C 3     # matches with surrounding events inline
 sxr grep -c "x" --before today # history only, not your own (live) session
 sxr secrets                    # leaked keys/passwords as kind+fingerprint, values never shown
-sxr clean                      # preview replacing those with masked markers; --apply writes
+sxr secrets clean              # preview redaction; --apply writes changes
 sxr errors @6 --json | jq .    # the original records, untouched
 sxr init --write               # teach agents sxr before their first call
 ```
 
+`show`'s selectors compose in one documented order, so none of them can discard
+another: a window first (`--around N` plus or minus `--context`, or `--range
+A:B` — never both), then kind (`--type K`, else the default skeleton widened by
+`--thinking` and `--tool-results`, else every kind once a window, `--full` or
+`--errors` asked for more), then `--errors`, then `--tail N`, then `-n`. So
+`--type tool --around 1247` is the tool calls inside that window, and `--full
+--errors` is every error record with its text whole. `--tools` is still accepted
+as the older spelling of `--tool-results`. Windows that cannot mean anything are
+usage errors rather than a quiet empty result: `--around` below 1, a negative
+`--context`, `--context` without `--around`, `--range` outside `0 < A <= B`,
+`--around` together with `--range`, and a negative `--budget`/`--line-limit`
+(`0` remains the explicit "never trim" value). An empty selection still exits 1,
+and says on stderr which selectors emptied it.
+
+`errors` prints every record the transcript itself marked as failed, one row per
+distinct failing tool call, and each row names the session it came from between
+the record number and the clock. That is the token `sxr show` accepts, so a row
+found by grep can be zoomed on its own, and two failures at the same record
+number in different sessions no longer look alike. Error text prints complete by
+default, because the exit status and the assertion are usually at the end: a
+one-line error stays on its row, and a multi-line one becomes an indented block
+below it so the row itself stays greppable. `--compact` restores one trimmed line
+per error for scanning a wide range, and it is the only thing that trims. `-n`
+remains one allowance shared by every selected session, and `--json` still emits
+the complete original records, `--compact` or not.
+
+`cmds` takes its scope from the selector alone. No selector means the newest
+session whether or not `--grep` is present, and `--all-sessions` searches every
+session in scope. Until 0.14.0 a nonempty `--grep` with no selector silently
+widened the scope to the whole project, so `sxr cmds --grep "git push"` searched
+history while `sxr cmds @1 --grep "git push"` searched one session; that is the
+behavior `--all-sessions` now names. A filtered view that searched fewer sessions
+than the scope holds says so and names the flag, in the empty case on stderr and
+otherwise as a `#` note.
+
+`prompts` reads, it does not list. With no selector it reads the newest session
+that has human prompts, walking past newer sessions that are empty, subagent
+transcripts or automated reviews, and naming its choice on stderr along with the
+`sxr list` command that shows what it skipped. `--latest` is that same default
+spelled out, for scripts that want to say so; it cannot be combined with an id,
+a range or `--file`. An explicit selection is honored exactly as given, including
+sessions the default would have walked past, and prints no such notice. `--json`
+is always the original records -- selecting a session never turns the output into
+a summary of sessions.
+
 `prompts --codex` uses explicit user-message events when present. Otherwise,
 it reads user-role text and uses recorded content labels to exclude injected
 instructions, environment context and internal reminders. Older transcripts
-without those labels retain the user-role text fallback. `prompts --all`
-includes every user-role record, including injected context and tool results.
-For Claude, the default also excludes records marked as metadata or compaction
-summaries.
+without those labels retain the user-role text fallback. For Claude, the
+default also excludes records marked as metadata or compaction summaries.
+
+Selection and completeness are separate flags. Plain `sxr prompts` prints the
+selected human input in full: it has no default character budget, so
+`SXR_BUDGET` and `SXR_LINE_LIMIT` cannot trim it. `--budget CHARS` or
+`--line-limit CHARS` asks for compact text (`--budget 0` asks for whole text
+and wins over `--line-limit`); negative values never truncate. `--all` lifts
+every row and character limit, in text and `--json` alike, and overrides an
+explicit `-n`/`--budget` supplied at either flag position. `--include-context`
+is the flag that widens selection to the other user-role records — injected
+instructions, environment context, compaction summaries and tool results —
+each labelled with its recorded provenance. Codex compaction boundary records
+are never replayed into either view.
+
+Migration, two changes. `--all` used to widen selection to injected context and
+tool results; that behavior is now `--include-context`, and `--all` only lifts
+limits. And a bare `sxr prompts` reads a session rather than listing human
+conversations, reversing the default that 0.13.0 shipped: use `sxr list` for the
+catalog of sessions, `sxr prompts` or `sxr prompts --latest` to read the newest
+human one, and note that a bare `prompts --json` is now that session's records
+rather than session metadata.
 
 `--path` accepts absolute paths, relative paths and `~`. Both the requested
 path and the recorded cwd resolve symlinks to their physical path. The default
@@ -331,7 +406,7 @@ Claude or Codex from the records, retains parent-qualified Claude child IDs,
 and checks an optional session ID and explicit provider/project/profile flags.
 Follow-up commands printed by sxr include the file path automatically, so they
 still select the same copy after changing directories. `--file` scopes every
-session command to that one file, including `path` and `clean`.
+session command to that one file, including `path` and `secrets clean`.
 
 The first `show --around`, `--range`, `--type` or `--tail` caches event positions
 and annotations for the selected file. Repeated zooms seek to the selected
@@ -362,10 +437,39 @@ Search, ranked retrieval, and read caches share
 It contains derived transcript data and is created with owner-only access.
 Verified appends index new records; edits, replacements and truncations rebuild
 the affected file. An incomplete final line is revisited when more bytes arrive.
-`clean --apply` clears the index before and after cleaning. Unavailable, locked
+`secrets clean --apply` clears the index before and after cleaning. Unavailable, locked
 or corrupt caches fall back to direct reads for grep and read views; `find`
 reports an error. `index --clear` removes a bad cache.
 Indexing requires SQLite 3.43 or newer with FTS5, included by the Homebrew install.
+
+`sxr secrets` audits the selected sessions and prints masked fingerprints.
+`sxr secrets clean` previews redaction; add `--apply` to replace the files.
+The former top-level `sxr clean` command has moved under `secrets`. Both commands
+default to Claude sessions in the current project. Use `--codex` for Codex,
+repeat `--claude-root` for multiple Claude profiles, or use `--file` for one file.
+
+Auditing and cleaning detect credentials in decoded JSON string values, including escaped
+text, serialized JSON, multiline private keys and structured password fields. It preserves
+property names, unrelated values, untouched lines and line endings. Invalid
+UTF-8 or JSON lines remain unchanged. Only certain/probable findings are
+redacted; entropy-only candidates remain review material. Unsupported bundled
+rules stop the scan with an error instead of silently reducing coverage.
+
+Each run scans the selected files. Activity checks read timestamps from the
+end of each file, and files without findings need no temporary copy. Cleaning
+includes selected duplicate copies and Claude children, checks each file for
+recent activity, and skips sessions with a timestamp within ten minutes of now.
+An explicit `--file` includes no copies or children. Changed files are replaced
+atomically after checking their identity, size and timestamps; no backup is kept.
+These checks cannot exclude a write between the final check and replacement,
+so run `--apply` after the selected sessions have stopped. File errors return
+exit 2. Redaction removes local occurrences, but does not revoke credentials.
+
+`secrets -n 1` shows one fingerprint and reports the full finding count.
+`secrets clean -n 1` limits printed file rows; it still scans or cleans every file
+in the selected scope. Clean `--json` emits one masked result per changed file,
+with `applied` distinguishing preview from writes. Totals and omissions go to stderr.
+`path --json` emits objects containing `type` and `path`.
 
 An agent searching history matches its own transcript: the search it just ran
 is a record in the session it is running in, so counts drift between two
@@ -397,7 +501,8 @@ in a file the agent already reads. `sxr init` prints that primer; `sxr init
 sxr init --write               # nearest AGENTS.md walking up from cwd
 sxr init --write --global      # ~/.agents/AGENTS.md, ~/.claude/CLAUDE.md, or ~/AGENTS.md
 sxr init --write CLAUDE.md     # any file you name
-sxr init --check               # exit 1 if the block is missing or a version behind
+sxr init --check               # exit 1 if the block is missing, stale or reissued
+sxr init --write --force       # overwrite even if guidance would be lost
 ```
 
 The block sits between `<!-- sxr:primer v0.3.0 -->` and `<!-- /sxr:primer -->`
@@ -407,7 +512,21 @@ and running it twice leaves the file byte-identical. If the markers are
 unbalanced -- one without its pair, or two blocks -- both flags exit 2 and
 leave the file alone rather than guess where the block ends. `--check` is the
 one to put in a setup script: exit 0 means the installed primer matches the
-binary, exit 1 prints which version is stale.
+binary, exit 1 prints why it does not: missing, stamped another version, or
+stamped this one over a different body.
+
+The primer lives in someone else's repository, so a write that would leave the
+reader worse informed is refused rather than performed. Before replacing an
+installed block, `--write` compares what the two bodies document -- long flags
+and subcommand names -- and exits 2 without touching the file if the installed
+one covers anything this binary's primer does not mention, or if its stamp
+names a later release. `--check` reports the same condition and does not
+suggest a write. Rewording is not a loss and passes, since only flags and
+commands are compared. `--force` overwrites deliberately, still replacing only
+what is between the markers. Two independent checks are used because a version
+stamp alone can be wrong: a build made from a checkout that predates a release
+can carry both a higher stamp and older guidance, and that is exactly the case
+that used to destroy content silently.
 
 ## Rules the output follows
 
@@ -417,15 +536,20 @@ binary, exit 1 prints which version is stale.
   it does not generate answers or summaries.
 - Truncation happens only in broad scans and is always marked
   (`...[+180 chars]`). Zoomed views (`--around`, `--range`, `--type`) and
-  read-view `--json` print everything, whole. `find` always returns bounded excerpts.
-- stdout carries data only; diagnostics go to stderr. Exit codes: 0 with
-  content, 1 for an empty result, 2 for usage or a bad id. A bad regex is
-  usage (2), never the empty result (1) — a typo must not read as "no hits".
+  `--full`, `--tail` and read-view `--json` keep returned text whole. Row limits
+  still apply. `find` always returns bounded excerpts.
+- Exit codes: 0 with content, 1 for an empty result, 2 for usage, a bad id or
+  an operation failure. Listing is the exception: bare `sxr` and `sxr list`
+  return 0 even when the scope is empty, in text and JSON modes. A bad regex
+  returns 2. JSON stdout contains data only; diagnostics go to stderr.
 - Table rows are tab-separated with a `#` header line; `find` groups evidence
   by session. No color into pipes, no pagers, no progress bars.
 - Nothing prints unbounded. `-n` caps rows across the whole scope (not per
   session), `-n 0` lifts the cap, and any view that stopped early says how
-  many rows it held back.
+  many rows it held back. Negative limits return 2. JSON read views count
+  physical records, keeping every field of each returned record. Tools JSON
+  is one complete aggregate; stats JSON has one complete object per session.
+  `--tail 0` selects no events and returns 1; negative tails return 2.
 - Errors name the flag that fixes them: the candidate list for an ambiguous
   id is capped at 5 short titles, and a wrong flag is answered with the
   right one (`-A 3` → `-C 3`, `sxr grep webhook retries` → `"webhook.*retries"`).

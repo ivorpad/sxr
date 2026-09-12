@@ -5,8 +5,10 @@ from pathlib import Path
 import pytest
 
 from sxr.model import Event, SessionRef
+from sxr.show_select import ShowOpts
 from sxr.views_info import cmds_view
-from sxr.views_read import ShowOpts, prompts, show
+from sxr.views_prompts import PromptOpts, prompts
+from sxr.views_read import show
 
 
 def _ref(provider: str = "claude") -> SessionRef:
@@ -19,16 +21,16 @@ def test_prompts_codex_prefers_user_message(capsys) -> None:
         Event(2, "", "user", "user_message", "the actual human prompt"),
         Event(3, "", "user", "result", "tool output"),
     ]
-    assert prompts(_ref("codex"), events, False, False, None) == 0
+    assert prompts(_ref("codex"), events, PromptOpts()) == 0
     out = capsys.readouterr().out
     assert "actual human prompt" in out
     assert "injected environment blob" not in out
-    assert "--all includes them" in out
+    assert "--include-context" in out
 
 
 def test_prompts_claude_uses_text(capsys) -> None:
     events = [Event(1, "", "user", "text", "hola"), Event(2, "", "user", "result", "x")]
-    assert prompts(_ref(), events, False, False, None) == 0
+    assert prompts(_ref(), events, PromptOpts()) == 0
     assert "hola" in capsys.readouterr().out
 
 
@@ -57,7 +59,7 @@ def test_show_hidden_note_names_flags(capsys) -> None:
     assert show(_ref(), events, ShowOpts()) == 0
     out = capsys.readouterr().out
     assert "1 thinking (--thinking)" in out
-    assert "1 tool results (--tools)" in out
+    assert "1 tool results (--tool-results)" in out
 
 
 def test_show_tail_keeps_last_selected_events(capsys) -> None:

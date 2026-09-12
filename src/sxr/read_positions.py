@@ -5,7 +5,7 @@ import os
 
 from sxr.index_records import signature
 from sxr.model import Event
-from sxr.views_read import _selected
+from sxr.show_select import selected
 
 FIELDS = ("ts", "role", "kind", "text", "tool", "is_error", "tag")
 
@@ -126,13 +126,13 @@ def select_rows(db, identity, opts):
         )
         for r in rows
     ]
-    selected, _zoom = _selected(stubs, opts)
+    picked, _zoom = selected(stubs, opts)
     # Individual indexed lookups avoid SQLite's bound-parameter limit for --type.
     return [
         db.execute(
             "SELECT * FROM read_events WHERE file=? AND ordinal=?", (identity, e.raw["ordinal"])
         ).fetchone()
-        for e in selected
+        for e in picked
     ]
 
 

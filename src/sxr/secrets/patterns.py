@@ -1,20 +1,21 @@
 """Vendored gitleaks ruleset (MIT, github.com/gitleaks/gitleaks) for Python re.
 
 gitleaks.toml ships verbatim from upstream; updating coverage means
-replacing that file, not editing regexes here. Rules whose regex Python's
-re cannot compile are skipped at load and counted in RuleSet.skipped.
+replacing that file, not editing regexes here. Go regex syntax is translated
+before compilation; unsupported rules stop the scan instead of losing coverage.
 This module only loads and compiles: each Rule carries its keywords,
 entropy threshold, secretGroup, and allowlists for detect.py to apply.
 """
 
 import re
 import tomllib
-import warnings
 from dataclasses import dataclass
 from functools import lru_cache
 from importlib import resources
 
-GENERIC_RULE_IDS = frozenset({"generic-api-key", "curl-auth-user"})
+from sxr.secrets.rule_regex import compile_rule
+
+GENERIC_RULE_IDS = frozenset({"generic-api-key", "curl-auth-user", "curl-auth-header"})
 
 
 @dataclass(frozen=True)
@@ -50,10 +51,7 @@ def _allow_parts(entries) -> tuple[list[re.Pattern], list[str]]:
     stopwords: list[str] = []
     for entry in entries or []:
         for rx in entry.get("regexes", []):
-            try:
-                regexes.append(re.compile(rx))
-            except re.error:
-                continue
+            regexes.append(compile_rule(rx))
         stopwords.extend(str(s).lower() for s in entry.get("stopwords", []))
     return regexes, stopwords
 
@@ -66,17 +64,13 @@ def load_rules() -> RuleSet:
     top = cfg.get("allowlist", {})
     global_regexes, global_stopwords = _allow_parts([top])
     rules: list[Rule] = []
-    skipped: list[str] = []
     for rec in cfg.get("rules", []):
         if "regex" not in rec:
             continue  # path-only rules; sxr scans transcripts, not file trees
         try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", FutureWarning)
-                regex = re.compile(rec["regex"])
-        except re.error:
-            skipped.append(rec["id"])
-            continue
+            regex = compile_rule(rec["regex"])
+        except (re.error, ValueError) as exc:
+            raise ValueError(f"cannot compile secret rule {rec['id']}: {exc}") from exc
         allow_regexes, allow_stopwords = _allow_parts(rec.get("allowlists"))
         rules.append(
             Rule(
@@ -93,7 +87,7 @@ def load_rules() -> RuleSet:
         rules=tuple(rules),
         allow_regexes=tuple(global_regexes),
         allow_stopwords=tuple(global_stopwords),
-        skipped=tuple(skipped),
+        skipped=(),
     )
 
 
@@ -119,5 +113,23 @@ def keyword_index() -> tuple[re.Pattern, dict[str, tuple[Rule, ...]], tuple[Rule
         for sub in keywords:
             if sub != k and sub in k:
                 by_keyword[k].extend(by_keyword[sub])
-    combined = re.compile("|".join(re.escape(k) for k in keywords))
+    combined = _keyword_regex(keywords)
     return combined, {k: tuple(v) for k, v in by_keyword.items()}, tuple(bare)
+
+
+def _keyword_regex(keywords):
+    """Share prefix branches so each character does not try every provider keyword."""
+    trie = {}
+    for keyword in keywords:
+        node = trie
+        for char in keyword:
+            node = node.setdefault(char, {})
+        node[""] = {}
+
+    def branch(node):
+        choices = [re.escape(char) + branch(child) for char, child in node.items() if char]
+        if "" in node:
+            choices.append("")  # Prefer the longer keyword when one contains another.
+        return choices[0] if len(choices) == 1 else "(?:" + "|".join(choices) + ")"
+
+    return re.compile(branch(trie) if trie else r"(?!)")

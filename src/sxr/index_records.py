@@ -26,6 +26,8 @@ def record_text(seq: int, raw: bytes, provider: str) -> str:
         record = json.loads(raw.decode("utf-8", errors="replace"))
     except json.JSONDecodeError:
         return ""
+    if not isinstance(record, dict):
+        return ""
     events = [_record_event(seq, record)] if provider == "codex" else _record_events(seq, record)
     return fold("\n".join(event.text for event in events if event.text))
 

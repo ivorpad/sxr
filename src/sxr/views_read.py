@@ -1,84 +1,13 @@
 """Transcript views: show, prompts, errors. Selection only, no judgment."""
 
 import json
-import re
 import sys
-from dataclasses import dataclass
 
 from sxr.model import Event, SessionRef
 from sxr.navigation import command
+from sxr.output import RowBudget, print_records, record_events
+from sxr.show_select import ShowOpts, empty_reason, is_skeleton, selected
 from sxr.util import clock, day, middle_trim, one_line
-
-
-@dataclass
-class ShowOpts:
-    """Selection flags for the show view."""
-
-    thinking: bool = False
-    tools: bool = False
-    errors: bool = False
-    full: bool = False
-    around: int | None = None
-    context: int = 10
-    range_: str | None = None
-    type_: str | None = None
-    tail: int | None = None
-    limit: int | None = None
-    json_out: bool = False
-    budget: int | None = None
-    line_limit: int | None = None
-
-
-def _selected(events: list[Event], opts: ShowOpts) -> tuple[list[Event], bool]:
-    """(events to print, whether the selection is an explicit zoom).
-
-    --tail keeps the last N of whatever the other flags selected, and is
-    itself a zoom: how a session ended prints whole, never trimmed.
-    """
-    picked, zoom = _base_selection(events, opts)
-    if opts.tail is not None:
-        return picked[-opts.tail :], True
-    return picked, zoom
-
-
-def _base_selection(events: list[Event], opts: ShowOpts) -> tuple[list[Event], bool]:
-    """Selection before --tail applies: zooms, type filter, or skeleton."""
-    if opts.type_:
-        prefix = opts.type_ + "."
-        return [e for e in events if e.kind == opts.type_ or e.kind.startswith(prefix)], True
-    if opts.around is not None:
-        lo, hi = opts.around - opts.context, opts.around + opts.context
-        return [e for e in events if lo <= e.seq <= hi], True
-    if opts.range_:
-        text = opts.range_
-        if re.fullmatch(r"\d+-\d+", text):
-            text = text.replace("-", ":")  # the grep habit: 10-50 means 10:50
-        lo, hi = (text.split(":", 1) + ["0"])[:2]
-        try:
-            a, b = int(lo), int(hi)
-        except ValueError:
-            print(
-                f"error: bad range '{opts.range_}'; format is A:B, e.g. --range 10:50",
-                file=sys.stderr,
-            )
-            raise SystemExit(2) from None
-        return [e for e in events if a <= e.seq <= b], True
-    return [e for e in events if _default_pick(e, opts)], False
-
-
-def _default_pick(event: Event, opts: ShowOpts) -> bool:
-    """Default skeleton membership for one event."""
-    if opts.full:
-        return True
-    if opts.errors:
-        return event.is_error or event.tag == "err"
-    if event.kind in ("text", "tool", "turn_context"):
-        return True
-    if event.kind == "thinking":
-        return opts.thinking
-    if event.kind == "result":
-        return opts.tools
-    return False
 
 
 def event_line(event: Event, trim: bool, cap: int = 0) -> str:
@@ -96,19 +25,37 @@ def event_line(event: Event, trim: bool, cap: int = 0) -> str:
     return one_line(body, cap) if trim else event.text
 
 
-def _print_events(events: list[Event], trim: bool, limit: int | None, cap: int = 0) -> None:
-    """Print event lines with the shared #seq/time/role/kind prefix; -n 0 = all."""
-    shown = events if not limit else events[:limit]
-    for event in shown:
-        kind = {"text": "text", "thinking": "think", "tool": "tool", "result": "result"}.get(
-            event.kind, event.kind
-        )
-        print(
-            f"#{event.seq:04d}  {clock(event.ts)}  {event.role:<6} {kind:<7} "
-            f"{event_line(event, trim, cap)}"
-        )
+def print_events(
+    events: list[Event],
+    trim: bool,
+    limit: int | None,
+    cap: int = 0,
+    budget: RowBudget | None = None,
+) -> None:
+    """Print event lines with the shared #seq/time/role/kind prefix; -n 0 = all.
+
+    An inherited budget spends one allowance across a whole session range and
+    reports its own omissions; without one, the note stays as it always was.
+    """
+    if budget is not None:
+        for event in budget.take(events):
+            _print_event(event, trim, cap)
+        return
+    for event in events if not limit else events[:limit]:
+        _print_event(event, trim, cap)
     if limit and len(events) > limit:
         print(f"# +{len(events) - limit} more events (raise -n, -n 0 for all)")
+
+
+def _print_event(event: Event, trim: bool, cap: int) -> None:
+    """One event row: #seq, clock, role, kind, then the rendered body."""
+    kind = {"text": "text", "thinking": "think", "tool": "tool", "result": "result"}.get(
+        event.kind, event.kind
+    )
+    print(
+        f"#{event.seq:04d}  {clock(event.ts)}  {event.role:<6} {kind:<7} "
+        f"{event_line(event, trim, cap)}"
+    )
 
 
 def _trim_decision(events: list[Event], limit: int | None, budget_flag: int | None) -> tuple:
@@ -139,34 +86,46 @@ def _header(ref: SessionRef, total_events: int) -> None:
 
 
 def show(
-    ref: SessionRef, events: list[Event], opts: ShowOpts, *, total_events: int | None = None
+    ref: SessionRef,
+    events: list[Event],
+    opts: ShowOpts,
+    *,
+    total_events: int | None = None,
+    rows: RowBudget | None = None,
 ) -> int:
-    """Render a transcript skeleton or an explicit zoom; exit code 0.
+    """Render a transcript skeleton or an explicit selection; exit 1 when empty.
 
-    Text prints whole whenever the view fits the char budget; only
-    over-budget scans trim, and they say so with the recovery commands.
+    Selection order lives in `show_select`; this function only displays what
+    survived it. Text prints whole whenever the view fits the char budget; only
+    over-budget scans trim, and they say so with the recovery commands. rows is
+    the allowance a session range shares; None means this session owns it.
     """
     from sxr.util import human_num, line_limit
 
-    selected, zoom = _selected(events, opts)
+    picked, zoom = selected(events, opts)
+    count = len(events) if total_events is None else total_events
+    if not picked:
+        print(
+            f"nothing selected in {ref.short_id}: {empty_reason(opts, count)}",
+            file=sys.stderr,
+        )
     if opts.json_out:
-        for event in selected:
-            print(json.dumps(event.raw.get("line", {}), ensure_ascii=False))
-        return 0 if selected else 1
-    trim, total, budget = _trim_decision(selected, opts.limit, opts.budget)
-    trim = trim and not zoom
-    _header(ref, len(events) if total_events is None else total_events)
+        print_records(picked, opts.limit, budget=rows)
+        return 0 if picked else 1
+    trim, total, budget = _trim_decision(picked, opts.limit, opts.budget)
+    trim = trim and not (zoom or opts.full)
+    _header(ref, count)
     cap = line_limit(opts.line_limit)
-    _print_events(selected, trim=trim, limit=opts.limit, cap=cap)
+    print_events(picked, trim=trim, limit=opts.limit, cap=cap, budget=rows)
     if trim:
         print(
             f"# trimmed to {cap}-char lines ({human_num(total)} chars > "
             f"{human_num(budget)} budget); whole text: --around <seq>, "
             f"--range A:B, --budget 0, or --json"
         )
-    if not zoom:
-        _hidden_note(events, selected)
-    return 0
+    if is_skeleton(opts):
+        _hidden_note(events, picked)
+    return 0 if picked else 1
 
 
 def _hidden_note(events: list[Event], selected: list[Event]) -> None:
@@ -182,95 +141,81 @@ def _hidden_note(events: list[Event], selected: list[Event]) -> None:
     if hidden.get("thinking"):
         parts.append(f"{hidden.pop('thinking')} thinking (--thinking)")
     if hidden.get("result"):
-        parts.append(f"{hidden.pop('result')} tool results (--tools)")
+        parts.append(f"{hidden.pop('result')} tool results (--tool-results)")
     if hidden:
         parts.append(f"{sum(hidden.values())} meta/attachments (--full)")
     print(f"# hidden: {', '.join(parts)}; zoom: --around <seq>; by kind: --type <kind>")
 
 
-def _prompt_record(event: Event, kind: str) -> bool:
-    """Select human input using the transcript's recorded content provenance."""
-    if event.kind != kind:
-        return False
-    record = event.raw.get("line", {})
-    if record.get("isMeta") or record.get("isCompactSummary"):
-        return False
-    payload = record.get("payload") or {}
-    metadata = payload.get("internal_chat_message_metadata_passthrough") or {}
-    kinds = metadata.get("content_item_kinds")
-    if not isinstance(kinds, list):
-        return True  # Legacy rollouts do not label response-item content.
-    return any(isinstance(value, str) and value.startswith("user.") for value in kinds)
+def error_records(ref: SessionRef, parse) -> list[Event]:
+    """One event per distinct failing tool call in one transcript, in file order.
+
+    Selection is the recorded `is_error` property, never inferred from wording.
+    `show --errors` is deliberately wider: it also keeps the *call* a failed
+    result belongs to, which carries `tag == "err"` but not `is_error`.
+    """
+    seen: set[str] = set()
+    picked = []
+    for event in parse(ref.path):
+        if not event.is_error:
+            continue
+        call_id = str(event.raw.get("tool_use_id") or event.seq)
+        if call_id in seen:
+            continue
+        seen.add(call_id)
+        picked.append(event)
+    return picked
 
 
-def prompts(
-    ref: SessionRef,
-    events: list[Event],
-    include_all: bool,
-    json_out: bool,
-    limit: int | None,
-    budget: int | None = None,
-    cap_flag: int | None = None,
+def error_line(ref: SessionRef, event: Event, compact: bool) -> str:
+    """One error row: record number, source session, time, tool, then the text.
+
+    The source column makes a row self-describing, so two errors at the same
+    sequence in different sessions stay distinguishable and either row can be
+    pasted into `sxr show <source> --around <seq>` on its own. Text is complete
+    by default: inline and quoted while the error is one line, otherwise an
+    indented block below the row so the row itself stays greppable. `--compact`
+    is the only thing that trims, and it trims the middle, where error output
+    keeps its summary.
+    """
+    head = f"#{event.seq:04d}  {ref.short_id}  {clock(event.ts)}  {event.tool or event.kind}"
+    if event.tag:
+        head += f"  [{event.tag}]"
+    if compact:
+        return f'{head}  "{middle_trim(" ".join(event.text.split()))}"'
+    text = event.text.strip("\n")
+    if "\n" in text:
+        return head + "\n" + "\n".join("    " + line for line in text.splitlines())
+    return f'{head}  "{text}"'
+
+
+def errors(
+    refs: list[SessionRef], parse, json_out: bool, limit: int | None, compact: bool = False
 ) -> int:
-    """Human prompts, or all user-role records with --all; exit 1 when empty."""
-    from sxr.util import human_num, line_limit
+    """Records carrying error properties, chronological; exit 1 when none.
 
-    has_user_message = any(e.kind == "user_message" for e in events)
-    kind = "user_message" if has_user_message else "text"
-    picked = [e for e in events if e.role == "user" and (include_all or _prompt_record(e, kind))]
-    rest = sum(1 for e in events if e.role == "user") - len(picked)
-    if json_out:
-        for event in picked:
-            print(json.dumps(event.raw.get("line", {}), ensure_ascii=False))
-        return 0 if picked else 1
-    if not picked:
-        print(f"no user text records in {ref.short_id}", file=sys.stderr)
-        return 1
-    trim, total, eff_budget = _trim_decision(picked, limit, budget)
-    cap = line_limit(cap_flag)
-    _print_events(picked, trim=trim, limit=limit, cap=cap)
-    note = (
-        f" ({rest} more user-role records: tool results or injected texts; --all includes them)"
-        if rest
-        else ""
-    )
-    print(f"# {len(picked)} user records shown{note}")
-    if trim:
-        print(
-            f"# trimmed to {cap}-char lines ({human_num(total)} chars > "
-            f"{human_num(eff_budget)} budget); whole text: --budget 0 or --json"
-        )
-    return 0
-
-
-def errors(refs: list[SessionRef], parse, json_out: bool, limit: int | None) -> int:
-    """Records carrying error properties, chronological; exit 1 when none."""
+    Every row names its own session, and error text prints whole unless
+    `--compact` asks for one trimmed line. `-n` remains one allowance shared by
+    every selected session, and `--json` still emits complete distinct physical
+    source records.
+    """
     total = 0
+    budget = RowBudget(limit)
     by_tool: dict[str, int] = {}
+    first: tuple[SessionRef, Event] | None = None
     for ref in refs:
-        seen: set[str] = set()
-        picked = []
-        for event in parse(ref.path):
-            if not event.is_error:
-                continue
-            call_id = str(event.raw.get("tool_use_id") or event.seq)
-            if call_id in seen:
-                continue
-            seen.add(call_id)
-            picked.append(event)
+        picked = error_records(ref, parse)
         total += len(picked)
         for event in picked:
             by_tool[event.tool or event.kind] = by_tool.get(event.tool or event.kind, 0) + 1
         if json_out:
-            for event in picked:
+            for event in budget.take(record_events(picked)):
                 print(json.dumps(event.raw.get("line", {}), ensure_ascii=False))
             continue
-        for event in picked if not limit else picked[:limit]:
-            body = middle_trim(" ".join(event.text.split()))
-            denial = f"  [{event.tag}]" if event.tag else ""
-            print(
-                f'#{event.seq:04d}  {clock(event.ts)}  {event.tool or event.kind}{denial}  "{body}"'
-            )
+        for event in budget.take(picked):
+            first = first or (ref, event)
+            print(error_line(ref, event, compact))
+    budget.notice("error records", stderr=json_out)
     if total == 0:
         scope = ", ".join(r.short_id for r in refs)
         print(f"no error records in {scope}", file=sys.stderr)
@@ -278,6 +223,7 @@ def errors(refs: list[SessionRef], parse, json_out: bool, limit: int | None) -> 
     if not json_out:
         parts = ", ".join(f"{tool} {n}" for tool, n in sorted(by_tool.items(), key=lambda i: -i[1]))
         print(f"# {total} error records ({parts})")
-        if len(refs) == 1:
-            print(f"# zoom: {command(refs[0], 'show', '--around', str(picked[0].seq))}")
+        if first is not None:
+            source, event = first
+            print(f"# zoom: {command(source, 'show', '--around', str(event.seq))}")
     return 0

@@ -8,9 +8,10 @@ from sxr import flags, onboard, skills_command, views_grep, views_info, views_re
 from sxr.find_command import find_cmd
 from sxr.handles import fail, resolve
 from sxr.onboard import EPILOG
+from sxr.prompt_command import prompts
 from sxr.scope_options import scope_options
 from sxr.search_index import cmds_view, grep_view, index_cmd
-from sxr.secrets_commands import clean_cmd, secrets_cmd
+from sxr.secrets_group import app as secrets_app
 from sxr.show_command import show
 from sxr.views_grep import GrepOpts
 
@@ -82,6 +83,7 @@ def list_cmd(
 
 
 app.command("show")(scope_options(show))
+app.command("prompts")(scope_options(prompts))
 
 
 @app.command("serve")
@@ -94,44 +96,26 @@ def serve_cmd(action: Annotated[str, typer.Argument()] = "status") -> None:
 
 @app.command()
 @scope_options
-def prompts(
-    ctx: typer.Context,
-    arg: flags.Arg = None,
-    include_all: Annotated[
-        bool, typer.Option("--all", help="Include injected context and tool results")
-    ] = False,
-    budget: flags.BudgetF = None,
-    line_cap: flags.LineLimitF = None,
-    use_codex: flags.CodexF = False,
-    use_claude: flags.ClaudeF = False,
-    path: flags.PathF = None,
-    json_out: flags.JsonF = False,
-    limit: flags.LimitF = None,
-) -> None:
-    """Human prompts in order, excluding records labelled as injected context."""
-    provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    ref = resolve(arg, flags.sessions(ctx, provider, cwd))[0]
-    events = provider.parse(ref.path)
-    raise typer.Exit(
-        views_read.prompts(ref, events, include_all, json_out, limit, budget, line_cap)
-    )
-
-
-@app.command()
-@scope_options
 def errors(
     ctx: typer.Context,
     arg: flags.Arg = None,
+    compact: Annotated[
+        bool, typer.Option("--compact", help="One trimmed line per error instead of whole text")
+    ] = False,
     use_codex: flags.CodexF = False,
     use_claude: flags.ClaudeF = False,
     path: flags.PathF = None,
     json_out: flags.JsonF = False,
     limit: flags.LimitF = None,
 ) -> None:
-    """Records with error properties (is_error, nonzero exit_code)."""
+    """Records with error properties (is_error, nonzero exit_code); text complete by default.
+
+    Each row names the session it came from, so rows from an @A:@B range stay
+    distinguishable and any one of them can be pasted into `sxr show`.
+    """
     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
     refs = resolve(arg, flags.sessions(ctx, provider, cwd))
-    raise typer.Exit(views_read.errors(refs, provider.parse, json_out, limit))
+    raise typer.Exit(views_read.errors(refs, provider.parse, json_out, limit, compact=compact))
 
 
 @app.command()
@@ -145,10 +129,10 @@ def tools(
     json_out: flags.JsonF = False,
     limit: flags.LimitF = None,
 ) -> None:
-    """Per-tool call and error counts."""
-    provider, cwd, json_out, _limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    ref = resolve(arg, flags.sessions(ctx, provider, cwd))[0]
-    raise typer.Exit(views_info.tools_view(provider.parse(ref.path), json_out))
+    """Per-tool call and error counts; an @A:@B range identifies each session."""
+    provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
+    refs = resolve(arg, flags.sessions(ctx, provider, cwd))
+    raise typer.Exit(views_info.tools_scope(refs, provider.parse, json_out, limit))
 
 
 @app.command()
@@ -163,10 +147,9 @@ def stats(
     limit: flags.LimitF = None,
 ) -> None:
     """Counts by record property: the elevation view."""
-    provider, cwd, json_out, _limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    for ref in resolve(arg, flags.sessions(ctx, provider, cwd)):
-        views_info.stats_view(ref, ref.read(provider.parse), json_out)
-    raise typer.Exit(0)
+    provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
+    refs = resolve(arg, flags.sessions(ctx, provider, cwd))
+    raise typer.Exit(views_info.stats_scope(refs, provider.parse, json_out, limit))
 
 
 @app.command("path")
@@ -181,9 +164,10 @@ def path_cmd(
     limit: flags.LimitF = None,
 ) -> None:
     """Print session file paths; feed them straight to jq."""
-    provider, cwd, _json, _limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
-    ref = resolve(arg, flags.sessions(ctx, provider, cwd))[0]
-    raise typer.Exit(views_info.path_view(provider.session_paths(ref)))
+    provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
+    refs = resolve(arg, flags.sessions(ctx, provider, cwd))
+    paths = list(dict.fromkeys(path for ref in refs for path in provider.session_paths(ref)))
+    raise typer.Exit(views_info.path_view(paths, json_out, limit))
 
 
 @app.command()
@@ -244,6 +228,9 @@ def cmds(
     grep_: Annotated[
         str | None, typer.Option("--grep", help="Only commands matching regex (smart-case)")
     ] = None,
+    all_sessions: Annotated[
+        bool, typer.Option("--all-sessions", help="Every session in scope, with or without --grep")
+    ] = False,
     since: flags.SinceF = None,
     before: flags.BeforeF = None,
     use_codex: flags.CodexF = False,
@@ -252,20 +239,26 @@ def cmds(
     json_out: flags.JsonF = False,
     limit: flags.LimitF = None,
 ) -> None:
-    """Tool commands with ok/err state; --grep searches all sessions in scope.
+    """Tool commands with ok/err state; scope is the selector, never the filter.
 
-    --since/--before narrow the scope by session start date.
+    No selector means the newest session, with or without --grep.
+    --all-sessions searches every session in scope. --since/--before narrow that
+    scope by session start date.
     """
+    if all_sessions and arg is not None:
+        fail(f"--all-sessions and '{arg}' select different scopes", "name one or the other")
     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
     sessions = flags.sessions(ctx, provider, cwd, since, before)
-    refs = sessions if arg is None and grep_ else resolve(arg, sessions)
-    raise typer.Exit(cmds_view(refs, provider, json_out, limit, grep_))
+    refs = sessions if all_sessions else resolve(arg, sessions)
+    # Only a filter that fell back to the default scope needs telling; a named
+    # selector or --all-sessions is a scope the caller chose.
+    defaulted = len(sessions) if arg is None and not all_sessions and grep_ else None
+    raise typer.Exit(cmds_view(refs, provider, json_out, limit, grep_, defaulted))
 
 
-# init, secrets, and clean carry their own flags; their modules own them.
+# These commands carry their own flags; their modules own them.
 app.command("init")(onboard.init_cmd)
-app.command("secrets")(scope_options(secrets_cmd))
-app.command("clean")(scope_options(clean_cmd))
+app.add_typer(secrets_app, name="secrets")
 app.command("index")(scope_options(index_cmd))
 app.command("find")(scope_options(find_cmd))
 skills_command.register(app)

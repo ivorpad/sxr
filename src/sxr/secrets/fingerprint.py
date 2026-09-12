@@ -35,7 +35,9 @@ def _salt(path: Path) -> bytes:
 
 def fingerprint(value: str) -> str:
     """8-hex salted tag for a secret value."""
-    return hashlib.sha256(_salt(salt_path()) + value.encode()).hexdigest()[:8]
+    return hashlib.sha256(
+        _salt(salt_path()) + value.encode("utf-8", errors="surrogatepass")
+    ).hexdigest()[:8]
 
 
 def marker(kind: str, value: str) -> str:

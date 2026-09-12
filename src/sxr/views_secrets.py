@@ -11,8 +11,9 @@ import sys
 from dataclasses import dataclass, field
 
 from sxr.model import SessionRef
-from sxr.secrets import fingerprint, scan_text
+from sxr.secrets import fingerprint
 from sxr.secrets.detect import SEVERITIES
+from sxr.secrets.records import scan_line
 from sxr.util import tab_row
 
 
@@ -28,20 +29,36 @@ class _Tally:
 
 
 def secrets_view(
-    refs: list[SessionRef], parse, candidates: bool, json_out: bool, limit: int | None
+    refs: list[SessionRef], candidates: bool, json_out: bool, limit: int | None
 ) -> int:
-    """Scan the scope's events and print the masked worklist; exit 1 if clean."""
+    """Scan stored values once per record and print a masked worklist; exit 1 if clean."""
     tallies: dict[str, _Tally] = {}
     for ref in refs:
-        for event in parse(ref.path):
-            for f in scan_text(event.text, candidates):
-                tally = tallies.setdefault(fingerprint(f.value), _Tally(f.kind, f.severity))
-                tally.sessions.add(ref.short_id)
-                tally.hits += 1
-                tally.first = tally.first or f"{ref.short_id}:{event.seq}"
+        try:
+            with ref.path.open("rb") as stream:
+                for seq, raw in enumerate(stream, 1):
+                    for f in scan_line(raw, candidates):
+                        tally = tallies.setdefault(fingerprint(f.value), _Tally(f.kind, f.severity))
+                        tally.sessions.add(ref.short_id)
+                        tally.hits += 1
+                        tally.first = tally.first or f"{ref.short_id}:{seq}"
+        except (OSError, ValueError, RecursionError) as exc:
+            print(
+                f"error: secret audit incomplete for {ref.short_id}: {type(exc).__name__}",
+                file=sys.stderr,
+            )
+            return 2
     rows = sorted(tallies.items(), key=lambda kv: (SEVERITIES.index(kv[1].severity), -kv[1].hits))
+    total = len(rows)
+    certain = sum(1 for _, t in rows if t.severity == "certain")
     if limit:
         rows = rows[:limit]
+    if len(rows) < total:
+        print(
+            f"# showing {len(rows)} of {total} distinct secrets; {total - len(rows)} more "
+            "(use -n 0 for all)",
+            file=sys.stderr if json_out else sys.stdout,
+        )
     if json_out:
         for fp, t in rows:
             print(
@@ -66,9 +83,8 @@ def secrets_view(
     print(tab_row("# kind", "severity", "fingerprint", "sessions", "hits", "first"))
     for fp, t in rows:
         print(tab_row(t.kind, t.severity, fp, len(t.sessions), t.hits, t.first))
-    certain = sum(1 for _, t in rows if t.severity == "certain")
     print(
-        f"# {len(rows)} distinct secrets ({certain} certain); values never printed. "
+        f"# {total} distinct secrets ({certain} certain); values never printed. "
         "Rotate certain ones first; zoom: sxr show <id> --around <seq>"
     )
     return 0

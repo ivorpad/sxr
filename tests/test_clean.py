@@ -1,4 +1,4 @@
-"""sxr clean: dry run by default, validated atomic rewrite, live-session skip."""
+"""sxr secrets clean: preview, validated atomic rewrite, live-session skip."""
 
 import json
 from datetime import UTC, datetime
@@ -112,6 +112,6 @@ def test_racing_writer_skips_the_file(corpus, capsys, monkeypatch) -> None:
     racing_stat.calls = 0
     monkeypatch.setattr(mod.Path, "stat", racing_stat)
     before = refs[0].path.read_bytes()
-    assert clean_view([refs[0]], paths, apply=True) == 1
-    assert "changed while cleaning; skipped" in capsys.readouterr().err
+    assert clean_view([refs[0]], paths, apply=True) == 2
+    assert "changed before cleaning; skipped" in capsys.readouterr().err
     assert refs[0].path.read_bytes() == before

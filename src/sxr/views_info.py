@@ -6,7 +6,9 @@ from collections import Counter
 
 from sxr.model import Event, SessionRef
 from sxr.navigation import command
+from sxr.output import RowBudget
 from sxr.providers.claude_code import INTERRUPT_MARKER
+from sxr.session_scope import render
 from sxr.util import LIVE_NOTE, day, human_num, human_size, is_live, live_mark, tab_row
 
 
@@ -90,7 +92,24 @@ def list_view(refs: list[SessionRef], json_out: bool, limit: int | None, cwd: st
     return 0
 
 
-def tools_view(events: list[Event], json_out: bool) -> int:
+def tools_scope(refs: list[SessionRef], parse, json_out: bool, limit: int | None) -> int:
+    """One identified tool summary per selected session, under one row allowance.
+
+    The `--json` aggregate keeps its existing shape, so a range identifies its
+    sessions on stderr rather than adding fields a single `@N` run never had.
+    """
+    return render(
+        refs,
+        lambda ref, rows: tools_view(parse(ref.path), json_out, limit, budget=rows),
+        limit,
+        "tools",
+        json_out=json_out,
+    )
+
+
+def tools_view(
+    events: list[Event], json_out: bool, limit: int | None = None, budget: RowBudget | None = None
+) -> int:
     """Per-tool call and error counts; Skill inputs come from input.skill."""
     calls: Counter[str] = Counter()
     fails: Counter[str] = Counter()
@@ -102,10 +121,7 @@ def tools_view(events: list[Event], json_out: bool) -> int:
         if event.tag == "err":
             fails[event.tool] += 1
         if event.tool == "Skill":
-            line = event.raw.get("line", {})
-            for block in line.get("message", {}).get("content", []):
-                if isinstance(block, dict) and block.get("type") == "tool_use":
-                    skills[str(block.get("input", {}).get("skill", ""))] += 1
+            skills[str(event.raw.get("input", {}).get("skill", ""))] += 1
     if json_out:
         rows = {
             "type": "tools",
@@ -116,8 +132,12 @@ def tools_view(events: list[Event], json_out: bool) -> int:
         print(json.dumps(rows, ensure_ascii=False))
         return 0 if calls else 1
     print(tab_row("# tool", "calls", "errors"))
-    for tool, count in calls.most_common():
+    own = budget is None
+    budget = budget or RowBudget(limit)
+    for tool, count in budget.take(calls.most_common()):
         print(tab_row(tool, count, fails.get(tool, 0)))
+    if own:
+        budget.notice("tools")
     if skills:
         inputs = ", ".join(f"{name} ({n})" for name, n in skills.most_common())
         print(f"# Skill inputs: {inputs}")
@@ -155,30 +175,52 @@ def _stat_rows(ref: SessionRef, events: list[Event]) -> list[tuple[str, object]]
 
 def stats_view(ref: SessionRef, events: list[Event], json_out: bool) -> int:
     """The elevation view: one field/value row per derived count."""
-    rows = _stat_rows(ref, events)
-    if json_out:
-        print(json.dumps({"type": "stats", **dict(rows)}, ensure_ascii=False))
-        return 0
-    print(tab_row("# field", "value"))
-    for field, value in rows:
-        print(tab_row(field, value))
+    return _print_stats([_stat_rows(ref, events)], json_out, None)
+
+
+def stats_scope(refs, parse, json_out, limit):
+    """Apply one output allowance across every selected session's statistics."""
+    return _print_stats((_stat_rows(ref, ref.read(parse)) for ref in refs), json_out, limit)
+
+
+def _print_stats(summaries, json_out, limit):
+    budget = RowBudget(limit)
+    for rows in summaries:
+        if json_out:
+            for row in budget.take([{"type": "stats", **dict(rows)}]):
+                print(json.dumps(row, ensure_ascii=False))
+        else:
+            print(tab_row("# field", "value"))
+            for field, value in budget.take(rows):
+                print(tab_row(field, value))
+    budget.notice("stat rows", stderr=json_out)
     return 0
 
 
-def path_view(paths: list) -> int:
+def path_view(paths: list, json_out: bool = False, limit: int | None = None) -> int:
     """Session file paths, main transcript first; feed straight to jq."""
-    for path in paths:
-        print(path)
+    budget = RowBudget(limit)
+    for path in budget.take(paths):
+        print(json.dumps({"type": "path", "path": str(path)}) if json_out else path)
+    budget.notice("paths", stderr=True)
     return 0
 
 
 def cmds_view(
-    refs: list[SessionRef], parse, json_out: bool, limit: int | None, pattern: str | None = None
+    refs: list[SessionRef],
+    parse,
+    json_out: bool,
+    limit: int | None,
+    pattern: str | None = None,
+    scope_size: int | None = None,
 ) -> int:
     """Tool commands of the scope, one per line, with paired result state.
 
     pattern (smart-case regex) matches the untruncated command text, so it
-    finds what a piped `| grep` over the display lines would miss. -n caps
+    finds what a piped `| grep` over the display lines would miss. It narrows
+    rows only, never the sessions searched. scope_size is set when a filtered
+    view fell back to the default scope rather than a chosen one: then the
+    sessions it did not read are disclosed and --all-sessions is named. -n caps
     printed rows across the whole scope, not per session; -n 0 prints all.
     """
     import re
@@ -214,14 +256,18 @@ def cmds_view(
                 f'"{one_line(event.raw.get("command", event.text), cap)}" -> {event.tag or "?"}'
             )
             shown += 1
+    unsearched = scope_size - len(refs) if scope_size else 0
     if total == 0:
         scope = ", ".join(r.short_id for r in refs)
         what = f"no commands matching '{pattern}'" if pattern else "no tool calls"
-        print(f"{what} in {scope}", file=sys.stderr)
+        rest = f"; --all-sessions searches the other {unsearched} in scope" if unsearched else ""
+        print(f"{what} in {scope}{rest}", file=sys.stderr)
         return 1
     if not json_out:
         if total > shown:
             print(f"# {total} commands, showing first {shown} (raise -n, or -n 0 for all)")
+        if unsearched:
+            print(f"# {len(refs)} of {scope_size} sessions searched; all of them: --all-sessions")
         if first_call:
             ref, seq = first_call
             zoom = command(ref, "show", "--around", str(seq))

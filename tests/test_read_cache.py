@@ -9,7 +9,8 @@ import pytest
 from sxr.file_selection import reference
 from sxr.index_store import clear, connect, index_path
 from sxr.read_cache import read_window
-from sxr.views_read import ShowOpts, _selected, show
+from sxr.show_select import ShowOpts, selected
+from sxr.views_read import show
 from test_codex_outcomes import _command, _record, _rollout
 from test_providers import _write_claude, _write_codex
 
@@ -54,11 +55,11 @@ def _read(path, opts):
 def test_cold_and_warm_match_full_parser(source, opts, monkeypatch, capsys):
     provider, direct_ref = reference(source)
     direct = direct_ref.read(provider.parse)
-    expected, _ = _selected(direct, opts)
+    expected, _ = selected(direct, opts)
     for _ in range(2):
         ref, events, total = _read(source, opts)
-        selected, _ = _selected(events, opts)
-        assert [asdict(e) for e in selected] == [asdict(e) for e in expected]
+        picked, _ = selected(events, opts)
+        assert [asdict(e) for e in picked] == [asdict(e) for e in expected]
         assert total == len(direct)
         for json_out in (False, True):
             opts.json_out = json_out
@@ -130,7 +131,7 @@ def test_source_mutation_invalidates_old_annotations(source, mutation):
     expected = ref.read(provider.parse)
     for _ in range(2):
         _, events, total = _read(source, opts)
-        assert [asdict(e) for e in events] == [asdict(e) for e in _selected(expected, opts)[0]]
+        assert [asdict(e) for e in events] == [asdict(e) for e in selected(expected, opts)[0]]
         assert total == len(expected)
 
 
@@ -154,7 +155,7 @@ def test_cache_failures_fall_back(source, failure, monkeypatch):
     opts = ShowOpts(around=2, context=0)
     _read(source, opts)
     provider, ref = reference(source)
-    expected = _selected(ref.read(provider.parse), opts)[0]
+    expected = selected(ref.read(provider.parse), opts)[0]
     db = None
     if failure == "corrupt":
         index_path().write_bytes(b"broken database")
@@ -175,7 +176,7 @@ def test_cache_failures_fall_back(source, failure, monkeypatch):
         monkeypatch.setenv("SXR_NO_CACHE", "1")
     try:
         _, events, _ = _read(source, opts)
-        assert [asdict(e) for e in _selected(events, opts)[0]] == [asdict(e) for e in expected]
+        assert [asdict(e) for e in selected(events, opts)[0]] == [asdict(e) for e in expected]
     finally:
         if db:
             db.close()
@@ -187,7 +188,7 @@ def test_newline_framing_and_clear(source, newline):
     opts = ShowOpts(range_="2:4")
     _read(source, opts)
     provider, ref = reference(source)
-    expected = _selected(ref.read(provider.parse), opts)[0]
+    expected = selected(ref.read(provider.parse), opts)[0]
     assert [asdict(e) for e in _read(source, opts)[1]] == [asdict(e) for e in expected]
     clear()
     assert not index_path().exists()
@@ -227,8 +228,8 @@ def test_mutation_during_seek_falls_back(source, monkeypatch):
     monkeypatch.setattr(cache, "load_events", changed)
     _, events, _ = _read(source, opts)
     provider, ref = reference(source)
-    expected = _selected(ref.read(provider.parse), opts)[0]
-    assert [asdict(e) for e in _selected(events, opts)[0]] == [asdict(e) for e in expected]
+    expected = selected(ref.read(provider.parse), opts)[0]
+    assert [asdict(e) for e in selected(events, opts)[0]] == [asdict(e) for e in expected]
 
 
 def test_mutation_during_build_does_not_publish_snapshot(source, monkeypatch):

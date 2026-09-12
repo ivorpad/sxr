@@ -4,9 +4,10 @@ import json
 from pathlib import Path
 
 from sxr.providers import codex
+from sxr.show_select import ShowOpts
 from sxr.views_grep import GrepOpts, grep_view
 from sxr.views_info import cmds_view, tools_view
-from sxr.views_read import ShowOpts, errors, show
+from sxr.views_read import errors, show
 
 
 def _record(kind: str, **payload) -> dict:

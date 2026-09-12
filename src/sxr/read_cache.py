@@ -8,7 +8,7 @@ from sxr.index_records import signature
 from sxr.index_store import connect
 from sxr.read_positions import load_events, save_events, schema, select_rows
 
-FORMAT = 1
+FORMAT = 2
 
 
 def _header(ref):

@@ -122,9 +122,39 @@ def verify_prompts(run, provider):
     """Check human-only selection and the explicit escape hatch in the installed CLI."""
     prompts = run("prompts", provider, "--path", "/w")
     assert "portable needle" in prompts and "injected-context" not in prompts
-    assert "injected-context" in run("prompts", provider, "--path", "/w", "--all")
+    # --all lifts limits and keeps the selection; --include-context is what widens it.
+    assert "injected-context" not in run("prompts", provider, "--path", "/w", "--all")
+    assert "injected-context" in run("prompts", provider, "--path", "/w", "--include-context")
     records = run("prompts", provider, "--path", "/w", "--json").splitlines()
     assert len(records) == 1 and "portable needle" in records[0]
+    assert run("prompts", provider, "--path", "/w", "--latest", "--json").splitlines() == records
+
+
+def verify_default_prompt_session(run, source):
+    """Default discovery walks past newer empty, subagent and review sessions."""
+    original = [json.loads(line) for line in source.read_text().splitlines()]
+    for day, (name, kind, message) in enumerate(
+        [
+            ("empty", "cli", original[1]),
+            ("child", "subagent", original[2]),
+            ("review", "guardian_review", original[2]),
+        ],
+        start=2,
+    ):
+        meta = {
+            "type": "session_meta",
+            "timestamp": f"2026-09-{day:02d}T12:00:00Z",
+            "payload": {"id": name, "cwd": "/w", "source": kind},
+        }
+        sibling = source.with_name(f"rollout-{name}.jsonl")
+        sibling.write_text(json.dumps(meta) + "\n" + json.dumps(message) + "\n")
+    # Reading, not listing: the newest human conversation's own records (D-08, D-09).
+    assert json.loads(run("prompts", "--codex", "--path", "/w", "--json")) == original[2]
+    latest = run("prompts", "--latest", "--codex", "--path", "/w", "--json")
+    assert json.loads(latest) == original[2]
+    assert not run("prompts", "empty", "--codex", "--path", "/w", "--json", codes=(1,))
+    widened = run("prompts", "empty", "--codex", "--path", "/w", "--include-context", "--json")
+    assert json.loads(widened) == original[1]
 
 
 def verify(executable, environment, sources):
@@ -147,12 +177,12 @@ def verify(executable, environment, sources):
         "find",
         "index",
         "secrets",
-        "clean",
         "init",
         "serve",
         "skills",
     ):
         assert run(command, "--help")
+    assert run("secrets", "clean", "--help")
     for provider in ("--claude", "--codex"):
         assert run("list", provider, "--path", "/w", "--json")
         for command in ("show", "prompts", "errors", "tools", "stats", "path"):
@@ -161,7 +191,7 @@ def verify(executable, environment, sources):
         assert "needle" in run("grep", "needle", provider, "--path", "/w")
         assert "needle" in run("cmds", "--grep", "echo", provider, "--path", "/w")
         run("secrets", provider, "--path", "/w", codes=(0, 1))
-        run("clean", provider, "--path", "/w", codes=(0, 1))
+        run("secrets", "clean", provider, "--path", "/w", codes=(0, 1))
     result = json.loads(run("find", "needle", "--all-projects", "--json"))
     assert result["total"] == 2 and result["complete"]
     status = json.loads(run("serve", "status"))
@@ -199,6 +229,7 @@ def verify(executable, environment, sources):
     run("skills", "notify", "--paths", codes=(2,))
     run("skills", "--index")
     run("skills", "notify", "--paths", codes=(1,))
+    verify_default_prompt_session(run, sources[1])
     assert run("init")
     run("serve", "stop")
 

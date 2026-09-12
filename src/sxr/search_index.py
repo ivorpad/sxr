@@ -57,14 +57,25 @@ def grep_view(pattern: str, refs, provider, opts: GrepOpts) -> int:
     return views_grep.grep_view(pattern, refs, provider.parse, opts)
 
 
-def cmds_view(refs, provider, json_out: bool, limit: int | None, pattern: str | None) -> int:
-    """Use the same candidate index for literal command searches."""
+def cmds_view(
+    refs,
+    provider,
+    json_out: bool,
+    limit: int | None,
+    pattern: str | None,
+    scope_size: int | None = None,
+) -> int:
+    """Use the same candidate index for literal command searches.
+
+    scope_size is how many sessions the scope holds, and is set only when a
+    filtered view defaulted its scope instead of being given one.
+    """
     selected = candidates(refs, pattern, False) if pattern else None
 
     def parse(path):
         return provider.parse(path) if selected is None or path in selected else []
 
-    return views_info.cmds_view(refs, parse, json_out, limit, pattern)
+    return views_info.cmds_view(refs, parse, json_out, limit, pattern, scope_size)
 
 
 def index_cmd(

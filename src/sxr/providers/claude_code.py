@@ -39,7 +39,9 @@ def _iter_records(path: Path):
             if not line:
                 continue
             try:
-                yield seq, json.loads(line)
+                record = json.loads(line)
+                if isinstance(record, dict):
+                    yield seq, record
             except json.JSONDecodeError:
                 continue
 
@@ -65,7 +67,7 @@ def _block_events(seq: int, ts: str, role: str, blocks: list[Any], meta: bool) -
                     "tool",
                     _tool_arg(block.get("input", {})),
                     tool=block.get("name", ""),
-                    raw={"id": block.get("id", "")},
+                    raw={"id": block.get("id", ""), "input": block.get("input", {})},
                 )
             )
         elif btype == "tool_result":
@@ -103,6 +105,16 @@ def _result_text(content: Any) -> str:
 
 
 def _record_events(seq: int, rec: dict[str, Any]) -> list[Event]:
+    """Retain API failure provenance without changing tool/result pairing."""
+    events = _content_events(seq, rec)
+    if rec.get("isApiErrorMessage"):
+        for event in events:
+            if event.kind != "tool":
+                event.is_error = True
+    return events
+
+
+def _content_events(seq: int, rec: dict[str, Any]) -> list[Event]:
     """Events for one record; unknown types survive with kind = their type."""
     rtype = rec.get("type", "")
     ts = rec.get("timestamp", "")

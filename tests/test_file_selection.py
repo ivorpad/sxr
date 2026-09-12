@@ -127,7 +127,7 @@ def test_codex_file_uses_its_own_history_profile(tmp_path, monkeypatch):
         ["cmds", "--json"],
         ["cmds", "--grep", "ls|test"],
         ["secrets", "--json"],
-        ["clean"],
+        ["secrets", "clean"],
     ],
 )
 def test_file_scope_matches_all_session_views(tmp_path, monkeypatch, writer, command):

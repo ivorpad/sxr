@@ -94,29 +94,30 @@ def resolve(
     fail(missing or f"no session matching '{arg}'; run sxr to list")
 
 
-def _stamp(value: str, flag: str, sessions: list[SessionRef]) -> str:
-    """A --since/--before value as a timestamp comparable with ref.started.
+def _instant(value: str) -> datetime:
+    """Treat offset-free timestamps as UTC and compare aware datetime values."""
+    when = datetime.fromisoformat(value.replace(" ", "T"))
+    return when.replace(tzinfo=UTC) if when.tzinfo is None else when.astimezone(UTC)
+
+
+def _stamp(value: str, flag: str, sessions: list[SessionRef]) -> datetime:
+    """A --since/--before value as an instant comparable with a session's start.
 
     A leading @ means a session handle, so the bound is that session's own
     start; anything else is a date or ISO datetime, normalized to UTC. Only
     @ selects a session: a bare id prefix like 2026 is also a valid date.
     `today` is midnight UTC today, since the docs teach --before today.
     """
-    if value.startswith("@"):
-        return resolve(value, sessions)[0].started
-    text = value.strip()
+    text = resolve(value, sessions)[0].started if value.startswith("@") else value.strip()
     if text == "today":
         # attribute lookup, not a bound import: the frozen-clock seam must reach here
         text = util.now_utc().date().isoformat()
     if not WHEN_RE.fullmatch(text):
         fail(f"bad {flag} value '{value}': want {WHEN_FORMS}")
     try:
-        when = datetime.fromisoformat(text.replace(" ", "T"))
+        return _instant(text)
     except ValueError as exc:
         fail(f"bad {flag} value '{value}': {exc}. Want {WHEN_FORMS}")
-    if when.tzinfo is not None:
-        when = when.astimezone(UTC).replace(tzinfo=None)
-    return when.isoformat()
 
 
 def window(
@@ -129,9 +130,16 @@ def window(
     """
     if not since and not before:
         return sessions
-    low = _stamp(since, "--since", sessions) if since else ""
-    high = _stamp(before, "--before", sessions) if before else ""
-    kept = [s for s in sessions if (not low or s.started >= low) and (not high or s.started < high)]
+    low = _stamp(since, "--since", sessions) if since else None
+    high = _stamp(before, "--before", sessions) if before else None
+    kept = []
+    for ref in sessions:
+        try:
+            started = _instant(ref.started)
+        except (ValueError, TypeError):
+            continue  # An unknown start cannot establish membership in a time window.
+        if (low is None or started >= low) and (high is None or started < high):
+            kept.append(ref)
     if sessions and not kept:
         bounds = " ".join(f"{f} {v}" for f, v in (("--since", since), ("--before", before)) if v)
         print(f"# {bounds} kept none of {len(sessions)} sessions in scope", file=sys.stderr)

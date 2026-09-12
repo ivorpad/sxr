@@ -86,7 +86,9 @@ def _apply_rule(rule: Rule, text: str, offset: int) -> list[Finding]:
     ruleset = load_rules()
     found = []
     for m in rule.regex.finditer(text):
-        group = rule.secret_group or (1 if m.lastindex else 0)
+        group = rule.secret_group or next(
+            (index for index, value in enumerate(m.groups(), 1) if value), 0
+        )
         secret = m.group(group) or ""
         if not secret or (rule.entropy and shannon(secret) < rule.entropy):
             continue
@@ -112,7 +114,7 @@ def _rule_findings(text: str, low: str) -> list[Finding]:
     """
     combined, by_keyword, bare = keyword_index()
     found = []
-    if len(text) <= SMALL_TEXT:
+    if len(text) <= SMALL_TEXT or len(low) != len(text):
         triggered: dict[int, Rule] = {id(r): r for r in bare}
         for hit in set(combined.findall(low)):
             triggered.update((id(r), r) for r in by_keyword[hit])
@@ -125,6 +127,9 @@ def _rule_findings(text: str, low: str) -> list[Finding]:
         lo, hi = max(0, m.start() - WINDOW_BEFORE), min(len(text), m.end() + WINDOW_AFTER)
         for rule in by_keyword[m.group(0)]:
             rules[id(rule)] = rule
+            if rule.id == "private-key":
+                windows[id(rule)] = [[0, len(text)]]
+                continue
             spans = windows.setdefault(id(rule), [])
             if spans and lo <= spans[-1][1]:
                 spans[-1][1] = max(hi, spans[-1][1])

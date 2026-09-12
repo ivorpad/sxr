@@ -5,7 +5,7 @@ from typing import Annotated
 import typer
 
 from sxr import flags
-from sxr.handles import resolve
+from sxr.handles import fail, resolve
 
 CandidatesF = Annotated[
     bool,
@@ -36,12 +36,18 @@ def secrets_cmd(
     row per distinct secret (kind, salted fingerprint, spread); the value
     itself is never printed, in --json mode included.
     """
+    from sxr.secrets.patterns import load_rules
     from sxr.views_secrets import secrets_view
 
+    try:
+        load_rules()
+    except ValueError as exc:
+        fail(str(exc))
+    candidates = candidates or ctx.meta.get("secrets_candidates", False)
     provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
     sessions = flags.sessions(ctx, provider, cwd, since, before)
     refs = sessions if arg is None else resolve(arg, sessions)
-    raise typer.Exit(secrets_view(refs, provider.parse, candidates, json_out, limit))
+    raise typer.Exit(secrets_view(refs, candidates, json_out, limit))
 
 
 def clean_cmd(
@@ -61,11 +67,11 @@ def clean_cmd(
     Only certain/probable findings are rewritten, never entropy candidates.
     Changed lines are validated as JSON and files replaced atomically;
     (live) sessions are skipped. No backup is kept: a backup keeps the
-    secrets. sxr secrets first shows what would be found.
+    secrets. Run without --apply first to preview the same cleaning scope.
     """
     from sxr.secrets.clean import clean_view
 
-    provider, cwd, _json, _limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
+    provider, cwd, json_out, limit = flags.merge(ctx, use_codex, use_claude, path, json_out, limit)
     sessions = flags.sessions(ctx, provider, cwd, since, before)
     refs = sessions if arg is None else resolve(arg, sessions)
-    raise typer.Exit(clean_view(refs, provider.session_paths, apply))
+    raise typer.Exit(clean_view(refs, provider.session_paths, apply, json_out, limit))

@@ -22,10 +22,28 @@ def clues(query):
     return terms
 
 
-def _excerpt(text, terms, cap=600):
-    folded = text.casefold()
-    positions = [folded.find(word.casefold()) for term in terms for word in term.split()]
-    first = min((p for p in positions if p >= 0), default=0)
+def _excerpt(db, text, terms, cap=600):
+    # Ask the index's tokenizer where it matched. Python case folding differs
+    # from unicode61 for accents, punctuation and length-changing characters.
+    db.execute(
+        "CREATE VIRTUAL TABLE IF NOT EXISTS temp.find_excerpt USING fts5("
+        "text, tokenize='unicode61')"
+    )
+    db.execute("DELETE FROM find_excerpt")
+    db.execute(
+        "INSERT INTO find_excerpt(text) VALUES (?)",
+        (text.encode("utf-8", errors="replace").decode("utf-8"),),
+    )
+    marker = "\x01"
+    while marker in text:
+        marker += "\x01"
+    expression = " OR ".join('"' + term.replace('"', '""') + '"' for term in terms)
+    row = db.execute(
+        "SELECT highlight(find_excerpt, 0, ?, '') FROM find_excerpt WHERE find_excerpt MATCH ?",
+        (marker, expression),
+    ).fetchone()
+    first = max(0, row[0].find(marker)) if row else 0
+    db.execute("DELETE FROM find_excerpt")
     start = max(0, first - 120)
     end = min(len(text), start + cap)
     return ("…" if start else "") + text[start:end] + ("…" if end < len(text) else "")
@@ -142,7 +160,9 @@ def search(db, refs, terms, limit=5, any_term=False):
                     tool=row["tool"],
                     outcome=row["outcome"],
                     text=_excerpt(
-                        zlib.decompress(row["text"]).decode("utf-8", errors="surrogatepass"), terms
+                        db,
+                        zlib.decompress(row["text"]).decode("utf-8", errors="surrogatepass"),
+                        terms,
                     ),
                 )
             )

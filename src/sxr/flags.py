@@ -16,14 +16,40 @@ CodexF = Annotated[bool, typer.Option("--codex", help="Read Codex sessions")]
 ClaudeF = Annotated[bool, typer.Option("--claude", help="Read Claude Code sessions (default)")]
 PathF = Annotated[Path | None, typer.Option("--path", help="Inspect DIR instead of cwd")]
 JsonF = Annotated[bool, typer.Option("--json", help="Raw JSONL records, never truncated")]
-LimitF = Annotated[int | None, typer.Option("--limit", "-n", help="Cap printed rows (0 = all)")]
+LimitF = Annotated[
+    int | None, typer.Option("--limit", "-n", min=0, help="Cap printed rows (0 = all)")
+]
 BudgetF = Annotated[
     int | None,
-    typer.Option("--budget", help="Chars before scan views trim (0 = never; env SXR_BUDGET)"),
+    typer.Option(
+        "--budget", min=0, help="Chars before scan views trim (0 = never; env SXR_BUDGET)"
+    ),
 ]
 LineLimitF = Annotated[
     int | None,
-    typer.Option("--line-limit", help="Per-line char cap when trimming (env SXR_LINE_LIMIT)"),
+    typer.Option(
+        "--line-limit",
+        min=0,
+        help="Per-line char cap when trimming (0 = never; env SXR_LINE_LIMIT)",
+    ),
+]
+PromptAllF = Annotated[
+    bool, typer.Option("--all", help="Lift every row and character limit (complete output)")
+]
+IncludeContextF = Annotated[
+    bool,
+    typer.Option(
+        "--include-context",
+        help="Also print injected context and tool results, labelled by provenance",
+    ),
+]
+PromptBudgetF = Annotated[
+    int | None,
+    typer.Option("--budget", help="Ask for compact text above CHARS (0 = complete; default: none)"),
+]
+PromptLineLimitF = Annotated[
+    int | None,
+    typer.Option("--line-limit", help="Per-line cap; supplying it asks for compact text"),
 ]
 SinceF = Annotated[
     str | None,
@@ -115,7 +141,8 @@ def sessions(
     refs = window(refs, since, before)
     identities = Counter((ref.provider, ref.id.lower()) for ref in refs)
     for index, ref in enumerate(refs, start=1):
+        handle = f"@{index}"
+        ref.extra["handle"] = handle  # The scope position a multi-session view names.
         if identities[ref.provider, ref.id.lower()] > 1:
-            handle = f"@{index}"
             ref.extra.update(display_id=handle, navigation_arg=handle)
     return refs

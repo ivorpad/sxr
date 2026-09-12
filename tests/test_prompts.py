@@ -1,4 +1,4 @@
-"""Human prompt selection from Codex transcripts with content provenance."""
+"""Human prompt selection by content provenance; --include-context widens it."""
 
 import json
 
@@ -28,9 +28,9 @@ def _rollout(tmp_path, records):
     return path
 
 
-@pytest.mark.parametrize("include_all", [False, True])
+@pytest.mark.parametrize("include_context", [False, True])
 @pytest.mark.parametrize("json_out", [False, True])
-def test_codex_prompts_excludes_injected_records(tmp_path, include_all, json_out):
+def test_codex_prompts_excludes_injected_records(tmp_path, include_context, json_out):
     instructions = _message("# AGENTS.md instructions\nInjected rules", ["agents_md.instructions"])
     environment = _message(
         "<environment_context>/w</environment_context>", ["environments.environment_context"]
@@ -46,15 +46,15 @@ def test_codex_prompts_excludes_injected_records(tmp_path, include_all, json_out
     records = [instructions, environment, first, tool, goal, second]
     path = _rollout(tmp_path, records)
     args = ["prompts", "--codex", "--file", str(path)]
-    if include_all:
-        args.append("--all")
+    if include_context:
+        args.append("--include-context")
     if json_out:
         args.append("--json")
     result = runner.invoke(app, args)
     assert result.exit_code == 0, result.output
     if json_out:
         assert [json.loads(line) for line in result.stdout.splitlines()] == (
-            records if include_all else [first, second]
+            records if include_context else [first, second]
         )
     else:
         assert "Please explain this file" in result.stdout
@@ -65,7 +65,17 @@ def test_codex_prompts_excludes_injected_records(tmp_path, include_all, json_out
             "Internal goal reminder",
             "Tool output",
         ):
-            assert (text in result.stdout) == include_all
+            assert (text in result.stdout) == include_context
+
+
+def test_include_context_labels_recorded_provenance(tmp_path):
+    instructions = _message("Injected rules", ["agents_md.instructions"])
+    human = _message("real request", ["user.text"])
+    path = _rollout(tmp_path, [instructions, human])
+    result = runner.invoke(app, ["prompts", "--file", str(path), "--include-context"])
+    assert result.exit_code == 0, result.output
+    assert '(agents_md.instructions) "Injected rules"' in result.stdout
+    assert "2 of 2 user records shown" in result.stdout
 
 
 def test_codex_prompts_keeps_unlabelled_legacy_messages(tmp_path):
@@ -83,8 +93,8 @@ def test_codex_prompts_with_only_injected_context_is_empty(tmp_path):
     assert result.stdout == ""
 
 
-@pytest.mark.parametrize("include_all", [False, True])
-def test_codex_legacy_user_events_are_not_duplicated(tmp_path, include_all):
+@pytest.mark.parametrize("include_context", [False, True])
+def test_codex_legacy_user_events_are_not_duplicated(tmp_path, include_context):
     human = {"type": "event_msg", "payload": {"type": "user_message", "message": "hello"}}
     records = [
         _message("<environment_context>injected</environment_context>"),
@@ -93,12 +103,12 @@ def test_codex_legacy_user_events_are_not_duplicated(tmp_path, include_all):
     ]
     path = _rollout(tmp_path, records)
     args = ["prompts", "--file", str(path), "--json"]
-    if include_all:
-        args.append("--all")
+    if include_context:
+        args.append("--include-context")
     result = runner.invoke(app, args)
     assert result.exit_code == 0, result.output
     assert [json.loads(line) for line in result.stdout.splitlines()] == (
-        records if include_all else [human]
+        records if include_context else [human]
     )
 
 
@@ -111,9 +121,11 @@ def test_codex_prompts_keeps_user_attachments(tmp_path):
     assert json.loads(result.stdout) == record
 
 
-@pytest.mark.parametrize("include_all", [False, True])
+@pytest.mark.parametrize("include_context", [False, True])
 @pytest.mark.parametrize("as_blocks", [False, True])
-def test_claude_prompts_excludes_marked_metadata_and_summaries(tmp_path, include_all, as_blocks):
+def test_claude_prompts_excludes_marked_metadata_and_summaries(
+    tmp_path, include_context, as_blocks
+):
     records = []
     for text, flags in [
         ("human request", {}),
@@ -127,10 +139,10 @@ def test_claude_prompts_excludes_marked_metadata_and_summaries(tmp_path, include
     path = tmp_path / "claude.jsonl"
     path.write_text("\n".join(json.dumps(record) for record in records))
     args = ["prompts", "--file", str(path), "--json"]
-    if include_all:
-        args.append("--all")
+    if include_context:
+        args.append("--include-context")
     result = runner.invoke(app, args)
     assert result.exit_code == 0, result.output
     assert [json.loads(line) for line in result.stdout.splitlines()] == (
-        records if include_all else records[:1]
+        records if include_context else records[:1]
     )

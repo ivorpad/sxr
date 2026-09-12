@@ -239,9 +239,13 @@ def test_since_narrows_grep_and_renumbers_handles(corpus, frozen) -> None:
 
 
 def test_cmds_grep_honors_the_window(corpus) -> None:
-    result = runner.invoke(app, ["cmds", "--grep", "x", "--path", "/w", "--since", "2026-07-28"])
-    assert result.exit_code == 1
-    assert "kept none of 3 sessions in scope" in result.output
+    # Exit 2, as for every other read command whose scope holds no sessions.
+    # This asserted exit 1 until SXR-CLI-05: --grep used to bypass selector
+    # resolution, so the same empty window exited 1 with a filter and 2 without.
+    for args in (["--grep", "x"], []):
+        result = runner.invoke(app, ["cmds", *args, "--path", "/w", "--since", "2026-07-28"])
+        assert result.exit_code == 2, args
+        assert "kept none of 3 sessions in scope" in result.output
 
 
 def test_bad_since_exits_2_through_the_cli(corpus) -> None:

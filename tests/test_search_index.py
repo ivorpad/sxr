@@ -221,7 +221,7 @@ def test_command_search_matches_direct_results(transcript, monkeypatch):
 def test_clean_removes_an_index_created_during_the_rewrite(transcript, monkeypatch):
     from sxr.secrets import clean
 
-    def rewrite(path, apply):
+    def rewrite(path, apply, **kwargs):
         assert search_index.candidates([transcript], "needle", False)
         return clean.FileResult(path.name, lines=1, replacements=1)
 
@@ -235,7 +235,7 @@ def test_clean_refuses_to_write_when_the_index_cannot_be_cleared(transcript):
     original = transcript.path.read_bytes()
     with sqlite3.connect(index_store.index_path()) as db:
         db.execute("BEGIN EXCLUSIVE")
-        result = CliRunner().invoke(app, ["--path", "/w", "clean", "--apply"])
+        result = CliRunner().invoke(app, ["--path", "/w", "secrets", "clean", "--apply"])
     assert result.exit_code == 2
     assert "cannot clear search index" in result.stderr
     assert transcript.path.read_bytes() == original

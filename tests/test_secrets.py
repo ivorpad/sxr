@@ -2,11 +2,10 @@
 
 import base64
 import json
-from pathlib import Path
 
 import pytest
 
-from sxr.model import Event, SessionRef
+from sxr.model import SessionRef
 from sxr.secrets import fingerprint, marker, scan_text
 from sxr.secrets.detect import shannon
 from sxr.secrets.fingerprint import _salt
@@ -115,21 +114,23 @@ def test_marker_format() -> None:
     assert m == f"[sxr:redacted:aws-access-token:{fingerprint(FAKE_AWS)}]"
 
 
-def _refs_and_parse():
-    refs = [SessionRef("claude", f"sess{n}111-2222", Path(f"{n}.jsonl")) for n in (1, 2)]
-    events = {
-        "1.jsonl": [
-            Event(4, "", "user", "text", f"my key is {FAKE_AWS}"),
-            Event(9, "", "asst", "text", f"you pasted {FAKE_AWS}"),
-        ],
-        "2.jsonl": [Event(2, "", "user", "text", f"db postgres://app:S3cretW0rd@h/x {FAKE_AWS}")],
-    }
-    return refs, lambda p: events[str(p)]
+def _refs(tmp_path):
+    refs = [SessionRef("claude", f"sess{n}111-2222", tmp_path / f"{n}.jsonl") for n in (1, 2)]
+    refs[0].path.write_text(
+        "\n" * 3
+        + json.dumps({"text": f"my key is {FAKE_AWS}"})
+        + "\n" * 5
+        + json.dumps({"text": f"you pasted {FAKE_AWS}"})
+    )
+    refs[1].path.write_text(
+        "\n" + json.dumps({"text": f"postgres://app:S3cretW0rd@h/x {FAKE_AWS}"})
+    )
+    return refs
 
 
-def test_secrets_view_masks_values_and_aggregates(capsys) -> None:
-    refs, parse = _refs_and_parse()
-    assert secrets_view(refs, parse, False, False, None) == 0
+def test_secrets_view_masks_values_and_aggregates(capsys, tmp_path) -> None:
+    refs = _refs(tmp_path)
+    assert secrets_view(refs, False, False, None) == 0
     out = capsys.readouterr().out
     assert FAKE_AWS not in out and "S3cretW0rd" not in out
     aws_row = next(line for line in out.splitlines() if line.startswith("aws-access-token"))
@@ -139,19 +140,18 @@ def test_secrets_view_masks_values_and_aggregates(capsys) -> None:
     assert "2 distinct secrets (1 certain)" in out
 
 
-def test_secrets_view_json_is_masked_too(capsys) -> None:
-    refs, parse = _refs_and_parse()
-    assert secrets_view(refs, parse, False, True, None) == 0
+def test_secrets_view_json_is_masked_too(capsys, tmp_path) -> None:
+    refs = _refs(tmp_path)
+    assert secrets_view(refs, False, True, None) == 0
     out = capsys.readouterr().out
     assert FAKE_AWS not in out and "S3cretW0rd" not in out
     rows = [json.loads(line) for line in out.splitlines()]
     assert {r["kind"] for r in rows} == {"aws-access-token", "url-credential"}
 
 
-def test_secrets_view_clean_scope_exits_1(capsys) -> None:
-    refs = [SessionRef("claude", "cccc1111-2222", Path("c.jsonl"))]
-    assert (
-        secrets_view(refs, lambda _: [Event(1, "", "user", "text", "hola")], False, False, None)
-        == 1
-    )
+def test_secrets_view_clean_scope_exits_1(capsys, tmp_path) -> None:
+    path = tmp_path / "c.jsonl"
+    path.write_text(json.dumps({"text": "hola"}))
+    refs = [SessionRef("claude", "cccc1111-2222", path)]
+    assert secrets_view(refs, False, False, None) == 1
     assert "no secrets detected" in capsys.readouterr().err

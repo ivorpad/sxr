@@ -184,7 +184,7 @@ def test_clean_loads_live_state_before_touching_a_file(corpus, monkeypatch):
 
     monkeypatch.setattr(clean, "_clean_file", unexpected)
     original = path.read_bytes()
-    result = invoke(provider, "clean", "session-2", "--apply")
+    result = invoke(provider, "secrets", "clean", "session-2", "--apply")
     assert result.exit_code == 1, result.output
     assert "skipped 1 (live) session" in result.stdout
     assert path.read_bytes() == original

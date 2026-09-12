@@ -34,7 +34,8 @@ def history_titles(root: Path | None = None) -> dict[str, str]:
                 entry = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            titles.setdefault(entry.get("session_id", ""), entry.get("text", ""))
+            if isinstance(entry, dict):
+                titles.setdefault(entry.get("session_id", ""), entry.get("text", ""))
     return titles
 
 
@@ -57,7 +58,9 @@ def _iter_records(path: Path):
             if not line:
                 continue
             try:
-                yield seq, json.loads(line)
+                record = json.loads(line)
+                if isinstance(record, dict):
+                    yield seq, record
             except json.JSONDecodeError:
                 continue
 
