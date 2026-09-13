@@ -63,7 +63,9 @@ BeforeF = Annotated[
 GrepBudgetF = Annotated[
     int | None,
     typer.Option(
-        "--budget", help="Chars of match rows before grep stops (0 = all; env SXR_BUDGET)"
+        "--budget",
+        min=0,
+        help="Chars of match rows before grep stops (0 = all; env SXR_BUDGET)",
     ),
 ]
 PatternF = Annotated[str | None, typer.Argument(help="Regex (smart-case; -F for literal)")]

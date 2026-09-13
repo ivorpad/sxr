@@ -56,6 +56,44 @@ explicitly and names the migration note. Everything else here is a regression.
   An offset is applied, not replaced by `Z`; a timestamp with no zone is read as
   UTC, the way both providers record them. Do not reintroduce `ts[:19]`,
   `ts[11:19]`, `ts[:10]`, or a sort keyed on the timestamp string.
+## The compact-display caps (SXR-CLI-21)
+
+- Each of the two numbers resolves as flag, then environment variable, then
+  built-in default: `--budget`/`SXR_BUDGET`/40000 for whether a view trims, and
+  `--line-limit`/`SXR_LINE_LIMIT`/200 for how wide a trimmed row is. `0` means no
+  trimming at either. A later slice must not add a third source or reorder these.
+- **One resolved per-line cap governs every trimmed row of a view.** Before
+  SXR-CLI-21 a `grep -C` invocation capped its match row at `one_line`'s built-in
+  200 and its context rows at `SXR_LINE_LIMIT`, so one view had two caps; and a
+  tool-result body kept `middle_trim`'s fixed 200-and-120 whatever cap was asked
+  for. `middle_trim` now derives its head and tail from that one cap, which at the
+  200 default is exactly the 200 and 120 it always used — so the default output
+  does not move, and only a caller who asked for a different cap sees a change.
+  This closes the clause **SXR-CLI-03 and SXR-CLI-04 each touched and left open**
+  ("same explicit cap policy for all event kinds"); neither slice defined a new
+  policy, both deferred to this one, and this is that one.
+- **The asymmetry D-02 and D-05 settled survives SXR-CLI-21 and is not this
+  slice's to revisit.** `show --budget -1` and `show --line-limit -1` exit 2;
+  `prompts --budget -1` and `prompts --line-limit -1` mean "never truncate" and
+  print whole text. `grep --budget -1` now exits 2 as well, which extends D-05's
+  reasoning to the other command with a *char* budget rather than harmonizing
+  `prompts` into it. `tests/test_compact_caps.py` pins both halves in one test so
+  a future edit cannot quietly erase one of them.
+- An unusable `SXR_BUDGET`/`SXR_LINE_LIMIT` prints one stderr notice and uses the
+  default. Three properties are contracts, not incidentals: it is **stderr only**,
+  so `--json` stdout stays a record contract; it fires **at most once per variable
+  per process**, so one command cannot repeat it; and it fires **only when the
+  command would have applied that value**, so `show --json` and `list` stay silent
+  about a budget they never consult. A *valid* value prints nothing at all —
+  a notice on every invocation of a correctly configured shell would be noise.
+  The dedupe is process-scoped state (`util.reset_env_notices`), which is right for
+  a CLI where each invocation is a process; a harness or test session that runs
+  many invocations in one process must reset it, and `tests/conftest.py` does.
+- Negative environment values are treated as unusable rather than as a synonym for
+  "no trimming". `0` is the documented way to ask for that, and the old reading let
+  `SXR_LINE_LIMIT=-5` reach `show`'s footer, which then announced a cap of `-5`
+  characters. A later slice must not restore "negative env means unlimited".
+
 - Window filtering compares instants and always did (`SXR-AUD-002`). A literal
   `--since`/`--before` bound keeps exactly the sessions it kept before
   SXR-CLI-08; `evidence-slice-08/scope-report.txt` checks that case by case on

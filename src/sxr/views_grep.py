@@ -104,9 +104,14 @@ def _window(ref: SessionRef, events: list[Event], pos: int, context: int, cap: i
     return lines
 
 
-def _row(ref: SessionRef, event: Event) -> str:
-    """One match row: session, event index, role, flattened text."""
-    return tab_row(ref.short_id, f"#{event.seq:04d}", event.role, f'"{one_line(event.text)}"')
+def _row(ref: SessionRef, event: Event, cap: int) -> str:
+    """One match row: session, event index, role, text under the view's cap.
+
+    The cap is passed in rather than defaulted because a row and a -C window in
+    the same invocation used to disagree: the window read SXR_LINE_LIMIT and the
+    row kept one_line's built-in 200 whatever the caller asked for.
+    """
+    return tab_row(ref.short_id, f"#{event.seq:04d}", event.role, f'"{one_line(event.text, cap)}"')
 
 
 def _session_json(ref: SessionRef) -> str:
@@ -146,14 +151,14 @@ def _emit(ref: SessionRef, events: list[Event], hits: list[Event], opts: GrepOpt
     if opts.ids_only:
         sink.write([ref.short_id])
         return
+    cap = line_limit(None)
     if opts.context > 0:
         index = {id(event): i for i, event in enumerate(events)}
-        cap = line_limit(None)
         for hit in hits:
             sink.write(_window(ref, events, index[id(hit)], opts.context, cap))
         return
     for event in hits:
-        sink.write([_row(ref, event)])
+        sink.write([_row(ref, event, cap)])
 
 
 def _hits_view(

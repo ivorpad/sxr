@@ -402,7 +402,10 @@ forces case-insensitive, `-F` matches the pattern literally, `--ids` (also `-l`,
 
 Match rows are capped at 40k chars (`--budget`, env `SXR_BUDGET`) or at `-n`
 rows, whichever comes first; the footer reports the true match count and
-`-n 0` prints all of them.
+`-n 0` prints all of them. A negative `--budget` is a usage error, as it is on
+`show`; `--budget 0` is how you ask for all of them. Each printed row is capped
+at 200 characters (`SXR_LINE_LIMIT`), the same number a `-C` window uses, so one
+invocation no longer caps its match rows and its context rows differently.
 
 Each of `grep`'s three shapes has its own `--json`, and all three emit JSON.
 Plain `--json` prints the matching source records, one per physical JSONL line:
@@ -574,6 +577,32 @@ that used to destroy content silently.
   physical records, keeping every field of each returned record. Tools JSON
   is one complete aggregate; stats JSON has one complete object per session.
   `--tail 0` selects no events and returns 1; negative tails return 2.
+- One compact cap serves every trimmed row of a view. Two numbers decide how much
+  a scan prints, and each resolves the same way — the flag if you gave one, else
+  the environment variable, else the built-in default:
+
+  | number | flag | env | default | `0` means |
+  | --- | --- | --- | --- | --- |
+  | when a view trims at all | `--budget CHARS` | `SXR_BUDGET` | 40000 | never trim |
+  | how wide a trimmed row is | `--line-limit CHARS` | `SXR_LINE_LIMIT` | 200 | no per-line cap |
+
+  Once a view resolves that per-line cap, every row it trims obeys it, tool-result
+  bodies included: a `grep -C` window and the match row above it are capped by the
+  same number, and so is the middle trim `errors --compact` and a trimmed tool
+  result use. Complete views ignore the budget entirely — `--full`, the zooms
+  (`--around`, `--range`, `--type`), `--tail` and read-view `--json`. `sxr prompts`
+  has no default budget at all, so neither variable can trim it, and a negative
+  `--budget`/`--line-limit` there still means "never truncate" while the same
+  negative on `show` or `grep` is a usage error. That asymmetry is deliberate:
+  `prompts` is the command you reach for when you want the whole thing.
+- An environment value that cannot be used says so instead of being ignored. A
+  `SXR_BUDGET` or `SXR_LINE_LIMIT` that is not a character count of 0 or more —
+  a typo, an empty string, a float, a negative — prints one stderr notice naming
+  the value and the default it fell back to, once per command and only when that
+  command would have applied it. `--json` stdout is unaffected. Previously such a
+  value changed behavior silently, and a negative one could reach a footer that
+  announced a cap of `-5` characters. Scripts that set a negative value to mean
+  "unlimited" should set `0`, which is the documented way to say it.
 - One timestamp reading serves sorting, filtering and display. A recorded
   timestamp is converted to its UTC instant, not sliced: an offset is applied
   rather than replaced by `Z`, and a timestamp with no zone is read as UTC, the

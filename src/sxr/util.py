@@ -5,6 +5,7 @@ Trim sizes are defaults, not policy: flags override env vars override these
 """
 
 import os
+import sys
 from datetime import UTC, datetime
 
 ONE_LINE_LIMIT = 200
@@ -19,12 +20,45 @@ LIVE_NOTE = (
 )
 
 
+_noted_env: set[str] = set()
+
+
+def reset_env_notices() -> None:
+    """Forget which variables have been reported. For tests and long-lived workers.
+
+    The notice below is deduplicated per process because one command resolves the
+    same variable two or three times. A test session is one process running many
+    commands, so it has to be able to clear that memory; `tests/conftest.py` does
+    so for every test.
+    """
+    _noted_env.clear()
+
+
 def _env_int(name: str, default: int) -> int:
-    """Integer env override, falling back to the default on absence/garbage."""
-    try:
-        return int(os.environ[name])
-    except (KeyError, ValueError):
+    """Integer env override; a value that cannot be used is reported, then ignored.
+
+    Silence was the defect: a typo in SXR_BUDGET changed nothing and said nothing,
+    so a shell could quietly cap or uncap every command for weeks. A negative
+    value counts as unusable rather than as a synonym for "no trimming", because 0
+    is the documented way to ask for that and `--budget -1` is a usage error.
+    """
+    raw = os.environ.get(name)
+    if raw is None:
         return default
+    try:
+        value = int(raw)
+    except ValueError:
+        value = -1
+    if value < 0:
+        if name not in _noted_env:
+            _noted_env.add(name)
+            print(
+                f"# {name}={raw!r} is not a character count of 0 or more; "
+                f"using {default}. 0 means never trim",
+                file=sys.stderr,
+            )
+        return default
+    return value
 
 
 def line_limit(flag: int | None = None) -> int:
@@ -45,8 +79,18 @@ def one_line(text: str, limit: int = ONE_LINE_LIMIT) -> str:
     return f"{flat[:limit]}... [+{len(flat) - limit} chars]"
 
 
-def middle_trim(text: str, head: int = MIDDLE_HEAD, tail: int = MIDDLE_TAIL) -> str:
-    """Trim the middle of long output; errors and summaries live at the end."""
+def middle_trim(text: str, cap: int = ONE_LINE_LIMIT) -> str:
+    """Trim the middle of long output; errors and summaries live at the end.
+
+    The head and tail derive from the one per-line cap, so a tool-result body obeys
+    the same number as every other row of the same view instead of the fixed 200
+    and 120 it used to keep regardless. At the 200 default the split is exactly the
+    200 and 120 it always was, so nothing moves unless a cap was asked for. A cap
+    of 0 means no trimming, as everywhere else.
+    """
+    if cap <= 0:
+        return text
+    head, tail = cap, cap * MIDDLE_TAIL // MIDDLE_HEAD
     if len(text) <= head + tail:
         return text
     omitted = len(text) - head - tail

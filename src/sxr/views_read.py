@@ -18,7 +18,7 @@ def event_line(event: Event, trim: bool, cap: int = 0) -> str:
         return f'{event.tool} "{one_line(event.text, cap) if trim else event.text}"{state}'
     if event.kind == "result":
         head = f"({event.tool}, is_error)" if event.is_error else f"({event.tool})"
-        return f'{head} "{middle_trim(body) if trim else event.text}"'
+        return f'{head} "{middle_trim(body, cap) if trim else event.text}"'
     if event.kind in ("text", "thinking"):
         tag = f"({event.tag}) " if event.tag else ""
         return f'{tag}"{one_line(body, cap) if trim else event.text}"'
@@ -167,7 +167,7 @@ def error_records(ref: SessionRef, parse) -> list[Event]:
     return picked
 
 
-def error_line(ref: SessionRef, event: Event, compact: bool) -> str:
+def error_line(ref: SessionRef, event: Event, compact: bool, cap: int = 0) -> str:
     """One error row: record number, source session, time, tool, then the text.
 
     The source column makes a row self-describing, so two errors at the same
@@ -176,13 +176,14 @@ def error_line(ref: SessionRef, event: Event, compact: bool) -> str:
     by default: inline and quoted while the error is one line, otherwise an
     indented block below the row so the row itself stays greppable. `--compact`
     is the only thing that trims, and it trims the middle, where error output
-    keeps its summary.
+    keeps its summary -- at the per-line cap the view resolved, so `--compact`
+    answers SXR_LINE_LIMIT instead of keeping fixed widths whatever was asked.
     """
     head = f"#{event.seq:04d}  {ref.short_id}  {clock(event.ts)}  {event.tool or event.kind}"
     if event.tag:
         head += f"  [{event.tag}]"
     if compact:
-        return f'{head}  "{middle_trim(" ".join(event.text.split()))}"'
+        return f'{head}  "{middle_trim(" ".join(event.text.split()), cap)}"'
     text = event.text.strip("\n")
     if "\n" in text:
         return head + "\n" + "\n".join("    " + line for line in text.splitlines())
@@ -199,10 +200,15 @@ def errors(
     every selected session, and `--json` still emits complete distinct physical
     source records.
     """
+    from sxr.util import line_limit
+
     total = 0
     budget = RowBudget(limit)
     by_tool: dict[str, int] = {}
     first: tuple[SessionRef, Event] | None = None
+    # Resolved once per view, so an unusable SXR_LINE_LIMIT is reported once and
+    # every trimmed row of this view answers to the same number.
+    cap = line_limit(None) if compact else 0
     for ref in refs:
         picked = error_records(ref, parse)
         total += len(picked)
@@ -214,7 +220,7 @@ def errors(
             continue
         for event in budget.take(picked):
             first = first or (ref, event)
-            print(error_line(ref, event, compact))
+            print(error_line(ref, event, compact, cap))
     budget.notice("error records", stderr=json_out)
     if total == 0:
         scope = ", ".join(r.short_id for r in refs)

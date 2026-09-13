@@ -18,7 +18,7 @@ States: `delivered` (implemented, verified, waiting on the reviewer),
 | SXR-MERGE-01 | record the reconciliation in git history as a merge of the published releases (D-11) | history only, no file changed | **delivered 2026-09-12** | [review-task-M.md](review-task-M.md), `baseline-M/`, `evidence-M/` |
 | SXR-AUDIT-02 | audit a second opinion's six findings against the merged tree, and record two upstream defects | correctness audit | **delivered 2026-09-12** | [review-task-M.md](review-task-M.md), `evidence-M/`, `disposition.json` |
 | SXR-DOCS-01 | commit the audit trail's documents and reproducers, excluding snapshots and captures | record keeping, no behavior | **delivered 2026-09-12** as `f42b1ad`, with finding 6's wording as `b70f3ac` | [audit/README.md](../../README.md), `.gitignore`, `evidence-commit/` |
-| SXR-CLI-06 | grep/cmds: valid JSON in every mode, one record per physical line | defect | **accepted 2026-09-12** by the originating reviewer (D-12 resolved with it) | [review-slice-06.md](review-slice-06.md), [slice-06.patch](slice-06.patch), `baseline-06/`, `evidence-slice-06/` |
+| SXR-CLI-06 | grep/cmds: valid JSON in every mode, one record per physical line | defect | **accepted 2026-09-12** by the originating reviewer (D-12 resolved with it); committed as `f89c45a` | [review-slice-06.md](review-slice-06.md), [slice-06.patch](slice-06.patch), `baseline-06/`, `evidence-slice-06/` |
 
 ## All five slices were built on a base three releases stale
 
@@ -118,8 +118,45 @@ Out-of-slice maintenance, reviewer-approved, recorded in
 [maintenance-2026-09-11.patch](maintenance-2026-09-11.patch): the D-06 hazard fix
 in two audit scripts, and the approved annotation of
 `docs/session-search-hints-research.md`. Neither touches `src/` or `tests/`.
-| SXR-CLI-08 | one timestamp parser for every sort, filter and format | defect | **delivered 2026-09-12** | [review-slice-08.md](review-slice-08.md), [slice-08.patch](slice-08.patch), `baseline-08/`, `evidence-slice-08/` |
-| SXR-CLI-07 … 24 | see [tasks.md](tasks.md) | mixed | proposed | — |
+| SXR-CLI-08 | one timestamp parser for every sort, filter and format | defect | **delivered 2026-09-12, accepted 2026-09-13** by the originating reviewer, who re-verified the single-parser claim in source (D-13 resolved with it); committed as `f0ce7ad` | [review-slice-08.md](review-slice-08.md), [slice-08.patch](slice-08.patch), `baseline-08/`, `evidence-slice-08/` |
+| SXR-CLI-21 | validate and document the compact-display flags | defect | **delivered 2026-09-13**; closes the cap clause SXR-CLI-03 and SXR-CLI-04 both deferred | [review-slice-21.md](review-slice-21.md), [slice-21.patch](slice-21.patch), `baseline-21/`, `evidence-slice-21/` |
+| SXR-CLI-07, 22 … 24 | see [tasks.md](tasks.md) | mixed | proposed | — |
+
+**Date correction, 2026-09-13.** `f0ce7ad` recorded slice 21's spec correction as
+"2026-09-12" and the slice itself as delivered that day, but the commit was authored
+`2026-09-13T13:31+02:00` and every slice-21 artifact was written on the 13th
+(`review-slice-21.md` 13:49, `baseline-21/` 13:32). The engagement crossed two
+midnights — slices 1 to 5 on the 11th, the reconciliation through slice 8 on the
+12th, slice 21 on the 13th — and the off-by-one came from continuing to write the
+previous day's date after midnight. `f0ce7ad` is not amended; the corrections live
+in the commit that follows it, and are listed here so the record shows the fix
+rather than a silent adjustment.
+
+Established against evidence, not memory: artifact mtimes against `git log --format=%aI`.
+
+| where | was | now | basis |
+| --- | --- | --- | --- |
+| `tasks.md` SXR-CLI-21 heading and spec note | 2026-09-12 | **2026-09-13** | `slice-21.patch` and `review-slice-21.md` mtimes, both 09-13 13:49 |
+| SXR-CLI-08 row | accepted 2026-09-12 | **delivered 2026-09-12, accepted 2026-09-13** | delivered on the 12th (`review-slice-08.md` 14:33); the acceptance arrived on the 13th. The earlier wording also overwrote a correct delivery date. |
+| SXR-CLI-21 row | delivered 2026-09-12 | **delivered 2026-09-13** | as above |
+| D-13 attribution and open-item 9 | 2026-09-12 | **2026-09-13** | the decision arrived with the slice-21 assignment on the 13th |
+
+One of those is a change to the reviewer's own instruction, stated rather than made
+quietly: the message resolving open decision 9 said to record D-13 as "originating
+reviewer, 2026-09-12", but it arrived on the 13th, so the reviewer's own note
+carries the same off-by-one. Corrected to 2026-09-13 on that evidence; say so if you
+want the dictated date restored.
+
+Every other date in this file and in `tasks.md` was checked the same way and is
+correct: slices 1 to 5 on 2026-09-11, the reconciliation, `SXR-HAZ-01`, D-08 to
+D-12, `SXR-DOCS-01`, slice 6 and slice 8's delivery on 2026-09-12, all matching
+their artifacts' mtimes and the commit dates of `d2021d9`, `b70f3ac` and `f42b1ad`.
+
+**Two status drifts found by the same pass**, and the reason to distrust derived
+documents generally: `tasks.md` still headed SXR-CLI-04 "DELIVERED, awaiting review"
+though this ledger has accepted it since 2026-09-11, and SXR-CLI-05's heading
+carried no status at all though it is accepted. Both now match this file, which is
+the authority because it is the one the reviewer edits directly.
 
 **Queue order, resequenced 2026-09-12 (reviewer-approved): `SXR-CLI-08` runs
 before `SXR-CLI-07`.** SXR-CLI-06 redefined `--sort`, `-l --json` and the
@@ -172,7 +209,7 @@ recorded here so a later slice cannot silently reopen them.
 | D-08 | Is `prompts` a read command or a discovery command? (open decision 6) | **A read command.** A bare `sxr prompts` prints complete human prompts, as slice 1 implemented and D-01/D-02 pinned. Upstream's session filtering, `--latest` and navigation notices are adopted; its default-to-listing is not. The recorded complaint was about reading, and a conversation catalog duplicates `sxr list`. The published 0.13.0 default is therefore deliberately reversed, and the migration is stated in `README.md`, in `prompts --help` and in the primer. | originating reviewer, 2026-09-12 |
 | D-09 | Does upstream's synthesized `prompt_session` object become the default `prompts --json` output? | **No. Raw source records remain the `--json` contract.** A catalog projection, if it is ever worth keeping, needs its own flag or command and must be documented as a distinct schema, never replacing raw records. | originating reviewer, 2026-09-12 |
 | D-11 | Commit the reconciliation as a rebase onto `8f93114` or as a merge? (open decision 7) | **A merge, so history records that 0.12.3, 0.12.4 and 0.13.0 happened and were reconciled rather than burying them.** Done 2026-09-12: `f806ede` carries the five slices and the hazard fix, and `d2021d9` merges `8f93114` into it with this tree's content as the resolution. The merge tree is byte-identical to `f806ede`'s, so the merge changed no file. Nothing is pushed. | originating reviewer, 2026-09-12 |
-| D-13 | Is `--since @N` selecting a different set an acceptable consequence of SXR-CLI-08's corrected ordering? | **Accept it.** `@N` is documented as temporary and recomputed per invocation, `CMD-list-typer`'s own compatibility cell sanctions renumbering, and the alternative — resolving `@N` against the old string order for window bounds only — would let one handle name two different sessions in a single command line. A *literal* bound keeps exactly the sessions it always kept; only an `@N` bound moves. Recorded in `contracts.md` so a later slice does not "restore" the old numbering as a bug fix. | originating reviewer, 2026-09-12 |
+| D-13 | Is `--since @N` selecting a different set an acceptable consequence of SXR-CLI-08's corrected ordering? | **Accept it.** `@N` is documented as temporary and recomputed per invocation, `CMD-list-typer`'s own compatibility cell sanctions renumbering, and the alternative — resolving `@N` against the old string order for window bounds only — would let one handle name two different sessions in a single command line. A *literal* bound keeps exactly the sessions it always kept; only an `@N` bound moves. Recorded in `contracts.md` so a later slice does not "restore" the old numbering as a bug fix. | originating reviewer, 2026-09-13 |
 | D-12 | Is `grep -l --json`'s `grep_session` object a projection D-09 permits, or an invented schema? | **Accept it as implemented.** It sits within D-09 rather than against it: the flag already existed, the schema is documented in `README.md` and `grep --help`, and it exposes nothing a caller could not already get from `list`. Recorded in `contracts.md` so a later slice neither "corrects" it back to raw records nor adds a match count, which would make `-l` and `-c` indistinguishable. | originating reviewer, 2026-09-12 |
 | D-10 | Does the `init --write` primer hazard wait for the reconciliation slice? | **No, it goes first and on its own.** It can corrupt other repositories while it sits there. Delivered as SXR-HAZ-01 with its own patch and evidence, separate from the rebase. | originating reviewer, 2026-09-12 |
 
@@ -237,7 +274,7 @@ recorded here so a later slice cannot silently reopen them.
    `grep_session` projection stands as implemented, and `contracts.md` records
    its shape so a later slice does not undo it.
 
-9. *Answered 2026-09-12 as D-13 and moved to the resolved table above.* The
+9. *Answered 2026-09-13 as D-13 and moved to the resolved table above.* The
    `--since @N` scope change stands; `contracts.md` keeps the literal-versus-`@N`
    distinction explicit so a later slice does not undo the numbering as a fix.
    The evidence and reasoning that produced the question are kept below.
