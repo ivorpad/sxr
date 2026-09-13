@@ -497,7 +497,12 @@ last 10 minutes are marked `(live)` in the title cell of the bare list and the
 `-c` table, and `--since DATE` / `--before DATE` filter the scope by session
 start (`YYYY-MM-DD`, an ISO datetime, `today`, or `@N` for that session's
 start; dates are UTC, the interval is `[since, before)`, so `--before today`
-drops everything recorded today). The label is not a filter because it cannot
+drops everything recorded today). Every displayed timestamp is UTC too, and is
+the moment the record names rather than its digits: a session recorded at
+`2026-09-11T00:30:00+02:00` is listed as `2026-09-10T22:30:00Z` and is inside
+the window `--since 2026-09-10 --before 2026-09-11`, not the next day's. Two
+sessions recording the same moment in different offsets show the same `started`
+and sort adjacently. The label is not a filter because it cannot
 be: a teammate's concurrent session looks exactly like your own, and dropping
 it silently would be worse than showing it.
 
@@ -569,6 +574,14 @@ that used to destroy content silently.
   physical records, keeping every field of each returned record. Tools JSON
   is one complete aggregate; stats JSON has one complete object per session.
   `--tail 0` selects no events and returns 1; negative tails return 2.
+- One timestamp reading serves sorting, filtering and display. A recorded
+  timestamp is converted to its UTC instant, not sliced: an offset is applied
+  rather than replaced by `Z`, and a timestamp with no zone is read as UTC, the
+  way both providers record them. Ordering compares instants, so `@N`, the bare
+  list, `find`'s ranking and `grep -c --sort started` agree with each other and
+  with `--since`/`--before`. Raw `--json` still emits the source record verbatim,
+  its own timestamp string included; only derived metadata such as `list --json`
+  carries the converted instant.
 - Errors name the flag that fixes them: the candidate list for an ambiguous
   id is capped at 5 short titles, and a wrong flag is answered with the
   right one (`-A 3` → `-C 3`, `sxr grep webhook retries` → `"webhook.*retries"`).
@@ -588,6 +601,19 @@ through as their own kind.
 Breaking since 0.2.3: `grep -c` prints five columns (session, matches, first,
 started, title), prunes zero-match rows, and exits 1 when nothing matches.
 Parsers of the old two-column TSV need `--json` or `--all`.
+
+Timestamps are now read as instants everywhere, which corrects chronology for a
+corpus containing offset-bearing timestamps and therefore changes what `@N`
+names in one: a session recorded at `09:00+02:00` used to sort after one
+recorded at `08:00Z`, though it happened an hour earlier. `@N` was always
+documented as temporary and recomputed per invocation, so this is a correction
+rather than a break, but two consequences are worth stating. A displayed
+`started` can move by the recorded offset, and a bound written as `--since @2`
+can select a different session than before, so it may keep a different set;
+a literal bound such as `--since 2026-09-10` keeps exactly the sessions it
+always did, because window filtering already compared instants. Corpora
+recording only `Z` timestamps, which is what both providers write today, are
+unaffected in every respect.
 
 ## Development
 

@@ -18,7 +18,7 @@ States: `delivered` (implemented, verified, waiting on the reviewer),
 | SXR-MERGE-01 | record the reconciliation in git history as a merge of the published releases (D-11) | history only, no file changed | **delivered 2026-09-12** | [review-task-M.md](review-task-M.md), `baseline-M/`, `evidence-M/` |
 | SXR-AUDIT-02 | audit a second opinion's six findings against the merged tree, and record two upstream defects | correctness audit | **delivered 2026-09-12** | [review-task-M.md](review-task-M.md), `evidence-M/`, `disposition.json` |
 | SXR-DOCS-01 | commit the audit trail's documents and reproducers, excluding snapshots and captures | record keeping, no behavior | **delivered 2026-09-12** as `f42b1ad`, with finding 6's wording as `b70f3ac` | [audit/README.md](../../README.md), `.gitignore`, `evidence-commit/` |
-| SXR-CLI-06 | grep/cmds: valid JSON in every mode, one record per physical line | defect | **delivered 2026-09-12** | [review-slice-06.md](review-slice-06.md), [slice-06.patch](slice-06.patch), `baseline-06/`, `evidence-slice-06/` |
+| SXR-CLI-06 | grep/cmds: valid JSON in every mode, one record per physical line | defect | **accepted 2026-09-12** by the originating reviewer (D-12 resolved with it) | [review-slice-06.md](review-slice-06.md), [slice-06.patch](slice-06.patch), `baseline-06/`, `evidence-slice-06/` |
 
 ## All five slices were built on a base three releases stale
 
@@ -118,6 +118,7 @@ Out-of-slice maintenance, reviewer-approved, recorded in
 [maintenance-2026-09-11.patch](maintenance-2026-09-11.patch): the D-06 hazard fix
 in two audit scripts, and the approved annotation of
 `docs/session-search-hints-research.md`. Neither touches `src/` or `tests/`.
+| SXR-CLI-08 | one timestamp parser for every sort, filter and format | defect | **delivered 2026-09-12** | [review-slice-08.md](review-slice-08.md), [slice-08.patch](slice-08.patch), `baseline-08/`, `evidence-slice-08/` |
 | SXR-CLI-07 … 24 | see [tasks.md](tasks.md) | mixed | proposed | — |
 
 **Queue order, resequenced 2026-09-12 (reviewer-approved): `SXR-CLI-08` runs
@@ -171,6 +172,7 @@ recorded here so a later slice cannot silently reopen them.
 | D-08 | Is `prompts` a read command or a discovery command? (open decision 6) | **A read command.** A bare `sxr prompts` prints complete human prompts, as slice 1 implemented and D-01/D-02 pinned. Upstream's session filtering, `--latest` and navigation notices are adopted; its default-to-listing is not. The recorded complaint was about reading, and a conversation catalog duplicates `sxr list`. The published 0.13.0 default is therefore deliberately reversed, and the migration is stated in `README.md`, in `prompts --help` and in the primer. | originating reviewer, 2026-09-12 |
 | D-09 | Does upstream's synthesized `prompt_session` object become the default `prompts --json` output? | **No. Raw source records remain the `--json` contract.** A catalog projection, if it is ever worth keeping, needs its own flag or command and must be documented as a distinct schema, never replacing raw records. | originating reviewer, 2026-09-12 |
 | D-11 | Commit the reconciliation as a rebase onto `8f93114` or as a merge? (open decision 7) | **A merge, so history records that 0.12.3, 0.12.4 and 0.13.0 happened and were reconciled rather than burying them.** Done 2026-09-12: `f806ede` carries the five slices and the hazard fix, and `d2021d9` merges `8f93114` into it with this tree's content as the resolution. The merge tree is byte-identical to `f806ede`'s, so the merge changed no file. Nothing is pushed. | originating reviewer, 2026-09-12 |
+| D-13 | Is `--since @N` selecting a different set an acceptable consequence of SXR-CLI-08's corrected ordering? | **Accept it.** `@N` is documented as temporary and recomputed per invocation, `CMD-list-typer`'s own compatibility cell sanctions renumbering, and the alternative — resolving `@N` against the old string order for window bounds only — would let one handle name two different sessions in a single command line. A *literal* bound keeps exactly the sessions it always kept; only an `@N` bound moves. Recorded in `contracts.md` so a later slice does not "restore" the old numbering as a bug fix. | originating reviewer, 2026-09-12 |
 | D-12 | Is `grep -l --json`'s `grep_session` object a projection D-09 permits, or an invented schema? | **Accept it as implemented.** It sits within D-09 rather than against it: the flag already existed, the schema is documented in `README.md` and `grep --help`, and it exposes nothing a caller could not already get from `list`. Recorded in `contracts.md` so a later slice neither "corrects" it back to raw records nor adds a match count, which would make `-l` and `-c` indistinguishable. | originating reviewer, 2026-09-12 |
 | D-10 | Does the `init --write` primer hazard wait for the reconciliation slice? | **No, it goes first and on its own.** It can corrupt other repositories while it sits there. Delivered as SXR-HAZ-01 with its own patch and evidence, separate from the rebase. | originating reviewer, 2026-09-12 |
 
@@ -234,6 +236,31 @@ recorded here so a later slice cannot silently reopen them.
 8. *Answered 2026-09-12 as D-12 and moved to the resolved table above.* The
    `grep_session` projection stands as implemented, and `contracts.md` records
    its shape so a later slice does not undo it.
+
+9. *Answered 2026-09-12 as D-13 and moved to the resolved table above.* The
+   `--since @N` scope change stands; `contracts.md` keeps the literal-versus-`@N`
+   distinction explicit so a later slice does not undo the numbering as a fix.
+   The evidence and reasoning that produced the question are kept below.
+
+   **Is `--since @N` selecting a different set an acceptable consequence of
+   SXR-CLI-08?** The reviewer asked to be told if unifying the parser changed
+   scope for an existing valid invocation. It does, in exactly one shape, and the
+   before/after evidence is in `evidence-slice-08/scope-report.txt`: on both
+   providers `--since @2` kept 4 of 4 sessions and now keeps 2, `--since @3` kept
+   2 and now keeps 4, and `--before @2` kept 0 and now keeps 2. The window did
+   not change — every *literal* bound keeps exactly the sessions it kept before,
+   checked case by case — and neither did `_stamp`, which still resolves `@N` and
+   takes that session's start. What changed is which session `@N` names, because
+   the ordering is now chronological. My recommendation is to accept it, for
+   three reasons: `@N` is documented as temporary and recomputed per invocation,
+   so nothing durable pointed at the old numbering; the row's own compatibility
+   cell already sanctions renumbering (`Corrected chronology can change @N
+   numbering for offset-bearing records`); and the alternative — resolving `@N`
+   against the old string order for window bounds only — would mean the same
+   handle meant two different sessions in one command line. A corpus of `Z`-only
+   timestamps, which is what both providers write today, is unaffected. The
+   `README.md` migration note states all of this. Flagged rather than assumed
+   because it is a scope change, not a display one.
 
 ## Known evidence gap: audit/2026-09-10/evidence/contracts.json
 

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from sxr.discovery import deduplicate, matches_path, normalize_path, project_paths
 from sxr.model import SessionRef
+from sxr.util import order_key
 
 
 def _metadata(path: Path, *, child: bool = False) -> SessionRef:
@@ -79,7 +80,7 @@ def list_sessions(
             if include_agents:
                 refs.extend(_children(ref, profile))
     unique = deduplicate(refs)
-    unique.sort(key=lambda ref: (ref.started, ref.id), reverse=True)
+    unique.sort(key=lambda ref: (order_key(ref.started), ref.id), reverse=True)
     if not lazy:
         for ref in unique:
             ref.summarize()

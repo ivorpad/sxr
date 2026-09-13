@@ -16,7 +16,7 @@ from sxr.find_query import clues, search, search_paths
 from sxr.handles import fail, window
 from sxr.index_store import connect
 from sxr.providers import claude_code, codex
-from sxr.util import one_line
+from sxr.util import date_of, one_line, order_key
 
 
 def _roots(ctx, use_codex, use_claude):
@@ -94,7 +94,7 @@ def _scope(refs, ctx, path, all_projects, since, before):
             ):
                 kept.append(r)
         refs = kept
-    refs.sort(key=lambda r: (r.started, r.id), reverse=True)
+    refs.sort(key=lambda r: (order_key(r.started), r.id), reverse=True)
     return window(refs, since or root.get("since"), before or root.get("before"))
 
 
@@ -158,7 +158,7 @@ def _render(results, coverage, errors, total, json_out, show_coverage=False, pat
             print(f"# incomplete: {error}", file=sys.stderr)
         return
     for rank, result in enumerate(results, 1):
-        print(f"{rank}. {result['provider']} {result['id']}  {result['started'][:10]}")
+        print(f"{rank}. {result['provider']} {result['id']}  {date_of(result['started'])}")
         _display(f"   {result['cwd']}  {one_line(result['title'], 120)}")
         for item in result["evidence"]:
             outcome = f" -> {item['outcome']}" if item["outcome"] else ""

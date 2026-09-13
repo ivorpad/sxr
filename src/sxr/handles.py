@@ -7,7 +7,7 @@ its own running session.
 
 import re
 import sys
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import NoReturn
 
 from sxr import util
@@ -95,9 +95,8 @@ def resolve(
 
 
 def _instant(value: str) -> datetime:
-    """Treat offset-free timestamps as UTC and compare aware datetime values."""
-    when = datetime.fromisoformat(value.replace(" ", "T"))
-    return when.replace(tzinfo=UTC) if when.tzinfo is None else when.astimezone(UTC)
+    """The shared timestamp parser; ValueError here becomes a usage error above."""
+    return util.instant(value)
 
 
 def _stamp(value: str, flag: str, sessions: list[SessionRef]) -> datetime:

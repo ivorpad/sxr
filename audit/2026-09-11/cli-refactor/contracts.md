@@ -47,6 +47,34 @@ explicitly and names the migration note. Everything else here is a regression.
 - Secret values are never printed, `--json` included; only kind, severity and a
   salted fingerprint.
 
+## Timestamps
+
+- **One reading of a recorded timestamp serves sorting, filtering and display**
+  (SXR-CLI-08). `util.instant()` is the only place in `src/sxr` that parses one —
+  `rg -n fromisoformat src/sxr` must return exactly one line — and `day`, `clock`,
+  `date_of`, `order_key`, `is_live` and `handles._instant` all route through it.
+  An offset is applied, not replaced by `Z`; a timestamp with no zone is read as
+  UTC, the way both providers record them. Do not reintroduce `ts[:19]`,
+  `ts[11:19]`, `ts[:10]`, or a sort keyed on the timestamp string.
+- Window filtering compares instants and always did (`SXR-AUD-002`). A literal
+  `--since`/`--before` bound keeps exactly the sessions it kept before
+  SXR-CLI-08; `evidence-slice-08/scope-report.txt` checks that case by case on
+  both providers.
+- **A bound written `--since @N` may select a different session than it did
+  before SXR-CLI-08, and that is accepted, not a defect** (`D-13`). The corrected
+  ordering changes what `@N` names for an offset-bearing corpus, so the bound
+  moves with it: measured on both providers, `--since @2` kept 4 of 4 sessions
+  and now keeps 2, `--since @3` kept 2 and now keeps 4, `--before @2` kept 0 and
+  now keeps 2. Do not "restore" the string ordering, and do not special-case
+  `@N` resolution for window bounds so that it follows the old numbering: that
+  would let one handle name two different sessions in a single command line. The
+  literal case and the `@N` case are separate contracts and a later slice must
+  not conflate them — `check_scope_08.py` keeps them apart by construction.
+- Raw `--json` keeps each record's own timestamp string verbatim (`D-09`). Only
+  derived metadata — `list --json`, `stats`, `grep -c --json` — carries the
+  converted instant. `find --json`'s `started` is deliberately still the source
+  string: it never appended `Z`, so it never claimed to be UTC.
+
 ## Selection
 
 - Provider defaults are unchanged by this refactor: `find` searches both

@@ -1,0 +1,1019 @@
+diff --git a/README.md b/README.md
+index 659b408..d764357 100644
+--- a/README.md
++++ b/README.md
+@@ -396,13 +396,30 @@ Patterns are smart-case regexes: an all-lowercase pattern matches any case, a
+ pattern with capitals matches exactly, and the footer says so, because a
+ capitalised or metacharacter-laden pattern otherwise misses matches silently
+ (`grep -c "Webhook"` can find 12 sessions where `webhook` finds 22). `-i`
+-forces case-insensitive, `-F` matches the pattern literally, `-l` prints only
+-the ids that match, `-e` spells the pattern for one that starts with a dash.
++forces case-insensitive, `-F` matches the pattern literally, `--ids` (also `-l`,
++`--files-with-matches`) lists the sessions that match rather than the matches,
++`-e` spells the pattern for one that starts with a dash.
+ 
+ Match rows are capped at 40k chars (`--budget`, env `SXR_BUDGET`) or at `-n`
+ rows, whichever comes first; the footer reports the true match count and
+ `-n 0` prints all of them.
+ 
++Each of `grep`'s three shapes has its own `--json`, and all three emit JSON.
++Plain `--json` prints the matching source records, one per physical JSONL line:
++a single line whose content holds two matching blocks is one record, printed
++once, and `-n` counts those records. `-c --json` prints one `grep_count` object
++per ranked session. `--ids --json` prints one `grep_session` object per matching
++session, carrying the full id, the provider and the source `path` under the same
++key `sxr list --json` uses for it -- a projection,
++not a source record, because "which sessions matched" is not a line the
++transcript contains. `sxr cmds --json` follows the same record rule: one line
++that recorded two tool calls is one record.
++
++Flags that describe a shape the mode cannot produce are refused rather than
++ignored: `-c` with `--ids` or with `-C`, and `--sort` without `-c`, all exit 2
++naming both flags, and `-C` requires a count of 0 or more. `--budget` with `-c`
++says on stderr that it caps match text the table does not print.
++
+ When the JSONL location is known, `--file` skips session discovery. It detects
+ Claude or Codex from the records, retains parent-qualified Claude child IDs,
+ and checks an optional session ID and explicit provider/project/profile flags.
+@@ -480,7 +497,12 @@ last 10 minutes are marked `(live)` in the title cell of the bare list and the
+ `-c` table, and `--since DATE` / `--before DATE` filter the scope by session
+ start (`YYYY-MM-DD`, an ISO datetime, `today`, or `@N` for that session's
+ start; dates are UTC, the interval is `[since, before)`, so `--before today`
+-drops everything recorded today). The label is not a filter because it cannot
++drops everything recorded today). Every displayed timestamp is UTC too, and is
++the moment the record names rather than its digits: a session recorded at
++`2026-09-11T00:30:00+02:00` is listed as `2026-09-10T22:30:00Z` and is inside
++the window `--since 2026-09-10 --before 2026-09-11`, not the next day's. Two
++sessions recording the same moment in different offsets show the same `started`
++and sort adjacently. The label is not a filter because it cannot
+ be: a teammate's concurrent session looks exactly like your own, and dropping
+ it silently would be worse than showing it.
+ 
+@@ -552,6 +574,14 @@ that used to destroy content silently.
+   physical records, keeping every field of each returned record. Tools JSON
+   is one complete aggregate; stats JSON has one complete object per session.
+   `--tail 0` selects no events and returns 1; negative tails return 2.
++- One timestamp reading serves sorting, filtering and display. A recorded
++  timestamp is converted to its UTC instant, not sliced: an offset is applied
++  rather than replaced by `Z`, and a timestamp with no zone is read as UTC, the
++  way both providers record them. Ordering compares instants, so `@N`, the bare
++  list, `find`'s ranking and `grep -c --sort started` agree with each other and
++  with `--since`/`--before`. Raw `--json` still emits the source record verbatim,
++  its own timestamp string included; only derived metadata such as `list --json`
++  carries the converted instant.
+ - Errors name the flag that fixes them: the candidate list for an ambiguous
+   id is capped at 5 short titles, and a wrong flag is answered with the
+   right one (`-A 3` → `-C 3`, `sxr grep webhook retries` → `"webhook.*retries"`).
+@@ -572,6 +602,19 @@ Breaking since 0.2.3: `grep -c` prints five columns (session, matches, first,
+ started, title), prunes zero-match rows, and exits 1 when nothing matches.
+ Parsers of the old two-column TSV need `--json` or `--all`.
+ 
++Timestamps are now read as instants everywhere, which corrects chronology for a
++corpus containing offset-bearing timestamps and therefore changes what `@N`
++names in one: a session recorded at `09:00+02:00` used to sort after one
++recorded at `08:00Z`, though it happened an hour earlier. `@N` was always
++documented as temporary and recomputed per invocation, so this is a correction
++rather than a break, but two consequences are worth stating. A displayed
++`started` can move by the recorded offset, and a bound written as `--since @2`
++can select a different session than before, so it may keep a different set;
++a literal bound such as `--since 2026-09-10` keeps exactly the sessions it
++always did, because window filtering already compared instants. Corpora
++recording only `Z` timestamps, which is what both providers write today, are
++unaffected in every respect.
++
+ ## Development
+ 
+ ```bash
+diff --git a/src/sxr/claude_discovery.py b/src/sxr/claude_discovery.py
+index b6382b1..9afb670 100644
+--- a/src/sxr/claude_discovery.py
++++ b/src/sxr/claude_discovery.py
+@@ -5,6 +5,7 @@ from pathlib import Path
+ 
+ from sxr.discovery import deduplicate, matches_path, normalize_path, project_paths
+ from sxr.model import SessionRef
++from sxr.util import order_key
+ 
+ 
+ def _metadata(path: Path, *, child: bool = False) -> SessionRef:
+@@ -79,7 +80,7 @@ def list_sessions(
+             if include_agents:
+                 refs.extend(_children(ref, profile))
+     unique = deduplicate(refs)
+-    unique.sort(key=lambda ref: (ref.started, ref.id), reverse=True)
++    unique.sort(key=lambda ref: (order_key(ref.started), ref.id), reverse=True)
+     if not lazy:
+         for ref in unique:
+             ref.summarize()
+diff --git a/src/sxr/cli.py b/src/sxr/cli.py
+index 160f7e0..8823540 100644
+--- a/src/sxr/cli.py
++++ b/src/sxr/cli.py
+@@ -183,7 +183,7 @@ def grep(
+     ids_only: flags.IdsOnlyF = False,
+     expr: flags.ExprF = None,
+     include_all: flags.AllRowsF = False,
+-    sort: flags.SortF = "matches",
++    sort: flags.SortF = None,
+     after_ctx: flags.AfterCtxF = None,
+     before_ctx: flags.BeforeCtxF = None,
+     since: flags.SinceF = None,
+@@ -198,6 +198,10 @@ def grep(
+     """Search event text across all sessions in scope; -c ranks matches.
+ 
+     --since/--before narrow the sessions; -n 0 lifts row and budget limits.
++
++    Every mode emits JSON under --json: matching source records one per physical
++    line, `grep_count` objects under -c, `grep_session` identities under --ids.
++    -c with --ids or -C, and --sort without -c, exit 2 rather than ignore a flag.
+     """
+     if after_ctx is not None or before_ctx is not None:
+         fail("no -A/-B; context is symmetric: -C 3 prints 3 events each side.")
+@@ -243,7 +247,8 @@ def cmds(
+ 
+     No selector means the newest session, with or without --grep.
+     --all-sessions searches every session in scope. --since/--before narrow that
+-    scope by session start date.
++    scope by session start date. -n counts printed calls in text and printed
++    source records under --json, where one line holding two calls is one record.
+     """
+     if all_sessions and arg is not None:
+         fail(f"--all-sessions and '{arg}' select different scopes", "name one or the other")
+diff --git a/src/sxr/find_service.py b/src/sxr/find_service.py
+index 782d35e..80cf38c 100644
+--- a/src/sxr/find_service.py
++++ b/src/sxr/find_service.py
+@@ -16,7 +16,7 @@ from sxr.find_query import clues, search, search_paths
+ from sxr.handles import fail, window
+ from sxr.index_store import connect
+ from sxr.providers import claude_code, codex
+-from sxr.util import one_line
++from sxr.util import date_of, one_line, order_key
+ 
+ 
+ def _roots(ctx, use_codex, use_claude):
+@@ -94,7 +94,7 @@ def _scope(refs, ctx, path, all_projects, since, before):
+             ):
+                 kept.append(r)
+         refs = kept
+-    refs.sort(key=lambda r: (r.started, r.id), reverse=True)
++    refs.sort(key=lambda r: (order_key(r.started), r.id), reverse=True)
+     return window(refs, since or root.get("since"), before or root.get("before"))
+ 
+ 
+@@ -158,7 +158,7 @@ def _render(results, coverage, errors, total, json_out, show_coverage=False, pat
+             print(f"# incomplete: {error}", file=sys.stderr)
+         return
+     for rank, result in enumerate(results, 1):
+-        print(f"{rank}. {result['provider']} {result['id']}  {result['started'][:10]}")
++        print(f"{rank}. {result['provider']} {result['id']}  {date_of(result['started'])}")
+         _display(f"   {result['cwd']}  {one_line(result['title'], 120)}")
+         for item in result["evidence"]:
+             outcome = f" -> {item['outcome']}" if item["outcome"] else ""
+diff --git a/src/sxr/flags.py b/src/sxr/flags.py
+index 0543b69..759c277 100644
+--- a/src/sxr/flags.py
++++ b/src/sxr/flags.py
+@@ -71,19 +71,28 @@ CountF = Annotated[
+     bool, typer.Option("--count", "-c", help="Rank sessions: matches, first seq, started, title")
+ ]
+ FixedF = Annotated[bool, typer.Option("--fixed", "-F", help="Fixed string, not a regex")]
+-ContextF = Annotated[int, typer.Option("--context", "-C", help="Events around each match")]
++ContextF = Annotated[
++    int, typer.Option("--context", "-C", help="Events around each match (0 or more)")
++]
+ IgnoreCaseF = Annotated[
+     bool, typer.Option("--ignore-case", "-i", help="Match any case (default: smart-case)")
+ ]
+ IdsOnlyF = Annotated[
+-    bool, typer.Option("--files-with-matches", "-l", help="Print only ids of matching sessions")
++    bool,
++    typer.Option(
++        "--ids",
++        "--files-with-matches",
++        "-l",
++        help="List matching sessions, not matches (--json: one identity object each)",
++    ),
+ ]
+ ExprF = Annotated[
+     str | None, typer.Option("--regexp", "-e", help="Pattern (allows a leading dash)")
+ ]
+ AllRowsF = Annotated[bool, typer.Option("--all", help="-c: keep zero-match rows")]
+ SortF = Annotated[
+-    str, typer.Option("--sort", help="-c order: matches (default) or started (oldest first)")
++    str | None,
++    typer.Option("--sort", help="-c only; matches (default) or started (oldest first)"),
+ ]
+ AfterCtxF = Annotated[int | None, typer.Option("-A", "--after-context", hidden=True)]
+ BeforeCtxF = Annotated[int | None, typer.Option("-B", "--before-context", hidden=True)]
+diff --git a/src/sxr/grep_options.py b/src/sxr/grep_options.py
+index 8482d5b..605aa06 100644
+--- a/src/sxr/grep_options.py
++++ b/src/sxr/grep_options.py
+@@ -1,8 +1,20 @@
+-"""Search selection and rendering options shared by indexed and direct scans."""
++"""Search selection and rendering options shared by indexed and direct scans.
++
++The options also police themselves. `grep` has three output shapes -- match
++rows, the -c table and the -l session list -- and each one ignores flags that
++belong to the others. Accepting a flag and then producing a shape it cannot
++describe is worse than refusing it, so the combinations are checked once, here,
++before any transcript is read.
++"""
+ 
+ from dataclasses import dataclass
+ from pathlib import Path
+ 
++from sxr.handles import fail
++
++SORTS = ("matches", "started")
++METACHARS = "\\.^$*+?[]{}()|"
++
+ 
+ @dataclass
+ class GrepOpts:
+@@ -14,7 +26,7 @@ class GrepOpts:
+     ignore_case: bool = False
+     ids_only: bool = False
+     include_all: bool = False
+-    sort: str = "matches"
++    sort: str | None = None
+     json_out: bool = False
+     limit: int | None = None
+     budget: int | None = None
+@@ -25,3 +37,27 @@ class GrepOpts:
+         if self.candidates is not None and ref.path not in self.candidates:
+             return []
+         return ref.read(parse) if summarize else parse(ref.path)
++
++    @property
++    def order(self) -> str:
++        """The -c ordering, with the default spelled rather than assumed."""
++        return self.sort or SORTS[0]
++
++    def check(self) -> None:
++        """Reject flag pairs that describe two different output shapes.
++
++        Each message names both flags and says which one to drop, because the
++        user asked for something coherent in their head and the tool has to say
++        which half it kept.
++        """
++        if self.sort is not None:
++            if self.sort not in SORTS:
++                fail(f"--sort takes {' or '.join(SORTS)}, not '{self.sort}'")
++            if not self.count:
++                fail("--sort orders the -c table; add -c, or drop --sort")
++        if self.context < 0:
++            fail(f"-C takes 0 or more events, not {self.context}; -C 0 prints no context")
++        if self.count and self.ids_only:
++            fail("-c ranks matching sessions and -l lists them; pick one")
++        if self.count and self.context:
++            fail("-c prints one row per session, so -C has no events to surround; drop one")
+diff --git a/src/sxr/handles.py b/src/sxr/handles.py
+index 9f556f5..15016f9 100644
+--- a/src/sxr/handles.py
++++ b/src/sxr/handles.py
+@@ -7,7 +7,7 @@ its own running session.
+ 
+ import re
+ import sys
+-from datetime import UTC, datetime
++from datetime import datetime
+ from typing import NoReturn
+ 
+ from sxr import util
+@@ -95,9 +95,8 @@ def resolve(
+ 
+ 
+ def _instant(value: str) -> datetime:
+-    """Treat offset-free timestamps as UTC and compare aware datetime values."""
+-    when = datetime.fromisoformat(value.replace(" ", "T"))
+-    return when.replace(tzinfo=UTC) if when.tzinfo is None else when.astimezone(UTC)
++    """The shared timestamp parser; ValueError here becomes a usage error above."""
++    return util.instant(value)
+ 
+ 
+ def _stamp(value: str, flag: str, sessions: list[SessionRef]) -> datetime:
+diff --git a/src/sxr/providers/codex.py b/src/sxr/providers/codex.py
+index d35a1f9..df22cec 100644
+--- a/src/sxr/providers/codex.py
++++ b/src/sxr/providers/codex.py
+@@ -14,6 +14,7 @@ from typing import Any
+ from sxr.discovery import deduplicate, matches_path, normalize_path, project_paths
+ from sxr.model import Event, SessionRef
+ from sxr.providers.codex_events import _record_event, canonicalize
++from sxr.util import order_key
+ 
+ 
+ def sessions_root() -> Path:
+@@ -150,7 +151,7 @@ def list_sessions(
+                 ref.extra.update(root=str(root), archived=root != roots[0], provenance=[str(path)])
+                 refs.append(ref)
+     refs = deduplicate(refs)
+-    refs.sort(key=lambda r: (r.started, r.id), reverse=True)
++    refs.sort(key=lambda r: (order_key(r.started), r.id), reverse=True)
+     if not lazy:
+         for ref in refs:
+             ref.summarize()
+diff --git a/src/sxr/search_index.py b/src/sxr/search_index.py
+index 7b89f5e..ccabd87 100644
+--- a/src/sxr/search_index.py
++++ b/src/sxr/search_index.py
+@@ -8,7 +8,7 @@ from typing import Annotated
+ import typer
+ 
+ from sxr import flags, views_grep, views_info
+-from sxr.grep_options import GrepOpts
++from sxr.grep_options import METACHARS, GrepOpts
+ from sxr.handles import fail
+ from sxr.index_records import fold, signature
+ from sxr.index_store import clear, connect, index_path
+@@ -20,7 +20,7 @@ def _literal(pattern: str, fixed: bool) -> bool:
+         len(fold(pattern)) >= 3
+         and "\0" not in pattern
+         and not any(0xD800 <= ord(char) <= 0xDFFF for char in pattern)
+-        and (fixed or not any(char in views_grep.METACHARS for char in pattern))
++        and (fixed or not any(char in METACHARS for char in pattern))
+     )
+ 
+ 
+diff --git a/src/sxr/util.py b/src/sxr/util.py
+index 0768b33..a48cb07 100644
+--- a/src/sxr/util.py
++++ b/src/sxr/util.py
+@@ -53,14 +53,61 @@ def middle_trim(text: str, head: int = MIDDLE_HEAD, tail: int = MIDDLE_TAIL) ->
+     return f"{text[:head]} ...[+{omitted} chars, middle]... {text[-tail:]}"
+ 
+ 
++def instant(ts: str) -> datetime:
++    """The UTC moment a recorded timestamp names; ValueError if it names none.
++
++    A timestamp without a zone is read as UTC, the way both providers record
++    them, and one with an offset is converted rather than having its offset
++    discarded. This is the only place in the tool that reads a recorded
++    timestamp: every sort, window and display goes through it, so a corpus
++    cannot order one way and print another.
++    """
++    return _aware(datetime.fromisoformat(ts.replace(" ", "T")))
++
++
++def _aware(when: datetime) -> datetime:
++    """The same moment as an aware UTC datetime."""
++    return when.replace(tzinfo=UTC) if when.tzinfo is None else when.astimezone(UTC)
++
++
++def _utc(ts: str) -> datetime | None:
++    """instant(), or None for a missing or unreadable timestamp."""
++    try:
++        return instant(ts) if ts else None
++    except (AttributeError, TypeError, ValueError):
++        return None
++
++
+ def clock(ts: str) -> str:
+-    """HH:MM:SS from an ISO timestamp, or blanks when missing."""
+-    return ts[11:19] if len(ts) >= 19 else "--:--:--"
++    """HH:MM:SS UTC from an ISO timestamp, or blanks when there is none."""
++    when = _utc(ts)
++    return when.strftime("%H:%M:%S") if when else "--:--:--"
+ 
+ 
+ def day(ts: str) -> str:
+-    """YYYY-MM-DDTHH:MM:SSZ from an ISO timestamp, or empty string."""
+-    return f"{ts[:19]}Z" if len(ts) >= 19 else ""
++    """YYYY-MM-DDTHH:MM:SSZ in real UTC, or empty string when there is none."""
++    when = _utc(ts)
++    return when.strftime("%Y-%m-%dT%H:%M:%SZ") if when else ""
++
++
++def date_of(ts: str) -> str:
++    """The UTC calendar date of a timestamp, or empty string when there is none.
++
++    Not `ts[:10]`: for a session recorded just after local midnight east of
++    Greenwich, the recorded date and the UTC date are different days, and the
++    UTC one is the day whose `--since`/`--before` window contains it.
++    """
++    when = _utc(ts)
++    return when.strftime("%Y-%m-%d") if when else ""
++
++
++def order_key(ts: str) -> datetime:
++    """Chronological sort key; an unreadable timestamp sorts as the oldest.
++
++    Sorting the recorded strings instead puts `2026-09-10T09:00:00+02:00` after
++    `2026-09-10T08:00:00Z`, though it happened an hour earlier.
++    """
++    return _utc(ts) or datetime.min.replace(tzinfo=UTC)
+ 
+ 
+ def now_utc() -> datetime:
+@@ -74,13 +121,8 @@ def is_live(ts: str) -> bool:
+     Timestamps without a zone are read as UTC, the way both providers record
+     them; unparseable or missing ones are simply not live.
+     """
+-    try:
+-        stamp = datetime.fromisoformat(ts)
+-    except ValueError:
+-        return False
+-    if stamp.tzinfo is None:
+-        stamp = stamp.replace(tzinfo=UTC)
+-    return abs((now_utc() - stamp).total_seconds()) < LIVE_WINDOW_SECONDS
++    stamp = _utc(ts)
++    return stamp is not None and abs((now_utc() - stamp).total_seconds()) < LIVE_WINDOW_SECONDS
+ 
+ 
+ def live_mark(ts: str) -> str:
+diff --git a/src/sxr/views_grep.py b/src/sxr/views_grep.py
+index ea25dc4..9b092c4 100644
+--- a/src/sxr/views_grep.py
++++ b/src/sxr/views_grep.py
+@@ -1,35 +1,24 @@
+-"""Cross-session search: match rows, -C windows, and the -c decision table.
++"""Cross-session search: the match rows, the -C windows and the -l session list.
++
++Every output path is capped: -n limits rows, a char budget stops runaway scans,
++and the footers name the flag that widens or narrows the next call. The -c table
++and the shared diagnostics live in grep_counts.
+ 
+-Every output path is capped: -n limits rows, a char budget stops runaway
+-scans, and the footers name the flag that widens or narrows the next call.
+ """
+ 
+ import json
+ import re
+-import sys
+ from dataclasses import dataclass
+ 
++from sxr.grep_counts import count_view, counts, empty, warnings
+ from sxr.grep_options import GrepOpts
+ from sxr.handles import fail, resolve
+ from sxr.model import Event, SessionRef
+ from sxr.navigation import command
+-from sxr.util import (
+-    LIVE_NOTE,
+-    clock,
+-    is_live,
+-    line_limit,
+-    live_mark,
+-    one_line,
+-    scan_budget,
+-    tab_row,
+-)
++from sxr.output import record_events
++from sxr.util import clock, line_limit, one_line, scan_budget, tab_row
+ from sxr.views_read import event_line
+ 
+-METACHARS = "\\.^$*+?[]{}()|"
+-TITLE_CAP = 50
+-BROADEN = "# smart-case regex; -F for literal; --codex / --path <dir> widen scope"
+-SORTS = ("matches", "started")
+-
+ 
+ def compile_pattern(
+     pattern: str, fixed: bool = False, ignore_case: bool = False, literal: str = ""
+@@ -75,27 +64,6 @@ def pick_pattern(pattern: str | None, arg: str | None, expr: str | None) -> tupl
+     return expr, pattern
+ 
+ 
+-def _warnings(pattern: str, opts: GrepOpts) -> list[str]:
+-    """Footer lines for the two patterns that miss matches silently."""
+-    lines = []
+-    if not opts.ignore_case and pattern != pattern.lower():
+-        lines.append(
+-            "# pattern has capitals: smart-case matches exact case; lowercase it or -i for any-case"
+-        )
+-    if not opts.fixed and any(c in METACHARS for c in pattern):
+-        lines.append("# pattern has regex metachars; -F matches it literally")
+-    return lines
+-
+-
+-def _empty(pattern: str, scanned: int, warn: list[str]) -> int:
+-    """Zero-match diagnostics on stderr: scope searched, then how to widen."""
+-    print(f"no matches for '{pattern}' in {scanned} sessions", file=sys.stderr)
+-    for line in warn:
+-        print(line, file=sys.stderr)
+-    print(BROADEN, file=sys.stderr)
+-    return 1
+-
+-
+ @dataclass
+ class _Sink:
+     """Prints match blocks until the row cap or the char budget stops it."""
+@@ -141,88 +109,43 @@ def _row(ref: SessionRef, event: Event) -> str:
+     return tab_row(ref.short_id, f"#{event.seq:04d}", event.role, f'"{one_line(event.text)}"')
+ 
+ 
+-def _title(ref: SessionRef, mark: bool = False) -> str:
+-    """Session title as the bare list shows it, trimmed for a table cell.
++def _session_json(ref: SessionRef) -> str:
++    """-l under --json: the session's identity, since -l names no records.
+ 
+-    mark prefixes the (live) label, which belongs in the title cell: a sixth
+-    column would break every TSV parser again, and a suffix hides behind the
+-    50-char trim exactly when the title is long.
++    There is no raw source record to emit here -- -l answers "which sessions",
++    a question the transcript does not contain a line for -- so this is a
++    projection, typed and named like the -c table's own `grep_count` rows. It
++    carries the full id and the source path so a short-id collision cannot make
++    two sessions look like one.
+     """
+-    return (live_mark(ref.ended) if mark else "") + " ".join(ref.label.split())[:TITLE_CAP]
+-
+-
+-def _order(rows: list[tuple], opts: GrepOpts) -> list[tuple]:
+-    """Count rows sorted by match density, or oldest first for --sort started."""
+-    kept = rows if opts.include_all else [row for row in rows if row[1]]
+-    if opts.sort == "started":
+-        return sorted(kept, key=lambda row: row[0].started)
+-    return sorted(kept, key=lambda row: -row[1])
+-
+-
+-def _count_view(pattern: str, rows: list[tuple], opts: GrepOpts, warn: list[str]) -> int:
+-    """The decision table: which sessions match, and where to zoom first."""
+-    matched = sum(1 for row in rows if row[1])
+-    if not matched:
+-        return _empty(pattern, len(rows), warn)
+-    kept = _order(rows, opts)
+-    shown = kept if not opts.limit else kept[: opts.limit]
+-    for ref, _, _ in shown:
+-        ref.summarize()
+-    if opts.json_out:
+-        for ref, count, first in shown:
+-            print(
+-                json.dumps(
+-                    {
+-                        "type": "grep_count",
+-                        "session": ref.id,
+-                        "matches": count,
+-                        "first": first,
+-                        "started": ref.started[:10],
+-                        "live": is_live(ref.ended),
+-                        "title": _title(ref),
+-                    },
+-                    ensure_ascii=False,
+-                )
+-            )
+-        return 0
+-    print(tab_row("# session", "matches", "first", "started", "title"))
+-    for ref, count, first in shown:
+-        print(tab_row(ref.short_id, count, first or "", ref.started[:10], _title(ref, True)))
+-    top = shown[0]
+-    print(
+-        f"# {matched} of {len(rows)} sessions match; "
+-        f"zoom: {command(top[0], 'show', '--around', str(top[2]))}"
++    return json.dumps(
++        {
++            "type": "grep_session",
++            "session": ref.id,
++            "provider": ref.provider,
++            "path": str(ref.path),
++        },
++        ensure_ascii=False,
+     )
+-    if len(kept) > len(shown):
+-        print(f"# +{len(kept) - len(shown)} matching sessions hidden (raise -n)")
+-    if any(is_live(ref.ended) for ref, _count, _first in shown):
+-        print(LIVE_NOTE)
+-    print("# oldest first: --sort started; keep zero-match rows: --all")
+-    for line in warn:
+-        print(line)
+-    return 0
+-
+-
+-def _counts(refs: list[SessionRef], parse, needle: re.Pattern, opts: GrepOpts) -> list[tuple]:
+-    """(session, matches, first matching seq) for every session in scope."""
+-    rows = []
+-    for ref in refs:
+-        hits = [
+-            e for e in opts.events(ref, parse, summarize=True) if e.text and needle.search(e.text)
+-        ]
+-        rows.append((ref, len(hits), hits[0].seq if hits else 0))
+-    return rows
+ 
+ 
+ def _emit(ref: SessionRef, events: list[Event], hits: list[Event], opts: GrepOpts, sink: _Sink):
+-    """Send one session's hits to the sink in the requested shape."""
++    """Send one session's hits to the sink in the requested shape.
++
++    JSON is decided before -l, so every JSON mode emits JSON. Raw records are
++    deduplicated per transcript: one physical line holding two matching blocks
++    is one record, and printing it twice would misreport the source.
++    """
++    if opts.json_out:
++        if opts.ids_only:
++            sink.write([_session_json(ref)])
++            return
++        for event in record_events(hits):
++            sink.write([json.dumps(event.raw.get("line", {}), ensure_ascii=False)])
++        return
+     if opts.ids_only:
+         sink.write([ref.short_id])
+         return
+-    if opts.json_out:
+-        for event in hits:
+-            sink.write([json.dumps(event.raw.get("line", {}), ensure_ascii=False)])
+-        return
+     if opts.context > 0:
+         index = {id(event): i for i, event in enumerate(events)}
+         cap = line_limit(None)
+@@ -260,7 +183,7 @@ def _hits_view(
+             sessions += 1
+             _emit(ref, events, hits, opts, sink)
+     if total == 0:
+-        return _empty(pattern, len(refs), warn)
++        return empty(pattern, len(refs), warn)
+     if opts.json_out:
+         return 0
+     if sink.capped:
+@@ -279,10 +202,9 @@ def _hits_view(
+ 
+ def grep_view(pattern: str, refs: list[SessionRef], parse, opts: GrepOpts) -> int:
+     """Search event text across the scope; -c ranks sessions, -l lists ids."""
+-    if opts.sort not in SORTS:
+-        fail(f"--sort takes {' or '.join(SORTS)}, not '{opts.sort}'")
++    opts.check()
+     needle = compile_pattern(pattern, opts.fixed, opts.ignore_case)
+-    warn = _warnings(pattern, opts)
++    warn = warnings(pattern, opts)
+     if opts.count:
+-        return _count_view(pattern, _counts(refs, parse, needle, opts), opts, warn)
++        return count_view(pattern, counts(refs, parse, needle, opts), opts, warn)
+     return _hits_view(pattern, refs, parse, needle, opts, warn)
+diff --git a/src/sxr/views_info.py b/src/sxr/views_info.py
+index 472c736..d565ce6 100644
+--- a/src/sxr/views_info.py
++++ b/src/sxr/views_info.py
+@@ -6,7 +6,7 @@ from collections import Counter
+ 
+ from sxr.model import Event, SessionRef
+ from sxr.navigation import command
+-from sxr.output import RowBudget
++from sxr.output import RowBudget, print_records
+ from sxr.providers.claude_code import INTERRUPT_MARKER
+ from sxr.session_scope import render
+ from sxr.util import LIVE_NOTE, day, human_num, human_size, is_live, live_mark, tab_row
+@@ -222,6 +222,10 @@ def cmds_view(
+     view fell back to the default scope rather than a chosen one: then the
+     sessions it did not read are disclosed and --all-sessions is named. -n caps
+     printed rows across the whole scope, not per session; -n 0 prints all.
++
++    Under --json the unit is the physical source record, not the call: a line
++    that recorded two tool calls is printed once, and -n counts records, so a
++    limit can never split one line's calls across the cap.
+     """
+     import re
+ 
+@@ -235,6 +239,7 @@ def cmds_view(
+     cap = line_limit(None)
+     total = shown = 0
+     first_call = None
++    records = RowBudget(limit)
+     for ref in refs:
+         calls = [e for e in parse(ref.path) if e.kind == "tool"]
+         if needle is not None:
+@@ -243,9 +248,8 @@ def cmds_view(
+             first_call = (ref, calls[0].seq)
+         total += len(calls)
+         if json_out:
+-            for event in calls if not limit else calls[: max(0, limit - shown)]:
+-                print(json.dumps(event.raw.get("line", {}), ensure_ascii=False))
+-                shown += 1
++            # One line holding two tool calls is one record; -n counts records.
++            print_records(calls, limit, records)
+             continue
+         prefix = f"{ref.short_id}\t" if len(refs) > 1 else ""
+         for event in calls:
+diff --git a/tests/test_timestamps.py b/tests/test_timestamps.py
+new file mode 100644
+index 0000000..90ab202
+--- /dev/null
++++ b/tests/test_timestamps.py
+@@ -0,0 +1,328 @@
++"""One timestamp parser for sorting, filtering and display (SXR-CLI-08).
++
++Three defects, all from reading recorded timestamps as text instead of moments:
++
++* `day()` returned `ts[:19] + "Z"`, so `2026-09-10T09:00:00+02:00` displayed as
++  `09:00:00Z` when the moment it names is `07:00:00Z`. `clock()` sliced the same
++  way, and `grep -c`'s date column and `find`'s used `ts[:10]`.
++* Session ordering compared the strings, so an offset-bearing session sorted by
++  its digits rather than its instant -- which decides `@N`.
++* `grep -c --sort started` compared the strings too.
++
++Window filtering (`--since`/`--before`) already compared UTC instants before this
++slice, so the tests here assert it did not move: a literal bound keeps exactly the
++sessions it kept before. What does move is a bound written `--since @N`, because
++`@N` names a different session once the order is right, and that is asserted as
++the deliberate consequence it is rather than left to be discovered.
++
++The fixture records the same moment twice in different offsets, and one session
++just after local midnight east of Greenwich whose UTC day is the previous one.
++"""
++
++import json
++from datetime import UTC, datetime
++
++import pytest
++from typer.testing import CliRunner
++
++from sxr.cli import app
++from sxr.util import clock, date_of, day, instant, order_key
++
++CWD = "/w"
++NEEDLE = "chronology"
++
++# key, claude id, codex id, recorded start, UTC instant it names
++CORPUS = [
++    (
++        "S1",
++        "aaaaaaa1-0000-4000-8000-00000000000a",
++        "01999991-aaaa-7000-8000-00000000000a",
++        "2026-09-10T09:00:00+02:00",
++        "2026-09-10T07:00:00Z",
++    ),
++    (
++        "S2",
++        "bbbbbbb2-0000-4000-8000-00000000000b",
++        "01999992-bbbb-7000-8000-00000000000b",
++        "2026-09-10T07:00:00Z",
++        "2026-09-10T07:00:00Z",
++    ),
++    (
++        "S3",
++        "ccccccc3-0000-4000-8000-00000000000c",
++        "01999993-cccc-7000-8000-00000000000c",
++        "2026-09-10T08:00:00Z",
++        "2026-09-10T08:00:00Z",
++    ),
++    (
++        "S4",
++        "ddddddd4-0000-4000-8000-00000000000d",
++        "01999994-dddd-7000-8000-00000000000d",
++        "2026-09-11T00:30:00+02:00",
++        "2026-09-10T22:30:00Z",
++    ),
++]
++
++
++def _claude(root, key, ident, start):
++    project = root / "projects" / "-w"
++    project.mkdir(parents=True, exist_ok=True)
++    body = [
++        dict(
++            type="user", timestamp=start, cwd=CWD, message=dict(role="user", content=f"open {key}")
++        ),
++        dict(
++            type="assistant",
++            timestamp=start,
++            cwd=CWD,
++            message=dict(
++                role="assistant",
++                content=[dict(type="text", text=f"{NEEDLE} {key}")],
++            ),
++        ),
++    ]
++    (project / f"{ident}.jsonl").write_text("\n".join(json.dumps(r) for r in body) + "\n")
++
++
++def _codex(root, key, ident, start):
++    directory = root / "sessions" / start[:4] / start[5:7] / start[8:10]
++    directory.mkdir(parents=True, exist_ok=True)
++
++    body = [
++        dict(
++            timestamp=start, type="session_meta", payload=dict(id=ident, cwd=CWD, timestamp=start)
++        ),
++        # A Codex human turn is event_msg/user_message, and that record is what
++        # supplies the session title; a response_item with role "user" does not.
++        dict(
++            timestamp=start,
++            type="event_msg",
++            payload=dict(type="user_message", message=f"open {key}"),
++        ),
++        dict(
++            timestamp=start,
++            type="response_item",
++            payload=dict(
++                type="message",
++                role="assistant",
++                content=[dict(type="output_text", text=f"{NEEDLE} {key}")],
++            ),
++        ),
++    ]
++    name = f"rollout-{start[:10]}T00-00-00-{ident}.jsonl"
++    (directory / name).write_text("\n".join(json.dumps(r) for r in body) + "\n")
++
++
++@pytest.fixture(params=["claude", "codex"])
++def corpus(request, tmp_path, monkeypatch):
++    """Four sessions on one provider, whose string and instant orders differ."""
++    root = tmp_path / request.param
++    for key, claude_id, codex_id, start, _utc in CORPUS:
++        if request.param == "claude":
++            _claude(root, key, claude_id, start)
++        else:
++            _codex(root, key, codex_id, start)
++    monkeypatch.setenv(
++        "CLAUDE_CONFIG_DIR" if request.param == "claude" else "CODEX_HOME", str(root)
++    )
++    return request.param
++
++
++def _run(corpus, *args):
++    prefix = ["--codex"] if corpus == "codex" else []
++    return CliRunner().invoke(app, [*prefix, *args, "--path", CWD])
++
++
++def _listed(result):
++    """The session keys of a listing, in printed order."""
++    order = []
++    for line in result.stdout.splitlines():
++        if line.startswith("@"):
++            short = line.split("\t")[1]
++            order += [
++                key for key, c, x, _s, _u in CORPUS if c.startswith(short) or x.startswith(short)
++            ]
++    return order
++
++
++# The parser itself.
++
++
++def test_an_offset_is_applied_not_discarded():
++    assert instant("2026-09-10T09:00:00+02:00") == datetime(2026, 9, 10, 7, tzinfo=UTC)
++
++
++def test_a_zoneless_timestamp_is_read_as_utc_the_way_providers_record_it():
++    assert instant("2026-09-10T09:00:00") == datetime(2026, 9, 10, 9, tzinfo=UTC)
++
++
++def test_a_space_separated_timestamp_is_still_a_timestamp():
++    assert instant("2026-09-10 09:00:00Z") == datetime(2026, 9, 10, 9, tzinfo=UTC)
++
++
++def test_day_prints_the_moment_the_record_names():
++    assert day("2026-09-10T09:00:00+02:00") == "2026-09-10T07:00:00Z"
++    assert day("2026-09-11T00:30:00+02:00") == "2026-09-10T22:30:00Z"
++
++
++def test_day_keeps_returning_empty_for_a_timestamp_it_cannot_read():
++    assert day("") == ""
++    assert day("whenever") == ""
++
++
++def test_clock_is_utc_not_the_recorded_wall_time():
++    assert clock("2026-09-10T09:05:00+02:00") == "07:05:00"
++    assert clock("2026-09-10T09:05:00Z") == "09:05:00"
++    assert clock("nonsense") == "--:--:--"
++
++
++def test_date_of_is_the_utc_day_whose_window_contains_the_session():
++    # ts[:10] would say 2026-09-11, which --since 2026-09-11 does not select.
++    assert date_of("2026-09-11T00:30:00+02:00") == "2026-09-10"
++    assert date_of("") == ""
++
++
++def test_order_key_puts_an_unreadable_timestamp_before_every_real_one():
++    assert order_key("") < order_key("1970-01-02T00:00:00Z")
++
++
++def test_order_key_ranks_by_instant_where_string_order_disagrees():
++    early, late = "2026-09-10T09:00:00+02:00", "2026-09-10T08:00:00Z"
++    assert early > late  # as text
++    assert order_key(early) < order_key(late)  # as moments
++
++
++# Ordering, and the @N handles it decides.
++
++
++def test_sessions_are_listed_newest_instant_first(corpus):
++    result = _run(corpus, "list")
++    assert result.exit_code == 0
++    # S4 22:30, S3 08:00, then S1 and S2 which record the same moment.
++    assert _listed(result)[:2] == ["S4", "S3"]
++    assert set(_listed(result)[2:]) == {"S1", "S2"}
++
++
++def test_sessions_recording_the_same_instant_are_adjacent(corpus):
++    order = _listed(_run(corpus, "list"))
++    assert abs(order.index("S1") - order.index("S2")) == 1
++
++
++def test_sessions_recording_the_same_instant_display_the_same_started(corpus):
++    rows = {}
++    for line in _run(corpus, "list").stdout.splitlines():
++        if line.startswith("@"):
++            cells = line.split("\t")
++            rows[cells[-1]] = cells[2]
++    assert rows["open S1"] == rows["open S2"] == "2026-09-10T07:00:00Z"
++
++
++def test_a_start_after_local_midnight_displays_its_utc_day(corpus):
++    started = {
++        line.split("\t")[-1]: line.split("\t")[2]
++        for line in _run(corpus, "list").stdout.splitlines()
++        if line.startswith("@")
++    }
++    assert started["open S4"] == "2026-09-10T22:30:00Z"
++
++
++def test_list_json_metadata_carries_the_converted_instant(corpus):
++    result = _run(corpus, "list", "--json")
++    starts = {
++        json.loads(line)["title"]: json.loads(line)["started"]
++        for line in result.stdout.splitlines()
++    }
++    assert starts["open S1"] == starts["open S2"] == "2026-09-10T07:00:00Z"
++    assert starts["open S4"] == "2026-09-10T22:30:00Z"
++
++
++def test_handle_one_is_the_newest_by_instant(corpus):
++    assert "S4" in _run(corpus, "show", "@1", "--tail", "1").stdout
++
++
++def test_row_limits_take_the_newest_instants(corpus):
++    assert _listed(_run(corpus, "list", "-n", "2")) == ["S4", "S3"]
++
++
++# grep -c: the ordering and the date column.
++
++
++def test_count_sort_started_orders_by_instant(corpus):
++    rows = [
++        line
++        for line in _run(corpus, "grep", NEEDLE, "-c", "--sort", "started").stdout.splitlines()
++        if not line.startswith("#")
++    ]
++    dates = [line.split("\t")[3] for line in rows if "\t" in line]
++    assert dates == sorted(dates)
++    titles = [line.split("\t")[-1] for line in rows if "\t" in line]
++    assert titles[-1] == "open S4"  # 22:30Z is the newest, though its digits say the 11th
++
++
++def test_count_date_column_is_the_utc_day(corpus):
++    rows = _run(corpus, "grep", NEEDLE, "-c").stdout.splitlines()
++    dates = {line.split("\t")[-1]: line.split("\t")[3] for line in rows if line.count("\t") >= 4}
++    assert dates["open S4"] == "2026-09-10"
++
++
++def test_count_json_started_is_the_utc_day(corpus):
++    result = _run(corpus, "grep", NEEDLE, "-c", "--json")
++    rows = {
++        json.loads(line)["title"]: json.loads(line)["started"]
++        for line in result.stdout.splitlines()
++    }
++    assert rows["open S4"] == "2026-09-10"
++
++
++# What must not move: raw records, and literal window bounds.
++
++
++def test_raw_json_keeps_the_source_timestamp_verbatim(corpus):
++    result = _run(corpus, "show", "@1", "--json")
++    stamps = {record.get("timestamp") for record in map(json.loads, result.stdout.splitlines())}
++    assert "2026-09-11T00:30:00+02:00" in stamps
++    assert "2026-09-10T22:30:00Z" not in stamps
++
++
++@pytest.mark.parametrize(
++    ("bound", "expected"),
++    [
++        (["--since", "2026-09-10"], {"S1", "S2", "S3", "S4"}),
++        (["--before", "2026-09-11"], {"S1", "S2", "S3", "S4"}),
++        (["--since", "2026-09-10", "--before", "2026-09-11"], {"S1", "S2", "S3", "S4"}),
++        (["--since", "2026-09-11"], set()),
++        (["--since", "2026-09-10T07:30:00Z"], {"S3", "S4"}),
++        (["--before", "2026-09-10T07:30:00Z"], {"S1", "S2"}),
++        (["--since", "2026-09-10T09:30:00+02:00"], {"S3", "S4"}),
++    ],
++)
++def test_a_literal_window_bound_keeps_the_sessions_it_always_kept(corpus, bound, expected):
++    # These sets are the measured pre-slice behavior: window filtering already
++    # compared instants, so unifying the parser must not move any of them.
++    assert set(_listed(_run(corpus, "list", *bound))) == expected
++
++
++def test_the_session_a_window_keeps_is_the_one_whose_displayed_day_it_names(corpus):
++    # Before this slice, S4 displayed 2026-09-11 while only the 10th's window
++    # contained it. The two now agree.
++    kept = _run(corpus, "list", "--since", "2026-09-10", "--before", "2026-09-11")
++    assert "open S4" in kept.stdout
++    assert "2026-09-10T22:30:00Z" in kept.stdout
++    assert _listed(_run(corpus, "list", "--since", "2026-09-11")) == []
++
++
++def test_a_handle_bound_follows_the_corrected_numbering(corpus):
++    # @2 is now S3 at 08:00Z, not S1 at 07:00Z, so the bound is an hour later and
++    # keeps two sessions rather than four. This is the renumbering, not the window.
++    assert set(_listed(_run(corpus, "list", "--since", "@2"))) == {"S3", "S4"}
++    assert set(_listed(_run(corpus, "list", "--before", "@2"))) == {"S1", "S2"}
++
++
++def test_an_empty_window_still_exits_zero_for_a_listing(corpus):
++    result = _run(corpus, "list", "--since", "2026-09-11")
++    assert result.exit_code == 0  # SXR-AUD-017
++    assert "kept none of 4 sessions" in result.stderr
++
++
++def test_an_unreadable_window_bound_is_still_a_usage_error(corpus):
++    assert _run(corpus, "list", "--since", "not-a-date").exit_code == 2

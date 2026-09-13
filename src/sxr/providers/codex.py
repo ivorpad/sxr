@@ -14,6 +14,7 @@ from typing import Any
 from sxr.discovery import deduplicate, matches_path, normalize_path, project_paths
 from sxr.model import Event, SessionRef
 from sxr.providers.codex_events import _record_event, canonicalize
+from sxr.util import order_key
 
 
 def sessions_root() -> Path:
@@ -150,7 +151,7 @@ def list_sessions(
                 ref.extra.update(root=str(root), archived=root != roots[0], provenance=[str(path)])
                 refs.append(ref)
     refs = deduplicate(refs)
-    refs.sort(key=lambda r: (r.started, r.id), reverse=True)
+    refs.sort(key=lambda r: (order_key(r.started), r.id), reverse=True)
     if not lazy:
         for ref in refs:
             ref.summarize()

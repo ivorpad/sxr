@@ -12,7 +12,7 @@ import sys
 from sxr.grep_options import METACHARS, SORTS, GrepOpts
 from sxr.model import SessionRef
 from sxr.navigation import command
-from sxr.util import LIVE_NOTE, is_live, live_mark, tab_row
+from sxr.util import LIVE_NOTE, date_of, is_live, live_mark, order_key, tab_row
 
 TITLE_CAP = 50
 BROADEN = "# smart-case regex; -F for literal; --codex / --path <dir> widen scope"
@@ -53,7 +53,7 @@ def _order(rows: list[tuple], opts: GrepOpts) -> list[tuple]:
     """Count rows sorted by match density, or oldest first for --sort started."""
     kept = rows if opts.include_all else [row for row in rows if row[1]]
     if opts.order == SORTS[1]:
-        return sorted(kept, key=lambda row: row[0].started)
+        return sorted(kept, key=lambda row: order_key(row[0].started))
     return sorted(kept, key=lambda row: -row[1])
 
 
@@ -91,7 +91,7 @@ def count_view(pattern: str, rows: list[tuple], opts: GrepOpts, warn: list[str])
                         "session": ref.id,
                         "matches": count,
                         "first": first,
-                        "started": ref.started[:10],
+                        "started": date_of(ref.started),
                         "live": is_live(ref.ended),
                         "title": title(ref),
                     },
@@ -101,7 +101,7 @@ def count_view(pattern: str, rows: list[tuple], opts: GrepOpts, warn: list[str])
         return 0
     print(tab_row("# session", "matches", "first", "started", "title"))
     for ref, count, first in shown:
-        print(tab_row(ref.short_id, count, first or "", ref.started[:10], title(ref, True)))
+        print(tab_row(ref.short_id, count, first or "", date_of(ref.started), title(ref, True)))
     top = shown[0]
     print(
         f"# {matched} of {len(rows)} sessions match; "

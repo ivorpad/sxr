@@ -1,0 +1,596 @@
+--- a/README.md
++++ b/README.md
+@@ -497,7 +497,12 @@
+ `-c` table, and `--since DATE` / `--before DATE` filter the scope by session
+ start (`YYYY-MM-DD`, an ISO datetime, `today`, or `@N` for that session's
+ start; dates are UTC, the interval is `[since, before)`, so `--before today`
+-drops everything recorded today). The label is not a filter because it cannot
++drops everything recorded today). Every displayed timestamp is UTC too, and is
++the moment the record names rather than its digits: a session recorded at
++`2026-09-11T00:30:00+02:00` is listed as `2026-09-10T22:30:00Z` and is inside
++the window `--since 2026-09-10 --before 2026-09-11`, not the next day's. Two
++sessions recording the same moment in different offsets show the same `started`
++and sort adjacently. The label is not a filter because it cannot
+ be: a teammate's concurrent session looks exactly like your own, and dropping
+ it silently would be worse than showing it.
+ 
+@@ -569,6 +574,14 @@
+   physical records, keeping every field of each returned record. Tools JSON
+   is one complete aggregate; stats JSON has one complete object per session.
+   `--tail 0` selects no events and returns 1; negative tails return 2.
++- One timestamp reading serves sorting, filtering and display. A recorded
++  timestamp is converted to its UTC instant, not sliced: an offset is applied
++  rather than replaced by `Z`, and a timestamp with no zone is read as UTC, the
++  way both providers record them. Ordering compares instants, so `@N`, the bare
++  list, `find`'s ranking and `grep -c --sort started` agree with each other and
++  with `--since`/`--before`. Raw `--json` still emits the source record verbatim,
++  its own timestamp string included; only derived metadata such as `list --json`
++  carries the converted instant.
+ - Errors name the flag that fixes them: the candidate list for an ambiguous
+   id is capped at 5 short titles, and a wrong flag is answered with the
+   right one (`-A 3` → `-C 3`, `sxr grep webhook retries` → `"webhook.*retries"`).
+@@ -589,6 +602,19 @@
+ started, title), prunes zero-match rows, and exits 1 when nothing matches.
+ Parsers of the old two-column TSV need `--json` or `--all`.
+ 
++Timestamps are now read as instants everywhere, which corrects chronology for a
++corpus containing offset-bearing timestamps and therefore changes what `@N`
++names in one: a session recorded at `09:00+02:00` used to sort after one
++recorded at `08:00Z`, though it happened an hour earlier. `@N` was always
++documented as temporary and recomputed per invocation, so this is a correction
++rather than a break, but two consequences are worth stating. A displayed
++`started` can move by the recorded offset, and a bound written as `--since @2`
++can select a different session than before, so it may keep a different set;
++a literal bound such as `--since 2026-09-10` keeps exactly the sessions it
++always did, because window filtering already compared instants. Corpora
++recording only `Z` timestamps, which is what both providers write today, are
++unaffected in every respect.
++
+ ## Development
+ 
+ ```bash
+--- a/src/sxr/util.py
++++ b/src/sxr/util.py
+@@ -53,16 +53,63 @@
+     return f"{text[:head]} ...[+{omitted} chars, middle]... {text[-tail:]}"
+ 
+ 
++def instant(ts: str) -> datetime:
++    """The UTC moment a recorded timestamp names; ValueError if it names none.
++
++    A timestamp without a zone is read as UTC, the way both providers record
++    them, and one with an offset is converted rather than having its offset
++    discarded. This is the only place in the tool that reads a recorded
++    timestamp: every sort, window and display goes through it, so a corpus
++    cannot order one way and print another.
++    """
++    return _aware(datetime.fromisoformat(ts.replace(" ", "T")))
++
++
++def _aware(when: datetime) -> datetime:
++    """The same moment as an aware UTC datetime."""
++    return when.replace(tzinfo=UTC) if when.tzinfo is None else when.astimezone(UTC)
++
++
++def _utc(ts: str) -> datetime | None:
++    """instant(), or None for a missing or unreadable timestamp."""
++    try:
++        return instant(ts) if ts else None
++    except (AttributeError, TypeError, ValueError):
++        return None
++
++
+ def clock(ts: str) -> str:
+-    """HH:MM:SS from an ISO timestamp, or blanks when missing."""
+-    return ts[11:19] if len(ts) >= 19 else "--:--:--"
++    """HH:MM:SS UTC from an ISO timestamp, or blanks when there is none."""
++    when = _utc(ts)
++    return when.strftime("%H:%M:%S") if when else "--:--:--"
+ 
+ 
+ def day(ts: str) -> str:
+-    """YYYY-MM-DDTHH:MM:SSZ from an ISO timestamp, or empty string."""
+-    return f"{ts[:19]}Z" if len(ts) >= 19 else ""
++    """YYYY-MM-DDTHH:MM:SSZ in real UTC, or empty string when there is none."""
++    when = _utc(ts)
++    return when.strftime("%Y-%m-%dT%H:%M:%SZ") if when else ""
+ 
+ 
++def date_of(ts: str) -> str:
++    """The UTC calendar date of a timestamp, or empty string when there is none.
++
++    Not `ts[:10]`: for a session recorded just after local midnight east of
++    Greenwich, the recorded date and the UTC date are different days, and the
++    UTC one is the day whose `--since`/`--before` window contains it.
++    """
++    when = _utc(ts)
++    return when.strftime("%Y-%m-%d") if when else ""
++
++
++def order_key(ts: str) -> datetime:
++    """Chronological sort key; an unreadable timestamp sorts as the oldest.
++
++    Sorting the recorded strings instead puts `2026-09-10T09:00:00+02:00` after
++    `2026-09-10T08:00:00Z`, though it happened an hour earlier.
++    """
++    return _utc(ts) or datetime.min.replace(tzinfo=UTC)
++
++
+ def now_utc() -> datetime:
+     """Current UTC time; the seam that lets live-label tests freeze the clock."""
+     return datetime.now(UTC)
+@@ -74,13 +121,8 @@
+     Timestamps without a zone are read as UTC, the way both providers record
+     them; unparseable or missing ones are simply not live.
+     """
+-    try:
+-        stamp = datetime.fromisoformat(ts)
+-    except ValueError:
+-        return False
+-    if stamp.tzinfo is None:
+-        stamp = stamp.replace(tzinfo=UTC)
+-    return abs((now_utc() - stamp).total_seconds()) < LIVE_WINDOW_SECONDS
++    stamp = _utc(ts)
++    return stamp is not None and abs((now_utc() - stamp).total_seconds()) < LIVE_WINDOW_SECONDS
+ 
+ 
+ def live_mark(ts: str) -> str:
+--- a/src/sxr/handles.py
++++ b/src/sxr/handles.py
+@@ -7,7 +7,7 @@
+ 
+ import re
+ import sys
+-from datetime import UTC, datetime
++from datetime import datetime
+ from typing import NoReturn
+ 
+ from sxr import util
+@@ -95,9 +95,8 @@
+ 
+ 
+ def _instant(value: str) -> datetime:
+-    """Treat offset-free timestamps as UTC and compare aware datetime values."""
+-    when = datetime.fromisoformat(value.replace(" ", "T"))
+-    return when.replace(tzinfo=UTC) if when.tzinfo is None else when.astimezone(UTC)
++    """The shared timestamp parser; ValueError here becomes a usage error above."""
++    return util.instant(value)
+ 
+ 
+ def _stamp(value: str, flag: str, sessions: list[SessionRef]) -> datetime:
+--- a/src/sxr/claude_discovery.py
++++ b/src/sxr/claude_discovery.py
+@@ -5,6 +5,7 @@
+ 
+ from sxr.discovery import deduplicate, matches_path, normalize_path, project_paths
+ from sxr.model import SessionRef
++from sxr.util import order_key
+ 
+ 
+ def _metadata(path: Path, *, child: bool = False) -> SessionRef:
+@@ -79,7 +80,7 @@
+             if include_agents:
+                 refs.extend(_children(ref, profile))
+     unique = deduplicate(refs)
+-    unique.sort(key=lambda ref: (ref.started, ref.id), reverse=True)
++    unique.sort(key=lambda ref: (order_key(ref.started), ref.id), reverse=True)
+     if not lazy:
+         for ref in unique:
+             ref.summarize()
+--- a/src/sxr/providers/codex.py
++++ b/src/sxr/providers/codex.py
+@@ -14,6 +14,7 @@
+ from sxr.discovery import deduplicate, matches_path, normalize_path, project_paths
+ from sxr.model import Event, SessionRef
+ from sxr.providers.codex_events import _record_event, canonicalize
++from sxr.util import order_key
+ 
+ 
+ def sessions_root() -> Path:
+@@ -150,7 +151,7 @@
+                 ref.extra.update(root=str(root), archived=root != roots[0], provenance=[str(path)])
+                 refs.append(ref)
+     refs = deduplicate(refs)
+-    refs.sort(key=lambda r: (r.started, r.id), reverse=True)
++    refs.sort(key=lambda r: (order_key(r.started), r.id), reverse=True)
+     if not lazy:
+         for ref in refs:
+             ref.summarize()
+--- a/src/sxr/find_service.py
++++ b/src/sxr/find_service.py
+@@ -16,7 +16,7 @@
+ from sxr.handles import fail, window
+ from sxr.index_store import connect
+ from sxr.providers import claude_code, codex
+-from sxr.util import one_line
++from sxr.util import date_of, one_line, order_key
+ 
+ 
+ def _roots(ctx, use_codex, use_claude):
+@@ -94,7 +94,7 @@
+             ):
+                 kept.append(r)
+         refs = kept
+-    refs.sort(key=lambda r: (r.started, r.id), reverse=True)
++    refs.sort(key=lambda r: (order_key(r.started), r.id), reverse=True)
+     return window(refs, since or root.get("since"), before or root.get("before"))
+ 
+ 
+@@ -158,7 +158,7 @@
+             print(f"# incomplete: {error}", file=sys.stderr)
+         return
+     for rank, result in enumerate(results, 1):
+-        print(f"{rank}. {result['provider']} {result['id']}  {result['started'][:10]}")
++        print(f"{rank}. {result['provider']} {result['id']}  {date_of(result['started'])}")
+         _display(f"   {result['cwd']}  {one_line(result['title'], 120)}")
+         for item in result["evidence"]:
+             outcome = f" -> {item['outcome']}" if item["outcome"] else ""
+--- a/src/sxr/grep_counts.py
++++ b/src/sxr/grep_counts.py
+@@ -12,7 +12,7 @@
+ from sxr.grep_options import METACHARS, SORTS, GrepOpts
+ from sxr.model import SessionRef
+ from sxr.navigation import command
+-from sxr.util import LIVE_NOTE, is_live, live_mark, tab_row
++from sxr.util import LIVE_NOTE, date_of, is_live, live_mark, order_key, tab_row
+ 
+ TITLE_CAP = 50
+ BROADEN = "# smart-case regex; -F for literal; --codex / --path <dir> widen scope"
+@@ -53,7 +53,7 @@
+     """Count rows sorted by match density, or oldest first for --sort started."""
+     kept = rows if opts.include_all else [row for row in rows if row[1]]
+     if opts.order == SORTS[1]:
+-        return sorted(kept, key=lambda row: row[0].started)
++        return sorted(kept, key=lambda row: order_key(row[0].started))
+     return sorted(kept, key=lambda row: -row[1])
+ 
+ 
+@@ -91,7 +91,7 @@
+                         "session": ref.id,
+                         "matches": count,
+                         "first": first,
+-                        "started": ref.started[:10],
++                        "started": date_of(ref.started),
+                         "live": is_live(ref.ended),
+                         "title": title(ref),
+                     },
+@@ -101,7 +101,7 @@
+         return 0
+     print(tab_row("# session", "matches", "first", "started", "title"))
+     for ref, count, first in shown:
+-        print(tab_row(ref.short_id, count, first or "", ref.started[:10], title(ref, True)))
++        print(tab_row(ref.short_id, count, first or "", date_of(ref.started), title(ref, True)))
+     top = shown[0]
+     print(
+         f"# {matched} of {len(rows)} sessions match; "
+--- /dev/null
++++ b/tests/test_timestamps.py
+@@ -0,0 +1,328 @@
++"""One timestamp parser for sorting, filtering and display (SXR-CLI-08).
++
++Three defects, all from reading recorded timestamps as text instead of moments:
++
++* `day()` returned `ts[:19] + "Z"`, so `2026-09-10T09:00:00+02:00` displayed as
++  `09:00:00Z` when the moment it names is `07:00:00Z`. `clock()` sliced the same
++  way, and `grep -c`'s date column and `find`'s used `ts[:10]`.
++* Session ordering compared the strings, so an offset-bearing session sorted by
++  its digits rather than its instant -- which decides `@N`.
++* `grep -c --sort started` compared the strings too.
++
++Window filtering (`--since`/`--before`) already compared UTC instants before this
++slice, so the tests here assert it did not move: a literal bound keeps exactly the
++sessions it kept before. What does move is a bound written `--since @N`, because
++`@N` names a different session once the order is right, and that is asserted as
++the deliberate consequence it is rather than left to be discovered.
++
++The fixture records the same moment twice in different offsets, and one session
++just after local midnight east of Greenwich whose UTC day is the previous one.
++"""
++
++import json
++from datetime import UTC, datetime
++
++import pytest
++from typer.testing import CliRunner
++
++from sxr.cli import app
++from sxr.util import clock, date_of, day, instant, order_key
++
++CWD = "/w"
++NEEDLE = "chronology"
++
++# key, claude id, codex id, recorded start, UTC instant it names
++CORPUS = [
++    (
++        "S1",
++        "aaaaaaa1-0000-4000-8000-00000000000a",
++        "01999991-aaaa-7000-8000-00000000000a",
++        "2026-09-10T09:00:00+02:00",
++        "2026-09-10T07:00:00Z",
++    ),
++    (
++        "S2",
++        "bbbbbbb2-0000-4000-8000-00000000000b",
++        "01999992-bbbb-7000-8000-00000000000b",
++        "2026-09-10T07:00:00Z",
++        "2026-09-10T07:00:00Z",
++    ),
++    (
++        "S3",
++        "ccccccc3-0000-4000-8000-00000000000c",
++        "01999993-cccc-7000-8000-00000000000c",
++        "2026-09-10T08:00:00Z",
++        "2026-09-10T08:00:00Z",
++    ),
++    (
++        "S4",
++        "ddddddd4-0000-4000-8000-00000000000d",
++        "01999994-dddd-7000-8000-00000000000d",
++        "2026-09-11T00:30:00+02:00",
++        "2026-09-10T22:30:00Z",
++    ),
++]
++
++
++def _claude(root, key, ident, start):
++    project = root / "projects" / "-w"
++    project.mkdir(parents=True, exist_ok=True)
++    body = [
++        dict(
++            type="user", timestamp=start, cwd=CWD, message=dict(role="user", content=f"open {key}")
++        ),
++        dict(
++            type="assistant",
++            timestamp=start,
++            cwd=CWD,
++            message=dict(
++                role="assistant",
++                content=[dict(type="text", text=f"{NEEDLE} {key}")],
++            ),
++        ),
++    ]
++    (project / f"{ident}.jsonl").write_text("\n".join(json.dumps(r) for r in body) + "\n")
++
++
++def _codex(root, key, ident, start):
++    directory = root / "sessions" / start[:4] / start[5:7] / start[8:10]
++    directory.mkdir(parents=True, exist_ok=True)
++
++    body = [
++        dict(
++            timestamp=start, type="session_meta", payload=dict(id=ident, cwd=CWD, timestamp=start)
++        ),
++        # A Codex human turn is event_msg/user_message, and that record is what
++        # supplies the session title; a response_item with role "user" does not.
++        dict(
++            timestamp=start,
++            type="event_msg",
++            payload=dict(type="user_message", message=f"open {key}"),
++        ),
++        dict(
++            timestamp=start,
++            type="response_item",
++            payload=dict(
++                type="message",
++                role="assistant",
++                content=[dict(type="output_text", text=f"{NEEDLE} {key}")],
++            ),
++        ),
++    ]
++    name = f"rollout-{start[:10]}T00-00-00-{ident}.jsonl"
++    (directory / name).write_text("\n".join(json.dumps(r) for r in body) + "\n")
++
++
++@pytest.fixture(params=["claude", "codex"])
++def corpus(request, tmp_path, monkeypatch):
++    """Four sessions on one provider, whose string and instant orders differ."""
++    root = tmp_path / request.param
++    for key, claude_id, codex_id, start, _utc in CORPUS:
++        if request.param == "claude":
++            _claude(root, key, claude_id, start)
++        else:
++            _codex(root, key, codex_id, start)
++    monkeypatch.setenv(
++        "CLAUDE_CONFIG_DIR" if request.param == "claude" else "CODEX_HOME", str(root)
++    )
++    return request.param
++
++
++def _run(corpus, *args):
++    prefix = ["--codex"] if corpus == "codex" else []
++    return CliRunner().invoke(app, [*prefix, *args, "--path", CWD])
++
++
++def _listed(result):
++    """The session keys of a listing, in printed order."""
++    order = []
++    for line in result.stdout.splitlines():
++        if line.startswith("@"):
++            short = line.split("\t")[1]
++            order += [
++                key for key, c, x, _s, _u in CORPUS if c.startswith(short) or x.startswith(short)
++            ]
++    return order
++
++
++# The parser itself.
++
++
++def test_an_offset_is_applied_not_discarded():
++    assert instant("2026-09-10T09:00:00+02:00") == datetime(2026, 9, 10, 7, tzinfo=UTC)
++
++
++def test_a_zoneless_timestamp_is_read_as_utc_the_way_providers_record_it():
++    assert instant("2026-09-10T09:00:00") == datetime(2026, 9, 10, 9, tzinfo=UTC)
++
++
++def test_a_space_separated_timestamp_is_still_a_timestamp():
++    assert instant("2026-09-10 09:00:00Z") == datetime(2026, 9, 10, 9, tzinfo=UTC)
++
++
++def test_day_prints_the_moment_the_record_names():
++    assert day("2026-09-10T09:00:00+02:00") == "2026-09-10T07:00:00Z"
++    assert day("2026-09-11T00:30:00+02:00") == "2026-09-10T22:30:00Z"
++
++
++def test_day_keeps_returning_empty_for_a_timestamp_it_cannot_read():
++    assert day("") == ""
++    assert day("whenever") == ""
++
++
++def test_clock_is_utc_not_the_recorded_wall_time():
++    assert clock("2026-09-10T09:05:00+02:00") == "07:05:00"
++    assert clock("2026-09-10T09:05:00Z") == "09:05:00"
++    assert clock("nonsense") == "--:--:--"
++
++
++def test_date_of_is_the_utc_day_whose_window_contains_the_session():
++    # ts[:10] would say 2026-09-11, which --since 2026-09-11 does not select.
++    assert date_of("2026-09-11T00:30:00+02:00") == "2026-09-10"
++    assert date_of("") == ""
++
++
++def test_order_key_puts_an_unreadable_timestamp_before_every_real_one():
++    assert order_key("") < order_key("1970-01-02T00:00:00Z")
++
++
++def test_order_key_ranks_by_instant_where_string_order_disagrees():
++    early, late = "2026-09-10T09:00:00+02:00", "2026-09-10T08:00:00Z"
++    assert early > late  # as text
++    assert order_key(early) < order_key(late)  # as moments
++
++
++# Ordering, and the @N handles it decides.
++
++
++def test_sessions_are_listed_newest_instant_first(corpus):
++    result = _run(corpus, "list")
++    assert result.exit_code == 0
++    # S4 22:30, S3 08:00, then S1 and S2 which record the same moment.
++    assert _listed(result)[:2] == ["S4", "S3"]
++    assert set(_listed(result)[2:]) == {"S1", "S2"}
++
++
++def test_sessions_recording_the_same_instant_are_adjacent(corpus):
++    order = _listed(_run(corpus, "list"))
++    assert abs(order.index("S1") - order.index("S2")) == 1
++
++
++def test_sessions_recording_the_same_instant_display_the_same_started(corpus):
++    rows = {}
++    for line in _run(corpus, "list").stdout.splitlines():
++        if line.startswith("@"):
++            cells = line.split("\t")
++            rows[cells[-1]] = cells[2]
++    assert rows["open S1"] == rows["open S2"] == "2026-09-10T07:00:00Z"
++
++
++def test_a_start_after_local_midnight_displays_its_utc_day(corpus):
++    started = {
++        line.split("\t")[-1]: line.split("\t")[2]
++        for line in _run(corpus, "list").stdout.splitlines()
++        if line.startswith("@")
++    }
++    assert started["open S4"] == "2026-09-10T22:30:00Z"
++
++
++def test_list_json_metadata_carries_the_converted_instant(corpus):
++    result = _run(corpus, "list", "--json")
++    starts = {
++        json.loads(line)["title"]: json.loads(line)["started"]
++        for line in result.stdout.splitlines()
++    }
++    assert starts["open S1"] == starts["open S2"] == "2026-09-10T07:00:00Z"
++    assert starts["open S4"] == "2026-09-10T22:30:00Z"
++
++
++def test_handle_one_is_the_newest_by_instant(corpus):
++    assert "S4" in _run(corpus, "show", "@1", "--tail", "1").stdout
++
++
++def test_row_limits_take_the_newest_instants(corpus):
++    assert _listed(_run(corpus, "list", "-n", "2")) == ["S4", "S3"]
++
++
++# grep -c: the ordering and the date column.
++
++
++def test_count_sort_started_orders_by_instant(corpus):
++    rows = [
++        line
++        for line in _run(corpus, "grep", NEEDLE, "-c", "--sort", "started").stdout.splitlines()
++        if not line.startswith("#")
++    ]
++    dates = [line.split("\t")[3] for line in rows if "\t" in line]
++    assert dates == sorted(dates)
++    titles = [line.split("\t")[-1] for line in rows if "\t" in line]
++    assert titles[-1] == "open S4"  # 22:30Z is the newest, though its digits say the 11th
++
++
++def test_count_date_column_is_the_utc_day(corpus):
++    rows = _run(corpus, "grep", NEEDLE, "-c").stdout.splitlines()
++    dates = {line.split("\t")[-1]: line.split("\t")[3] for line in rows if line.count("\t") >= 4}
++    assert dates["open S4"] == "2026-09-10"
++
++
++def test_count_json_started_is_the_utc_day(corpus):
++    result = _run(corpus, "grep", NEEDLE, "-c", "--json")
++    rows = {
++        json.loads(line)["title"]: json.loads(line)["started"]
++        for line in result.stdout.splitlines()
++    }
++    assert rows["open S4"] == "2026-09-10"
++
++
++# What must not move: raw records, and literal window bounds.
++
++
++def test_raw_json_keeps_the_source_timestamp_verbatim(corpus):
++    result = _run(corpus, "show", "@1", "--json")
++    stamps = {record.get("timestamp") for record in map(json.loads, result.stdout.splitlines())}
++    assert "2026-09-11T00:30:00+02:00" in stamps
++    assert "2026-09-10T22:30:00Z" not in stamps
++
++
++@pytest.mark.parametrize(
++    ("bound", "expected"),
++    [
++        (["--since", "2026-09-10"], {"S1", "S2", "S3", "S4"}),
++        (["--before", "2026-09-11"], {"S1", "S2", "S3", "S4"}),
++        (["--since", "2026-09-10", "--before", "2026-09-11"], {"S1", "S2", "S3", "S4"}),
++        (["--since", "2026-09-11"], set()),
++        (["--since", "2026-09-10T07:30:00Z"], {"S3", "S4"}),
++        (["--before", "2026-09-10T07:30:00Z"], {"S1", "S2"}),
++        (["--since", "2026-09-10T09:30:00+02:00"], {"S3", "S4"}),
++    ],
++)
++def test_a_literal_window_bound_keeps_the_sessions_it_always_kept(corpus, bound, expected):
++    # These sets are the measured pre-slice behavior: window filtering already
++    # compared instants, so unifying the parser must not move any of them.
++    assert set(_listed(_run(corpus, "list", *bound))) == expected
++
++
++def test_the_session_a_window_keeps_is_the_one_whose_displayed_day_it_names(corpus):
++    # Before this slice, S4 displayed 2026-09-11 while only the 10th's window
++    # contained it. The two now agree.
++    kept = _run(corpus, "list", "--since", "2026-09-10", "--before", "2026-09-11")
++    assert "open S4" in kept.stdout
++    assert "2026-09-10T22:30:00Z" in kept.stdout
++    assert _listed(_run(corpus, "list", "--since", "2026-09-11")) == []
++
++
++def test_a_handle_bound_follows_the_corrected_numbering(corpus):
++    # @2 is now S3 at 08:00Z, not S1 at 07:00Z, so the bound is an hour later and
++    # keeps two sessions rather than four. This is the renumbering, not the window.
++    assert set(_listed(_run(corpus, "list", "--since", "@2"))) == {"S3", "S4"}
++    assert set(_listed(_run(corpus, "list", "--before", "@2"))) == {"S1", "S2"}
++
++
++def test_an_empty_window_still_exits_zero_for_a_listing(corpus):
++    result = _run(corpus, "list", "--since", "2026-09-11")
++    assert result.exit_code == 0  # SXR-AUD-017
++    assert "kept none of 4 sessions" in result.stderr
++
++
++def test_an_unreadable_window_bound_is_still_a_usage_error(corpus):
++    assert _run(corpus, "list", "--since", "not-a-date").exit_code == 2
