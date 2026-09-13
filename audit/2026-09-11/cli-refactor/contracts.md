@@ -35,6 +35,15 @@ explicitly and names the migration note. Everything else here is a regression.
   skipped without renumbering later records, and files are never rewritten
   (`SXR-AUD-015`).
 - Aggregate JSON objects keep all their fields even when rows are limited.
+- **`grep -l --json` emits a documented projection, not raw records, and that is
+  deliberate** (`D-12`, SXR-CLI-06). `-l` answers "which sessions matched", which
+  no transcript line records, so there is nothing raw to print. The shape is
+  `{"type": "grep_session", "session", "provider", "path"}`, with the full
+  session id and the `path` key `list --json` already uses. Two changes are
+  regressions, not corrections: reverting it to raw records or to bare ids, which
+  D-09 does not require and which made the mode emit non-JSON before; and adding
+  a match count, which would make `-l` and `-c` indistinguishable. `-c` keeps its
+  own `grep_count` projection. Both are pinned by `tests/test_grep_modes.py`.
 - Secret values are never printed, `--json` included; only kind, severity and a
   salted fingerprint.
 

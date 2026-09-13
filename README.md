@@ -396,12 +396,29 @@ Patterns are smart-case regexes: an all-lowercase pattern matches any case, a
 pattern with capitals matches exactly, and the footer says so, because a
 capitalised or metacharacter-laden pattern otherwise misses matches silently
 (`grep -c "Webhook"` can find 12 sessions where `webhook` finds 22). `-i`
-forces case-insensitive, `-F` matches the pattern literally, `-l` prints only
-the ids that match, `-e` spells the pattern for one that starts with a dash.
+forces case-insensitive, `-F` matches the pattern literally, `--ids` (also `-l`,
+`--files-with-matches`) lists the sessions that match rather than the matches,
+`-e` spells the pattern for one that starts with a dash.
 
 Match rows are capped at 40k chars (`--budget`, env `SXR_BUDGET`) or at `-n`
 rows, whichever comes first; the footer reports the true match count and
 `-n 0` prints all of them.
+
+Each of `grep`'s three shapes has its own `--json`, and all three emit JSON.
+Plain `--json` prints the matching source records, one per physical JSONL line:
+a single line whose content holds two matching blocks is one record, printed
+once, and `-n` counts those records. `-c --json` prints one `grep_count` object
+per ranked session. `--ids --json` prints one `grep_session` object per matching
+session, carrying the full id, the provider and the source `path` under the same
+key `sxr list --json` uses for it -- a projection,
+not a source record, because "which sessions matched" is not a line the
+transcript contains. `sxr cmds --json` follows the same record rule: one line
+that recorded two tool calls is one record.
+
+Flags that describe a shape the mode cannot produce are refused rather than
+ignored: `-c` with `--ids` or with `-C`, and `--sort` without `-c`, all exit 2
+naming both flags, and `-C` requires a count of 0 or more. `--budget` with `-c`
+says on stderr that it caps match text the table does not print.
 
 When the JSONL location is known, `--file` skips session discovery. It detects
 Claude or Codex from the records, retains parent-qualified Claude child IDs,

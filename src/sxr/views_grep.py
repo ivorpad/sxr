@@ -1,34 +1,23 @@
-"""Cross-session search: match rows, -C windows, and the -c decision table.
+"""Cross-session search: the match rows, the -C windows and the -l session list.
 
-Every output path is capped: -n limits rows, a char budget stops runaway
-scans, and the footers name the flag that widens or narrows the next call.
+Every output path is capped: -n limits rows, a char budget stops runaway scans,
+and the footers name the flag that widens or narrows the next call. The -c table
+and the shared diagnostics live in grep_counts.
+
 """
 
 import json
 import re
-import sys
 from dataclasses import dataclass
 
+from sxr.grep_counts import count_view, counts, empty, warnings
 from sxr.grep_options import GrepOpts
 from sxr.handles import fail, resolve
 from sxr.model import Event, SessionRef
 from sxr.navigation import command
-from sxr.util import (
-    LIVE_NOTE,
-    clock,
-    is_live,
-    line_limit,
-    live_mark,
-    one_line,
-    scan_budget,
-    tab_row,
-)
+from sxr.output import record_events
+from sxr.util import clock, line_limit, one_line, scan_budget, tab_row
 from sxr.views_read import event_line
-
-METACHARS = "\\.^$*+?[]{}()|"
-TITLE_CAP = 50
-BROADEN = "# smart-case regex; -F for literal; --codex / --path <dir> widen scope"
-SORTS = ("matches", "started")
 
 
 def compile_pattern(
@@ -73,27 +62,6 @@ def pick_pattern(pattern: str | None, arg: str | None, expr: str | None) -> tupl
     if arg is not None:
         fail(f"'{pattern}' and '{arg}' are both positionals; -e takes the pattern")
     return expr, pattern
-
-
-def _warnings(pattern: str, opts: GrepOpts) -> list[str]:
-    """Footer lines for the two patterns that miss matches silently."""
-    lines = []
-    if not opts.ignore_case and pattern != pattern.lower():
-        lines.append(
-            "# pattern has capitals: smart-case matches exact case; lowercase it or -i for any-case"
-        )
-    if not opts.fixed and any(c in METACHARS for c in pattern):
-        lines.append("# pattern has regex metachars; -F matches it literally")
-    return lines
-
-
-def _empty(pattern: str, scanned: int, warn: list[str]) -> int:
-    """Zero-match diagnostics on stderr: scope searched, then how to widen."""
-    print(f"no matches for '{pattern}' in {scanned} sessions", file=sys.stderr)
-    for line in warn:
-        print(line, file=sys.stderr)
-    print(BROADEN, file=sys.stderr)
-    return 1
 
 
 @dataclass
@@ -141,87 +109,42 @@ def _row(ref: SessionRef, event: Event) -> str:
     return tab_row(ref.short_id, f"#{event.seq:04d}", event.role, f'"{one_line(event.text)}"')
 
 
-def _title(ref: SessionRef, mark: bool = False) -> str:
-    """Session title as the bare list shows it, trimmed for a table cell.
+def _session_json(ref: SessionRef) -> str:
+    """-l under --json: the session's identity, since -l names no records.
 
-    mark prefixes the (live) label, which belongs in the title cell: a sixth
-    column would break every TSV parser again, and a suffix hides behind the
-    50-char trim exactly when the title is long.
+    There is no raw source record to emit here -- -l answers "which sessions",
+    a question the transcript does not contain a line for -- so this is a
+    projection, typed and named like the -c table's own `grep_count` rows. It
+    carries the full id and the source path so a short-id collision cannot make
+    two sessions look like one.
     """
-    return (live_mark(ref.ended) if mark else "") + " ".join(ref.label.split())[:TITLE_CAP]
-
-
-def _order(rows: list[tuple], opts: GrepOpts) -> list[tuple]:
-    """Count rows sorted by match density, or oldest first for --sort started."""
-    kept = rows if opts.include_all else [row for row in rows if row[1]]
-    if opts.sort == "started":
-        return sorted(kept, key=lambda row: row[0].started)
-    return sorted(kept, key=lambda row: -row[1])
-
-
-def _count_view(pattern: str, rows: list[tuple], opts: GrepOpts, warn: list[str]) -> int:
-    """The decision table: which sessions match, and where to zoom first."""
-    matched = sum(1 for row in rows if row[1])
-    if not matched:
-        return _empty(pattern, len(rows), warn)
-    kept = _order(rows, opts)
-    shown = kept if not opts.limit else kept[: opts.limit]
-    for ref, _, _ in shown:
-        ref.summarize()
-    if opts.json_out:
-        for ref, count, first in shown:
-            print(
-                json.dumps(
-                    {
-                        "type": "grep_count",
-                        "session": ref.id,
-                        "matches": count,
-                        "first": first,
-                        "started": ref.started[:10],
-                        "live": is_live(ref.ended),
-                        "title": _title(ref),
-                    },
-                    ensure_ascii=False,
-                )
-            )
-        return 0
-    print(tab_row("# session", "matches", "first", "started", "title"))
-    for ref, count, first in shown:
-        print(tab_row(ref.short_id, count, first or "", ref.started[:10], _title(ref, True)))
-    top = shown[0]
-    print(
-        f"# {matched} of {len(rows)} sessions match; "
-        f"zoom: {command(top[0], 'show', '--around', str(top[2]))}"
+    return json.dumps(
+        {
+            "type": "grep_session",
+            "session": ref.id,
+            "provider": ref.provider,
+            "path": str(ref.path),
+        },
+        ensure_ascii=False,
     )
-    if len(kept) > len(shown):
-        print(f"# +{len(kept) - len(shown)} matching sessions hidden (raise -n)")
-    if any(is_live(ref.ended) for ref, _count, _first in shown):
-        print(LIVE_NOTE)
-    print("# oldest first: --sort started; keep zero-match rows: --all")
-    for line in warn:
-        print(line)
-    return 0
-
-
-def _counts(refs: list[SessionRef], parse, needle: re.Pattern, opts: GrepOpts) -> list[tuple]:
-    """(session, matches, first matching seq) for every session in scope."""
-    rows = []
-    for ref in refs:
-        hits = [
-            e for e in opts.events(ref, parse, summarize=True) if e.text and needle.search(e.text)
-        ]
-        rows.append((ref, len(hits), hits[0].seq if hits else 0))
-    return rows
 
 
 def _emit(ref: SessionRef, events: list[Event], hits: list[Event], opts: GrepOpts, sink: _Sink):
-    """Send one session's hits to the sink in the requested shape."""
+    """Send one session's hits to the sink in the requested shape.
+
+    JSON is decided before -l, so every JSON mode emits JSON. Raw records are
+    deduplicated per transcript: one physical line holding two matching blocks
+    is one record, and printing it twice would misreport the source.
+    """
+    if opts.json_out:
+        if opts.ids_only:
+            sink.write([_session_json(ref)])
+            return
+        for event in record_events(hits):
+            sink.write([json.dumps(event.raw.get("line", {}), ensure_ascii=False)])
+        return
     if opts.ids_only:
         sink.write([ref.short_id])
-        return
-    if opts.json_out:
-        for event in hits:
-            sink.write([json.dumps(event.raw.get("line", {}), ensure_ascii=False)])
         return
     if opts.context > 0:
         index = {id(event): i for i, event in enumerate(events)}
@@ -260,7 +183,7 @@ def _hits_view(
             sessions += 1
             _emit(ref, events, hits, opts, sink)
     if total == 0:
-        return _empty(pattern, len(refs), warn)
+        return empty(pattern, len(refs), warn)
     if opts.json_out:
         return 0
     if sink.capped:
@@ -279,10 +202,9 @@ def _hits_view(
 
 def grep_view(pattern: str, refs: list[SessionRef], parse, opts: GrepOpts) -> int:
     """Search event text across the scope; -c ranks sessions, -l lists ids."""
-    if opts.sort not in SORTS:
-        fail(f"--sort takes {' or '.join(SORTS)}, not '{opts.sort}'")
+    opts.check()
     needle = compile_pattern(pattern, opts.fixed, opts.ignore_case)
-    warn = _warnings(pattern, opts)
+    warn = warnings(pattern, opts)
     if opts.count:
-        return _count_view(pattern, _counts(refs, parse, needle, opts), opts, warn)
+        return count_view(pattern, counts(refs, parse, needle, opts), opts, warn)
     return _hits_view(pattern, refs, parse, needle, opts, warn)

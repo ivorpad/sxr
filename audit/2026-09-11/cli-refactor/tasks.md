@@ -96,6 +96,8 @@ tree's behavior, not the cell's.
 - **deps:** none
 - **accept:** every line of `grep -l --json` parses as JSON; a session whose single line holds two matching blocks emits one raw record; `grep -c -l x` and `grep x --sort started` (no `-c`) exit 2; `cmds --json -n 2` prints two distinct physical records; `-c` totals unchanged.
 - **review:** dedup reuses `output.record_events`/`RowBudget` rather than new machinery.
+- **delivered:** `_emit` decides `json_out` before `ids_only`, so every JSON mode emits JSON; `-l --json` prints one `grep_session` object per matching session with the full id, provider and source `path`, under the key `list --json` already uses. Raw grep and `cmds` JSON pass their events through `output.record_events`, so one physical line is one record and `-n` counts records: `cmds --json` on a line with two tool calls went from three lines to two, and `cmds --json -n 2` from the same record twice to two distinct ones. `GrepOpts.check()` refuses `-c` with `-l`/`--ids`, `-c` with `-C`, `--sort` without `-c`, and negative `-C`, each naming both flags; `--budget` under `-c` prints one stderr line saying what it caps. `--sort`'s default became `None` so an explicit value is distinguishable, with `GrepOpts.order` spelling the default. `--ids` joins `-l`/`--files-with-matches`. `views_grep.py` would have passed 300 lines, so the `-c` table and the shared diagnostics moved to `grep_counts.py` and `METACHARS`/`SORTS`/the validation to `grep_options.py`; no suppression was added. `tests/test_grep_modes.py` adds 45 cases across both providers. 996 tests pass, 0 failures; konpy 111 files, 0 violations; both contract suites unchanged at 66/1 and 5/0. Evidence: `evidence-slice-06/`, packet: `review-slice-06.md`, diff: `slice-06.patch`.
+- **clauses left open, unweakened:** `--events-json` for normalized events with paired outcomes and coordinates (`EXTRA-006`, `PAR-cmds-typer-json_out`) — a new surface, not a defect fix, and D-09 says a projection needs its own flag and documented schema; merging overlapping `-C` windows (`PAR-grep-typer-context`); the shared `--json` flag help still reads "Raw JSONL records, never truncated", which is inaccurate for `-c`, `-l`, `list`, `stats` and `tools` alike and cannot be corrected for `grep` alone without changing every command's help; the shown/total/omitted notice for `-n`-bounded JSON streams, which is `SXR-CLI-20`'s and depends on this slice; and `--sort started` ordering by UTC instant rather than timestamp string, which is `SXR-CLI-08`'s.
 
 ## SXR-CLI-07 — grep: result cap separated from character caps
 
@@ -300,6 +302,16 @@ tree's behavior, not the cell's.
 ## Proposed sequence
 
 01 → 02 → 03 → 04 → 21 → 06 → 07 → 05 → 08 → 09 → 10 → 11 → 12 → 13 → 18 → 15 → 16 → 17 → 19 → 20 → 14 → 24 → 23 → 22.
+
+**Resequenced 2026-09-12, reviewer-approved: 08 comes before 07.** As actually
+run the order has been 01 → 02 → 03 → 04 → 05 → 06 → **08** → 07 → …, with 21
+still ahead of 07. Two reasons. SXR-CLI-06 changed the documented meaning of
+`--sort`, `-l --json` and the `--json` record unit, and SXR-CLI-07 changes the
+documented meanings of `-n 0` and `--all`; two consecutive slices redefining
+documented flags is a review hazard, because a reader cannot tell which
+migration note explains a given behavior change. And SXR-CLI-07 keeps
+`--sort started`, which SXR-CLI-08 is what makes correct: sorting timestamp
+strings is wrong for offset-bearing transcripts whatever the row caps do.
 
 Rationale for the shape: the `views_read` cluster (01–04, 21) lands first because three tasks edit the same renderer; the search cluster (06, 07, 05) next; correctness fixes with no shared blast radius (08–13) after that; parser strictness (18) before everything that depends on it (15, 16, 17, 20); additive surfaces (14, 23) and the documentation sweep (22) last, so help is written once against final behavior.
 

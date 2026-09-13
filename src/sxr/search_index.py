@@ -8,7 +8,7 @@ from typing import Annotated
 import typer
 
 from sxr import flags, views_grep, views_info
-from sxr.grep_options import GrepOpts
+from sxr.grep_options import METACHARS, GrepOpts
 from sxr.handles import fail
 from sxr.index_records import fold, signature
 from sxr.index_store import clear, connect, index_path
@@ -20,7 +20,7 @@ def _literal(pattern: str, fixed: bool) -> bool:
         len(fold(pattern)) >= 3
         and "\0" not in pattern
         and not any(0xD800 <= ord(char) <= 0xDFFF for char in pattern)
-        and (fixed or not any(char in views_grep.METACHARS for char in pattern))
+        and (fixed or not any(char in METACHARS for char in pattern))
     )
 
 

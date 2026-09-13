@@ -71,19 +71,28 @@ CountF = Annotated[
     bool, typer.Option("--count", "-c", help="Rank sessions: matches, first seq, started, title")
 ]
 FixedF = Annotated[bool, typer.Option("--fixed", "-F", help="Fixed string, not a regex")]
-ContextF = Annotated[int, typer.Option("--context", "-C", help="Events around each match")]
+ContextF = Annotated[
+    int, typer.Option("--context", "-C", help="Events around each match (0 or more)")
+]
 IgnoreCaseF = Annotated[
     bool, typer.Option("--ignore-case", "-i", help="Match any case (default: smart-case)")
 ]
 IdsOnlyF = Annotated[
-    bool, typer.Option("--files-with-matches", "-l", help="Print only ids of matching sessions")
+    bool,
+    typer.Option(
+        "--ids",
+        "--files-with-matches",
+        "-l",
+        help="List matching sessions, not matches (--json: one identity object each)",
+    ),
 ]
 ExprF = Annotated[
     str | None, typer.Option("--regexp", "-e", help="Pattern (allows a leading dash)")
 ]
 AllRowsF = Annotated[bool, typer.Option("--all", help="-c: keep zero-match rows")]
 SortF = Annotated[
-    str, typer.Option("--sort", help="-c order: matches (default) or started (oldest first)")
+    str | None,
+    typer.Option("--sort", help="-c only; matches (default) or started (oldest first)"),
 ]
 AfterCtxF = Annotated[int | None, typer.Option("-A", "--after-context", hidden=True)]
 BeforeCtxF = Annotated[int | None, typer.Option("-B", "--before-context", hidden=True)]

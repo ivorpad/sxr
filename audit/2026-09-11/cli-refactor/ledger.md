@@ -17,6 +17,8 @@ States: `delivered` (implemented, verified, waiting on the reviewer),
 | SXR-CLI-RECONCILE | adopt upstream's prompts session filtering, `--latest` and notices, under D-08 and D-09 | intentional-behavior-change | **delivered 2026-09-12** | [review-task-B.md](review-task-B.md), [task-B.patch](task-B.patch), `evidence-B/` |
 | SXR-MERGE-01 | record the reconciliation in git history as a merge of the published releases (D-11) | history only, no file changed | **delivered 2026-09-12** | [review-task-M.md](review-task-M.md), `baseline-M/`, `evidence-M/` |
 | SXR-AUDIT-02 | audit a second opinion's six findings against the merged tree, and record two upstream defects | correctness audit | **delivered 2026-09-12** | [review-task-M.md](review-task-M.md), `evidence-M/`, `disposition.json` |
+| SXR-DOCS-01 | commit the audit trail's documents and reproducers, excluding snapshots and captures | record keeping, no behavior | **delivered 2026-09-12** as `f42b1ad`, with finding 6's wording as `b70f3ac` | [audit/README.md](../../README.md), `.gitignore`, `evidence-commit/` |
+| SXR-CLI-06 | grep/cmds: valid JSON in every mode, one record per physical line | defect | **delivered 2026-09-12** | [review-slice-06.md](review-slice-06.md), [slice-06.patch](slice-06.patch), `baseline-06/`, `evidence-slice-06/` |
 
 ## All five slices were built on a base three releases stale
 
@@ -116,7 +118,15 @@ Out-of-slice maintenance, reviewer-approved, recorded in
 [maintenance-2026-09-11.patch](maintenance-2026-09-11.patch): the D-06 hazard fix
 in two audit scripts, and the approved annotation of
 `docs/session-search-hints-research.md`. Neither touches `src/` or `tests/`.
-| SXR-CLI-05 … 24 | see [tasks.md](tasks.md) | mixed | proposed | — |
+| SXR-CLI-07 … 24 | see [tasks.md](tasks.md) | mixed | proposed | — |
+
+**Queue order, resequenced 2026-09-12 (reviewer-approved): `SXR-CLI-08` runs
+before `SXR-CLI-07`.** SXR-CLI-06 redefined `--sort`, `-l --json` and the
+`--json` record unit, and SXR-CLI-07 redefines `-n 0` and `--all`; two
+consecutive slices changing documented flag meanings makes a reader unable to
+tell which migration note explains a behavior change. SXR-CLI-08 also has no
+dependencies and is what makes `--sort started` correct, which SXR-CLI-07 keeps
+using. The full sequence with the reason is in [tasks.md](tasks.md).
 
 ## Disposition coverage
 
@@ -161,6 +171,7 @@ recorded here so a later slice cannot silently reopen them.
 | D-08 | Is `prompts` a read command or a discovery command? (open decision 6) | **A read command.** A bare `sxr prompts` prints complete human prompts, as slice 1 implemented and D-01/D-02 pinned. Upstream's session filtering, `--latest` and navigation notices are adopted; its default-to-listing is not. The recorded complaint was about reading, and a conversation catalog duplicates `sxr list`. The published 0.13.0 default is therefore deliberately reversed, and the migration is stated in `README.md`, in `prompts --help` and in the primer. | originating reviewer, 2026-09-12 |
 | D-09 | Does upstream's synthesized `prompt_session` object become the default `prompts --json` output? | **No. Raw source records remain the `--json` contract.** A catalog projection, if it is ever worth keeping, needs its own flag or command and must be documented as a distinct schema, never replacing raw records. | originating reviewer, 2026-09-12 |
 | D-11 | Commit the reconciliation as a rebase onto `8f93114` or as a merge? (open decision 7) | **A merge, so history records that 0.12.3, 0.12.4 and 0.13.0 happened and were reconciled rather than burying them.** Done 2026-09-12: `f806ede` carries the five slices and the hazard fix, and `d2021d9` merges `8f93114` into it with this tree's content as the resolution. The merge tree is byte-identical to `f806ede`'s, so the merge changed no file. Nothing is pushed. | originating reviewer, 2026-09-12 |
+| D-12 | Is `grep -l --json`'s `grep_session` object a projection D-09 permits, or an invented schema? | **Accept it as implemented.** It sits within D-09 rather than against it: the flag already existed, the schema is documented in `README.md` and `grep --help`, and it exposes nothing a caller could not already get from `list`. Recorded in `contracts.md` so a later slice neither "corrects" it back to raw records nor adds a match count, which would make `-l` and `-c` indistinguishable. | originating reviewer, 2026-09-12 |
 | D-10 | Does the `init --write` primer hazard wait for the reconciliation slice? | **No, it goes first and on its own.** It can corrupt other repositories while it sits there. Delivered as SXR-HAZ-01 with its own patch and evidence, separate from the rebase. | originating reviewer, 2026-09-12 |
 
 ## Open decisions
@@ -220,6 +231,9 @@ recorded here so a later slice cannot silently reopen them.
    the reconciliation is now a merge commit.* What remains open is only whether
    and when a release is actually cut. Nothing is published and nothing is
    pushed; the version stays `0.14.0`.
+8. *Answered 2026-09-12 as D-12 and moved to the resolved table above.* The
+   `grep_session` projection stands as implemented, and `contracts.md` records
+   its shape so a later slice does not undo it.
 
 ## Known evidence gap: audit/2026-09-10/evidence/contracts.json
 

@@ -6,7 +6,7 @@ from collections import Counter
 
 from sxr.model import Event, SessionRef
 from sxr.navigation import command
-from sxr.output import RowBudget
+from sxr.output import RowBudget, print_records
 from sxr.providers.claude_code import INTERRUPT_MARKER
 from sxr.session_scope import render
 from sxr.util import LIVE_NOTE, day, human_num, human_size, is_live, live_mark, tab_row
@@ -222,6 +222,10 @@ def cmds_view(
     view fell back to the default scope rather than a chosen one: then the
     sessions it did not read are disclosed and --all-sessions is named. -n caps
     printed rows across the whole scope, not per session; -n 0 prints all.
+
+    Under --json the unit is the physical source record, not the call: a line
+    that recorded two tool calls is printed once, and -n counts records, so a
+    limit can never split one line's calls across the cap.
     """
     import re
 
@@ -235,6 +239,7 @@ def cmds_view(
     cap = line_limit(None)
     total = shown = 0
     first_call = None
+    records = RowBudget(limit)
     for ref in refs:
         calls = [e for e in parse(ref.path) if e.kind == "tool"]
         if needle is not None:
@@ -243,9 +248,8 @@ def cmds_view(
             first_call = (ref, calls[0].seq)
         total += len(calls)
         if json_out:
-            for event in calls if not limit else calls[: max(0, limit - shown)]:
-                print(json.dumps(event.raw.get("line", {}), ensure_ascii=False))
-                shown += 1
+            # One line holding two tool calls is one record; -n counts records.
+            print_records(calls, limit, records)
             continue
         prefix = f"{ref.short_id}\t" if len(refs) > 1 else ""
         for event in calls:

@@ -183,7 +183,7 @@ def grep(
     ids_only: flags.IdsOnlyF = False,
     expr: flags.ExprF = None,
     include_all: flags.AllRowsF = False,
-    sort: flags.SortF = "matches",
+    sort: flags.SortF = None,
     after_ctx: flags.AfterCtxF = None,
     before_ctx: flags.BeforeCtxF = None,
     since: flags.SinceF = None,
@@ -198,6 +198,10 @@ def grep(
     """Search event text across all sessions in scope; -c ranks matches.
 
     --since/--before narrow the sessions; -n 0 lifts row and budget limits.
+
+    Every mode emits JSON under --json: matching source records one per physical
+    line, `grep_count` objects under -c, `grep_session` identities under --ids.
+    -c with --ids or -C, and --sort without -c, exit 2 rather than ignore a flag.
     """
     if after_ctx is not None or before_ctx is not None:
         fail("no -A/-B; context is symmetric: -C 3 prints 3 events each side.")
@@ -243,7 +247,8 @@ def cmds(
 
     No selector means the newest session, with or without --grep.
     --all-sessions searches every session in scope. --since/--before narrow that
-    scope by session start date.
+    scope by session start date. -n counts printed calls in text and printed
+    source records under --json, where one line holding two calls is one record.
     """
     if all_sessions and arg is not None:
         fail(f"--all-sessions and '{arg}' select different scopes", "name one or the other")
