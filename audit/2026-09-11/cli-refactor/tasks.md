@@ -27,7 +27,7 @@ tree's behavior, not the cell's.
 - **deps:** none
 - **accept:** under `SXR_BUDGET=1 SXR_LINE_LIMIT=5`, every human prompt appears in full; `--all` selects the same record set as the default; `--include-context` adds the injected records and labels each with its recorded provenance; `--all` **lifts** an explicit `-n`/`--budget` at either flag position (this is the chosen precedence — `--all` means completeness, so it wins); `--budget 0` beats `--line-limit`; negative `--budget`/`--line-limit` never truncate; negative `-n` still exits 2; `prompts --json` emits each physical line exactly once; Claude and Codex plus legacy unlabelled provenance and a Codex compaction boundary all covered.
 - **review:** selection logic separated from display logic; each of the 10 expectations in `tests/test_prompt_defaults.py` accounted for. See `review-slice-01.md`.
-- **decisions resolved on acceptance (originating reviewer, 2026-09-11):** `--all` keeps overriding an explicit `-n`/`--budget`; negative `--budget`/`--line-limit` keep meaning "no trimming"; the README plus `prompts --help` note is a sufficient migration path, with no stderr deprecation warning. See `ledger.md`.
+- **decisions resolved on acceptance (originating reviewer, 2026-09-11), all scoped to `sxr prompts`:** `prompts --all` keeps overriding an explicit `-n`/`--budget` (D-01; `grep --all` was given the same precedence by SXR-CLI-07, and `--all` means completeness on both); negative `--budget`/`--line-limit` keep meaning "no trimming" **on `prompts` only** (D-02 -- `show` rejects them per D-05 and `grep` followed `show` in SXR-CLI-21, so do not read this row as a rule for every command); the README plus `prompts --help` note is a sufficient migration path, with no stderr deprecation warning. See `ledger.md`.
 
 ## SXR-CLI-02 — honor multi-session ranges in show, prompts, tools  *(ACCEPTED 2026-09-11)*
 
@@ -99,7 +99,7 @@ tree's behavior, not the cell's.
 - **delivered:** `_emit` decides `json_out` before `ids_only`, so every JSON mode emits JSON; `-l --json` prints one `grep_session` object per matching session with the full id, provider and source `path`, under the key `list --json` already uses. Raw grep and `cmds` JSON pass their events through `output.record_events`, so one physical line is one record and `-n` counts records: `cmds --json` on a line with two tool calls went from three lines to two, and `cmds --json -n 2` from the same record twice to two distinct ones. `GrepOpts.check()` refuses `-c` with `-l`/`--ids`, `-c` with `-C`, `--sort` without `-c`, and negative `-C`, each naming both flags; `--budget` under `-c` prints one stderr line saying what it caps. `--sort`'s default became `None` so an explicit value is distinguishable, with `GrepOpts.order` spelling the default. `--ids` joins `-l`/`--files-with-matches`. `views_grep.py` would have passed 300 lines, so the `-c` table and the shared diagnostics moved to `grep_counts.py` and `METACHARS`/`SORTS`/the validation to `grep_options.py`; no suppression was added. `tests/test_grep_modes.py` adds 45 cases across both providers. 996 tests pass, 0 failures; konpy 111 files, 0 violations; both contract suites unchanged at 66/1 and 5/0. Evidence: `evidence-slice-06/`, packet: `review-slice-06.md`, diff: `slice-06.patch`.
 - **clauses left open, unweakened:** `--events-json` for normalized events with paired outcomes and coordinates (`EXTRA-006`, `PAR-cmds-typer-json_out`) — a new surface, not a defect fix, and D-09 says a projection needs its own flag and documented schema; merging overlapping `-C` windows (`PAR-grep-typer-context`); the shared `--json` flag help still reads "Raw JSONL records, never truncated", which is inaccurate for `-c`, `-l`, `list`, `stats` and `tools` alike and cannot be corrected for `grep` alone without changing every command's help; the shown/total/omitted notice for `-n`-bounded JSON streams, which is `SXR-CLI-20`'s and depends on this slice; and `--sort started` ordering by UTC instant rather than timestamp string, which is `SXR-CLI-08`'s.
 
-## SXR-CLI-07 — grep: result cap separated from character caps
+## SXR-CLI-07 — grep: result cap separated from character caps  *(DELIVERED 2026-09-13, awaiting review)*
 
 - **class:** intentional-behavior-change
 - **rows:** CMD-grep-typer, PAR-grep-typer-limit, PAR-grep-typer-budget, PAR-grep-typer-include_all, EXTRA-046, EXTRA-048
@@ -109,6 +109,14 @@ tree's behavior, not the cell's.
 - **deps:** SXR-CLI-06, SXR-CLI-21
 - **accept:** `-n 0` keeps the default budget and says so on stderr; `--all` prints every match in full; `--full -n 5` prints five complete matches; `-c --include-zero` on an all-zero scope prints the table and exits 1; count totals identical with and without display caps.
 - **review:** migration note for the changed `-n 0` and `--all` meanings in help, README and primer; full-view budget bypass (SXR-AUD-008) still holds.
+- **rows verified against source and run before editing.** Every `before` cell was true, which is worth saying after two slices where one was not. Measured in `evidence-slice-07/before/`: `--budget 400 -n 0` printed all 16 rows where `--budget 400` printed 1, so `-n 0` really did discard an explicit budget; `-n 0` alone still trimmed every row and produced zero complete texts; `--all` on a normal scan was byte-identical to no flag at all; `--all -c` on an all-zero scope printed nothing and exited 1; `--full` and `--include-zero` exited 2 as unknown options.
+- **one clause `tasks.md` had dropped, recovered from the rows.** `PAR-grep-typer-budget`'s `after` asks for "a documented search-output budget **with omission metadata**" and its `acceptance` for "omitted results ... visible in text **and structured metadata**". The `after` cell above kept only the character-stopping half. The gap was real: `grep -n 2 --json` printed 2 of 14 records with nothing on stdout and nothing on stderr to say 12 were missing, while the same cap in text mode printed a footer. Closed by sending the footer to stderr under `--json`, which is the same `stderr=json_out` shape `errors` already uses -- D-09 keeps stdout to records, so "structured metadata" on stdout was not available, and an unreported omission was the worse of the two.
+- **delivered:** three caps, three flags, each independent. `-n` caps results; `--budget` stops output by characters and is no longer discarded by `-n 0`; `--line-limit` flattens each row. `--full` lifts both character caps and leaves `-n` in charge, as `show --full` does under SXR-AUD-008. `--all` lifts all three, which makes it exactly `--full -n 0` -- asserted byte-for-byte on both providers rather than described, so the two spellings cannot drift. `--include-zero` takes over the zero-count-row job and makes an all-zero table printable while the scope still exits 1. `-c --full` and a bare `--include-zero` are refused with a reason, the way `-c --sort` and `-c -C` already are.
+- **`--all` agrees with `prompts`, deliberately.** D-01 settled that `prompts --all` means completeness and overrides an explicit `-n`/`--budget`, with selection-widening moved to `--include-context`. `grep --all` now means completeness and overrides an explicit `-n`/`--budget`, with selection-widening moved to `--include-zero`. Same meaning, same precedence, same shape of sibling flag; two tests name D-01 so the parallel is checkable rather than a claim.
+- **`--full` against `--all`, resolved rather than left ambiguous.** They do overlap, and the overlap is the point: `--all` is defined *as* `--full -n 0` instead of as a fourth independent switch. `--full` exists because "every match, whole" and "these five matches, whole" are both real questions and `-n` is the only difference between them. `rows_uncapped` and `complete_text` are the two properties the view actually reads, so neither flag can grow a private meaning.
+- **migration, stated in three places and measured in a fourth.** `sxr grep --help` and the `--help` epilog carry the caps; `README.md` gains a four-column table and a two-item migration list; the `-c` footer now advertises `--include-zero` rather than the flag that no longer does that job, which is what a script author sees first. 28 captures from slices 5, 6, 8 and 21 changed, and all 28 are one of those three sentences -- no data row moved.
+- **`PRIMER_BODY` is unchanged, and that is a judgment worth reviewing.** Checked line by line: the installed primer never mentioned `grep --all`, `grep -n 0` or zero-count rows, and its one relevant sentence ("`--around`, `--range`, `--type` or `--full` prints whole text") becomes more true now that `--full` exists on `grep` too. Nothing in it is false. Adding to it would either need a version bump nobody approved or leave a v0.14.0-stamped block whose content differs from this tree's v0.14.0 primer -- the drift `write_hazard` exists to catch. Left for the reviewer as **open decision 10**.
+- **left open:** `CMD-grep-typer`'s `problem` cell also says "-C limits blocks rather than physical lines", which is a `-C` unit question this slice did not touch and no acceptance clause here covers. `PAR-grep-typer-limit` asks to "define the unit for each mode": done for match rows, `-l` sessions and `-c` table rows, not for `-C` windows.
 
 ## SXR-CLI-08 — one timestamp parser for every sort, filter and format
 
@@ -305,6 +313,30 @@ tree's behavior, not the cell's.
 - **deps:** SXR-CLI-06
 - **accept:** `list --json -n 1` with three sessions prints one object on stdout and a notice on stderr; `2>/dev/null` leaves valid JSON only; the stderr claim in help matches observed streams.
 - **review:** stdout/stderr split per command; existing SXR-AUD-005/006/007 notices preserved.
+
+---
+
+## SXR-DOCS-02 — one primer refresh for every flag-changing slice
+
+- **class:** record keeping, no behavior change
+- **rows:** none; queued by D-14 rather than derived from the CSV
+- **why it exists:** SXR-CLI-06, 07 and 21 each changed a documented flag meaning, and
+  more of the queue will. `PRIMER_BODY` is version-stamped, and `write_hazard` compares
+  installed content independently of that stamp, so editing the primer once per slice
+  would either move the version once per slice or leave stamped blocks in other
+  repositories whose content differs from what that version generates.
+- **after:** one refresh of `PRIMER_BODY` covering every flag-changing slice delivered by
+  then, with a single version bump, once those slices are done. D-14 defers the content,
+  it does not cancel it.
+- **deps:** every flag-changing slice that should be covered. Today that is SXR-CLI-06,
+  SXR-CLI-07 and SXR-CLI-21; check the ledger for later ones before running it.
+- **accept:** `init --check` reports the installed block as outdated for the old version
+  and current after the refresh; the primer's token budget is respected; nothing in the
+  refreshed text contradicts `README.md` or the `--help` epilog.
+- **carried forward, per slice, so the refresh has a source rather than a memory:**
+  SXR-CLI-07's ready wording for the grep bullet is *"--full/--all print matches whole;
+  -c --include-zero keeps zero-count rows."* SXR-CLI-06 and SXR-CLI-21 wrote no primer
+  text, and neither made a primer statement false; verify that again at refresh time.
 
 ---
 

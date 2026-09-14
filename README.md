@@ -383,12 +383,12 @@ $ sxr grep -c webhook
 eec026f8	206	16	2026-07-10	Fix webhok typo in route table
 6ba59ad2	54	7	2026-06-26	Debug webhook and queue outage
 # 22 of 47 sessions match; zoom: sxr --file /home/me/.claude/projects/-repo/8118457e-1111-2222-3333-444444444444.jsonl show 8118457e-1111-2222-3333-444444444444 --around 4
-# oldest first: --sort started; keep zero-match rows: --all
+# oldest first: --sort started; keep zero-match rows: --include-zero
 ```
 
 `first` is the event index of the first match, so `show <id> --around <first>`
-is the immediate next call. Sessions with no matches are pruned (`--all`
-restores them) and a scope with zero matches exits 1. `--sort started` orders
+is the immediate next call. Sessions with no matches are pruned
+(`--include-zero` restores them) and a scope with zero matches exits 1. `--sort started` orders
 oldest first when the question is where something started, not where it is
 loudest.
 
@@ -400,12 +400,37 @@ forces case-insensitive, `-F` matches the pattern literally, `--ids` (also `-l`,
 `--files-with-matches`) lists the sessions that match rather than the matches,
 `-e` spells the pattern for one that starts with a dash.
 
-Match rows are capped at 40k chars (`--budget`, env `SXR_BUDGET`) or at `-n`
-rows, whichever comes first; the footer reports the true match count and
-`-n 0` prints all of them. A negative `--budget` is a usage error, as it is on
-`show`; `--budget 0` is how you ask for all of them. Each printed row is capped
-at 200 characters (`SXR_LINE_LIMIT`), the same number a `-C` window uses, so one
-invocation no longer caps its match rows and its context rows differently.
+Three caps decide how much a scan prints, and each one answers to its own flag.
+Whichever binds first stops the output, and the footer always reports the true
+match count rather than the number printed.
+
+| cap | flag | default | lifted by |
+| --- | --- | --- | --- |
+| how many results | `-n` | every match | `-n 0`, or `--all` |
+| how many characters in total | `--budget`, env `SXR_BUDGET` | 40k | `--budget 0`, `--full`, or `--all` |
+| how wide each row is | `--line-limit`, env `SXR_LINE_LIMIT` | 200 | `--line-limit 0`, `--full`, or `--all` |
+
+`--full` prints every selected match whole, exactly as `show --full` does, and
+leaves `-n` in charge of how many. `--all` lifts all three caps, which makes it
+precisely `--full -n 0` -- a single spelling for "everything, whole", and the same
+meaning `--all` carries on `prompts`. A negative `--budget` is a usage error, as it
+is on `show`; `--budget 0` asks for all of them. The row cap is the same number a
+`-C` window uses, so one invocation no longer caps its match rows and its context
+rows differently.
+
+`grep -c --include-zero` keeps sessions with zero matches in the table, including
+when every session has zero, and a scope with no matches still exits 1 whether or
+not its rows were printed.
+
+Migration, two changes, both from separating caps that used to be entangled:
+
+- `-n 0` lifted the character budget as well as the row cap, so `grep -n 0 --budget
+  400` printed everything and quietly ignored the budget. `-n 0` now lifts the row
+  cap only, says so on stderr when the budget then stops the output, and `--all` is
+  the direct replacement for the old meaning.
+- `--all` used to mean only "keep zero-match rows in `-c`" and did nothing at all to
+  a normal scan. That job is now `--include-zero`; `--all` means uncapped complete
+  output. Scripts using `grep -c --all` for zero rows want `--include-zero`.
 
 Each of `grep`'s three shapes has its own `--json`, and all three emit JSON.
 Plain `--json` prints the matching source records, one per physical JSONL line:
@@ -572,8 +597,9 @@ that used to destroy content silently.
 - Table rows are tab-separated with a `#` header line; `find` groups evidence
   by session. No color into pipes, no pagers, no progress bars.
 - Nothing prints unbounded. `-n` caps rows across the whole scope (not per
-  session), `-n 0` lifts the cap, and any view that stopped early says how
-  many rows it held back. Negative limits return 2. JSON read views count
+  session), `-n 0` lifts that cap and no other, and any view that stopped early
+  says how many rows it held back -- on stderr under `--json`, where stdout
+  carries records only. Negative limits return 2. JSON read views count
   physical records, keeping every field of each returned record. Tools JSON
   is one complete aggregate; stats JSON has one complete object per session.
   `--tail 0` selects no events and returns 1; negative tails return 2.
@@ -629,7 +655,7 @@ through as their own kind.
 
 Breaking since 0.2.3: `grep -c` prints five columns (session, matches, first,
 started, title), prunes zero-match rows, and exits 1 when nothing matches.
-Parsers of the old two-column TSV need `--json` or `--all`.
+Parsers of the old two-column TSV need `--json` or `--include-zero`.
 
 Timestamps are now read as instants everywhere, which corrects chronology for a
 corpus containing offset-bearing timestamps and therefore changes what `@N`

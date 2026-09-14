@@ -1,0 +1,647 @@
+diff --git a/README.md b/README.md
+index b176535..f756f6b 100644
+--- a/README.md
++++ b/README.md
+@@ -383,12 +383,12 @@ $ sxr grep -c webhook
+ eec026f8	206	16	2026-07-10	Fix webhok typo in route table
+ 6ba59ad2	54	7	2026-06-26	Debug webhook and queue outage
+ # 22 of 47 sessions match; zoom: sxr --file /home/me/.claude/projects/-repo/8118457e-1111-2222-3333-444444444444.jsonl show 8118457e-1111-2222-3333-444444444444 --around 4
+-# oldest first: --sort started; keep zero-match rows: --all
++# oldest first: --sort started; keep zero-match rows: --include-zero
+ ```
+ 
+ `first` is the event index of the first match, so `show <id> --around <first>`
+-is the immediate next call. Sessions with no matches are pruned (`--all`
+-restores them) and a scope with zero matches exits 1. `--sort started` orders
++is the immediate next call. Sessions with no matches are pruned
++(`--include-zero` restores them) and a scope with zero matches exits 1. `--sort started` orders
+ oldest first when the question is where something started, not where it is
+ loudest.
+ 
+@@ -400,12 +400,37 @@ forces case-insensitive, `-F` matches the pattern literally, `--ids` (also `-l`,
+ `--files-with-matches`) lists the sessions that match rather than the matches,
+ `-e` spells the pattern for one that starts with a dash.
+ 
+-Match rows are capped at 40k chars (`--budget`, env `SXR_BUDGET`) or at `-n`
+-rows, whichever comes first; the footer reports the true match count and
+-`-n 0` prints all of them. A negative `--budget` is a usage error, as it is on
+-`show`; `--budget 0` is how you ask for all of them. Each printed row is capped
+-at 200 characters (`SXR_LINE_LIMIT`), the same number a `-C` window uses, so one
+-invocation no longer caps its match rows and its context rows differently.
++Three caps decide how much a scan prints, and each one answers to its own flag.
++Whichever binds first stops the output, and the footer always reports the true
++match count rather than the number printed.
++
++| cap | flag | default | lifted by |
++| --- | --- | --- | --- |
++| how many results | `-n` | every match | `-n 0`, or `--all` |
++| how many characters in total | `--budget`, env `SXR_BUDGET` | 40k | `--budget 0`, `--full`, or `--all` |
++| how wide each row is | `--line-limit`, env `SXR_LINE_LIMIT` | 200 | `--line-limit 0`, `--full`, or `--all` |
++
++`--full` prints every selected match whole, exactly as `show --full` does, and
++leaves `-n` in charge of how many. `--all` lifts all three caps, which makes it
++precisely `--full -n 0` -- a single spelling for "everything, whole", and the same
++meaning `--all` carries on `prompts`. A negative `--budget` is a usage error, as it
++is on `show`; `--budget 0` asks for all of them. The row cap is the same number a
++`-C` window uses, so one invocation no longer caps its match rows and its context
++rows differently.
++
++`grep -c --include-zero` keeps sessions with zero matches in the table, including
++when every session has zero, and a scope with no matches still exits 1 whether or
++not its rows were printed.
++
++Migration, two changes, both from separating caps that used to be entangled:
++
++- `-n 0` lifted the character budget as well as the row cap, so `grep -n 0 --budget
++  400` printed everything and quietly ignored the budget. `-n 0` now lifts the row
++  cap only, says so on stderr when the budget then stops the output, and `--all` is
++  the direct replacement for the old meaning.
++- `--all` used to mean only "keep zero-match rows in `-c`" and did nothing at all to
++  a normal scan. That job is now `--include-zero`; `--all` means uncapped complete
++  output. Scripts using `grep -c --all` for zero rows want `--include-zero`.
+ 
+ Each of `grep`'s three shapes has its own `--json`, and all three emit JSON.
+ Plain `--json` prints the matching source records, one per physical JSONL line:
+@@ -572,8 +597,9 @@ that used to destroy content silently.
+ - Table rows are tab-separated with a `#` header line; `find` groups evidence
+   by session. No color into pipes, no pagers, no progress bars.
+ - Nothing prints unbounded. `-n` caps rows across the whole scope (not per
+-  session), `-n 0` lifts the cap, and any view that stopped early says how
+-  many rows it held back. Negative limits return 2. JSON read views count
++  session), `-n 0` lifts that cap and no other, and any view that stopped early
++  says how many rows it held back -- on stderr under `--json`, where stdout
++  carries records only. Negative limits return 2. JSON read views count
+   physical records, keeping every field of each returned record. Tools JSON
+   is one complete aggregate; stats JSON has one complete object per session.
+   `--tail 0` selects no events and returns 1; negative tails return 2.
+@@ -629,7 +655,7 @@ through as their own kind.
+ 
+ Breaking since 0.2.3: `grep -c` prints five columns (session, matches, first,
+ started, title), prunes zero-match rows, and exits 1 when nothing matches.
+-Parsers of the old two-column TSV need `--json` or `--all`.
++Parsers of the old two-column TSV need `--json` or `--include-zero`.
+ 
+ Timestamps are now read as instants everywhere, which corrects chronology for a
+ corpus containing offset-bearing timestamps and therefore changes what `@N`
+diff --git a/src/sxr/cli.py b/src/sxr/cli.py
+index 8823540..287b871 100644
+--- a/src/sxr/cli.py
++++ b/src/sxr/cli.py
+@@ -182,7 +182,9 @@ def grep(
+     ignore_case: flags.IgnoreCaseF = False,
+     ids_only: flags.IdsOnlyF = False,
+     expr: flags.ExprF = None,
+-    include_all: flags.AllRowsF = False,
++    uncapped: flags.GrepAllF = False,
++    full: flags.GrepFullF = False,
++    include_zero: flags.IncludeZeroF = False,
+     sort: flags.SortF = None,
+     after_ctx: flags.AfterCtxF = None,
+     before_ctx: flags.BeforeCtxF = None,
+@@ -197,7 +199,11 @@ def grep(
+ ) -> None:
+     """Search event text across all sessions in scope; -c ranks matches.
+ 
+-    --since/--before narrow the sessions; -n 0 lifts row and budget limits.
++    --since/--before narrow the sessions. Three caps act independently: -n caps
++    results, --budget stops output by characters, and each match row is flattened
++    to --line-limit chars. --full lifts the character caps and keeps -n; --all
++    lifts all three and is exactly --full -n 0. -n 0 lifts the row cap only and
++    says so, where it used to silently discard an explicit --budget too.
+ 
+     Every mode emits JSON under --json: matching source records one per physical
+     line, `grep_count` objects under -c, `grep_session` identities under --ids.
+@@ -215,7 +221,9 @@ def grep(
+         context=context,
+         ignore_case=ignore_case,
+         ids_only=ids_only,
+-        include_all=include_all,
++        uncapped=uncapped,
++        full=full,
++        include_zero=include_zero,
+         sort=sort,
+         json_out=json_out,
+         limit=limit,
+diff --git a/src/sxr/flags.py b/src/sxr/flags.py
+index d83e9f6..a9331db 100644
+--- a/src/sxr/flags.py
++++ b/src/sxr/flags.py
+@@ -91,7 +91,16 @@ IdsOnlyF = Annotated[
+ ExprF = Annotated[
+     str | None, typer.Option("--regexp", "-e", help="Pattern (allows a leading dash)")
+ ]
+-AllRowsF = Annotated[bool, typer.Option("--all", help="-c: keep zero-match rows")]
++GrepAllF = Annotated[
++    bool,
++    typer.Option("--all", help="Complete match text, no row or char cap (= --full -n 0)"),
++]
++GrepFullF = Annotated[
++    bool, typer.Option("--full", help="Complete match text; -n still caps results")
++]
++IncludeZeroF = Annotated[
++    bool, typer.Option("--include-zero", help="-c: keep sessions with zero matches")
++]
+ SortF = Annotated[
+     str | None,
+     typer.Option("--sort", help="-c only; matches (default) or started (oldest first)"),
+diff --git a/src/sxr/grep_counts.py b/src/sxr/grep_counts.py
+index 67d6e5e..efb97c7 100644
+--- a/src/sxr/grep_counts.py
++++ b/src/sxr/grep_counts.py
+@@ -51,7 +51,7 @@ def title(ref: SessionRef, mark: bool = False) -> str:
+ 
+ def _order(rows: list[tuple], opts: GrepOpts) -> list[tuple]:
+     """Count rows sorted by match density, or oldest first for --sort started."""
+-    kept = rows if opts.include_all else [row for row in rows if row[1]]
++    kept = rows if opts.include_zero else [row for row in rows if row[1]]
+     if opts.order == SORTS[1]:
+         return sorted(kept, key=lambda row: order_key(row[0].started))
+     return sorted(kept, key=lambda row: -row[1])
+@@ -76,10 +76,10 @@ def count_view(pattern: str, rows: list[tuple], opts: GrepOpts, warn: list[str])
+             file=sys.stderr,
+         )
+     matched = sum(1 for row in rows if row[1])
+-    if not matched:
++    if not matched and not opts.include_zero:
+         return empty(pattern, len(rows), warn)
+     kept = _order(rows, opts)
+-    shown = kept if not opts.limit else kept[: opts.limit]
++    shown = kept if opts.rows_uncapped or not opts.limit else kept[: opts.limit]
+     for ref, _, _ in shown:
+         ref.summarize()
+     if opts.json_out:
+@@ -102,16 +102,20 @@ def count_view(pattern: str, rows: list[tuple], opts: GrepOpts, warn: list[str])
+     print(tab_row("# session", "matches", "first", "started", "title"))
+     for ref, count, first in shown:
+         print(tab_row(ref.short_id, count, first or "", date_of(ref.started), title(ref, True)))
+-    top = shown[0]
+-    print(
+-        f"# {matched} of {len(rows)} sessions match; "
+-        f"zoom: {command(top[0], 'show', '--around', str(top[2]))}"
+-    )
++    zoom = next((row for row in shown if row[1]), None)
++    if zoom is None:
++        print(f"# 0 of {len(rows)} sessions match")
++    else:
++        print(
++            f"# {matched} of {len(rows)} sessions match; "
++            f"zoom: {command(zoom[0], 'show', '--around', str(zoom[2]))}"
++        )
+     if len(kept) > len(shown):
+         print(f"# +{len(kept) - len(shown)} matching sessions hidden (raise -n)")
+     if any(is_live(ref.ended) for ref, _count, _first in shown):
+         print(LIVE_NOTE)
+-    print("# oldest first: --sort started; keep zero-match rows: --all")
++    print("# oldest first: --sort started; keep zero-match rows: --include-zero")
+     for line in warn:
+         print(line)
+-    return 0
++    # Reporting zero rows as data does not make a zero-match scope a hit.
++    return 0 if matched else 1
+diff --git a/src/sxr/grep_options.py b/src/sxr/grep_options.py
+index 605aa06..1c2c5ca 100644
+--- a/src/sxr/grep_options.py
++++ b/src/sxr/grep_options.py
+@@ -25,7 +25,9 @@ class GrepOpts:
+     context: int = 0
+     ignore_case: bool = False
+     ids_only: bool = False
+-    include_all: bool = False
++    uncapped: bool = False
++    full: bool = False
++    include_zero: bool = False
+     sort: str | None = None
+     json_out: bool = False
+     limit: int | None = None
+@@ -43,6 +45,20 @@ class GrepOpts:
+         """The -c ordering, with the default spelled rather than assumed."""
+         return self.sort or SORTS[0]
+ 
++    @property
++    def complete_text(self) -> bool:
++        """Print each match whole? --full asks for it, --all includes it."""
++        return self.full or self.uncapped
++
++    @property
++    def rows_uncapped(self) -> bool:
++        """Print every result? --all asks for it, and so does an explicit -n 0.
++
++        These are two spellings of one intent, which is why --all is documented as
++        --full -n 0 rather than as a fourth independent switch.
++        """
++        return self.uncapped or self.limit == 0
++
+     def check(self) -> None:
+         """Reject flag pairs that describe two different output shapes.
+ 
+@@ -61,3 +77,10 @@ class GrepOpts:
+             fail("-c ranks matching sessions and -l lists them; pick one")
+         if self.count and self.context:
+             fail("-c prints one row per session, so -C has no events to surround; drop one")
++        if self.count and self.full:
++            fail(
++                "-c counts matches and prints none of their text, so --full has "
++                "nothing to complete; use --all to lift -n"
++            )
++        if self.include_zero and not self.count:
++            fail("--include-zero keeps zero-match rows in the -c table; add -c, or drop it")
+diff --git a/src/sxr/primer_text.py b/src/sxr/primer_text.py
+index f88576e..b0ab061 100644
+--- a/src/sxr/primer_text.py
++++ b/src/sxr/primer_text.py
+@@ -26,7 +26,9 @@ budgets: show prints whole text whenever it fits --budget chars (default
+ (default 200; env SXR_LINE_LIMIT) and says so. --budget 0 disables trimming;
+ negative values are a usage error. prompts has no default budget: it prints
+ complete human input, and only --budget/--line-limit ask for compact text.
+---all lifts every limit.
++grep flattens each match row and stops at --budget chars; --full prints matches
++whole under -n, and zero-count -c rows are --include-zero. --all lifts every
++limit on any command.
+ \b
+ show selection: one order, so no flag discards another -- window (--around
+ +/- --context, or --range A:B, never both), then kind (--type, else the
+diff --git a/src/sxr/views_grep.py b/src/sxr/views_grep.py
+index 7bc513a..f29cc1f 100644
+--- a/src/sxr/views_grep.py
++++ b/src/sxr/views_grep.py
+@@ -8,6 +8,7 @@ and the shared diagnostics live in grep_counts.
+ 
+ import json
+ import re
++import sys
+ from dataclasses import dataclass
+ 
+ from sxr.grep_counts import count_view, counts, empty, warnings
+@@ -151,7 +152,7 @@ def _emit(ref: SessionRef, events: list[Event], hits: list[Event], opts: GrepOpt
+     if opts.ids_only:
+         sink.write([ref.short_id])
+         return
+-    cap = line_limit(None)
++    cap = 0 if opts.complete_text else line_limit(None)
+     if opts.context > 0:
+         index = {id(event): i for i, event in enumerate(events)}
+         for hit in hits:
+@@ -161,6 +162,32 @@ def _emit(ref: SessionRef, events: list[Event], hits: list[Event], opts: GrepOpt
+         sink.write([_row(ref, event, cap)])
+ 
+ 
++def _omitted(total: int, sessions: int, shown: int, opts: GrepOpts) -> None:
++    """Say what a cap held back, and name the escape the caller has not used yet.
++
++    Under --json this goes to stderr, because stdout is a record contract (D-09)
++    and an omission nobody is told about is the worse of the two problems: before
++    this, `grep -n 2 --json` printed 2 of 14 records and said nothing anywhere.
++    """
++    found = f"{sessions} sessions" if opts.ids_only else f"{total} matches"
++    hint = (
++        "--all for all of it whole, or --budget 0 to lift the character stop"
++        if opts.rows_uncapped
++        else "narrow the pattern, scope to <id>, -n 0 for every result, "
++        "or --all for all of it whole"
++    )
++    stream = sys.stderr if opts.json_out else sys.stdout
++    print(f"# {found}, showing first {shown}; {hint}", file=stream)
++    if opts.limit == 0 and not opts.uncapped:
++        # -n 0 used to lift the character budget as well. It stopped here instead,
++        # so the caller needs to hear that the flag they used no longer does that.
++        print(
++            "# -n 0 lifts the result cap only now; the character budget still "
++            "applies (--all, or --budget 0)",
++            file=sys.stderr,
++        )
++
++
+ def _hits_view(
+     pattern: str,
+     refs: list[SessionRef],
+@@ -170,10 +197,12 @@ def _hits_view(
+     warn: list[str],
+ ) -> int:
+     """Match rows, id list, or -C windows, all under the printing caps."""
+-    unlimited = opts.limit == 0
+     sink = _Sink(
+-        row_cap=None if unlimited or not opts.limit else opts.limit,
+-        budget=0 if unlimited or opts.json_out else scan_budget(opts.budget),
++        row_cap=None if opts.rows_uncapped or not opts.limit else opts.limit,
++        # -n used to lift this too, which meant an explicit --budget could be
++        # discarded by a flag that reads as a row count. Only the character flags
++        # decide the character stop now.
++        budget=0 if opts.complete_text or opts.json_out else scan_budget(opts.budget),
+     )
+     total = 0
+     sessions = 0
+@@ -189,14 +218,10 @@ def _hits_view(
+             _emit(ref, events, hits, opts, sink)
+     if total == 0:
+         return empty(pattern, len(refs), warn)
++    if sink.capped:
++        _omitted(total, sessions, sink.shown, opts)
+     if opts.json_out:
+         return 0
+-    if sink.capped:
+-        found = f"{sessions} sessions" if opts.ids_only else f"{total} matches"
+-        print(
+-            f"# {found}, showing first {sink.shown}; narrow the pattern, "
+-            f"scope to <id>, or -n 0 for all"
+-        )
+     if not opts.ids_only and opts.context == 0 and first_hit:
+         ref, seq = first_hit
+         print(f"# context inline: -C 3; zoom: {command(ref, 'show', '--around', str(seq))}")
+diff --git a/tests/test_grep.py b/tests/test_grep.py
+index d9e8089..b8aced1 100644
+--- a/tests/test_grep.py
++++ b/tests/test_grep.py
+@@ -31,7 +31,7 @@ def test_limit_caps_match_rows_and_reports_the_total(capsys) -> None:
+     out = capsys.readouterr().out
+     assert out.count("needle") == 3
+     assert "# 20 matches, showing first 3" in out
+-    assert "-n 0 for all" in out
++    assert "-n 0 for every result, or --all for all of it whole" in out
+ 
+ 
+ def test_limit_zero_prints_everything(capsys) -> None:
+@@ -104,11 +104,11 @@ def test_count_sort_started_puts_the_oldest_first(capsys) -> None:
+     assert "zoom: sxr show old00000 --around 1" in lines[3]
+ 
+ 
+-def test_count_all_restores_zero_rows(capsys) -> None:
++def test_count_include_zero_restores_zero_rows(capsys) -> None:
+     hit = _ref("hit00000")
+     zero = _ref("zero0000")
+     events = {hit.path: _events("needle"), zero.path: _events("nope")}
+-    opts = GrepOpts(count=True, include_all=True)
++    opts = GrepOpts(count=True, include_zero=True)
+     assert grep_view("needle", [hit, zero], _parse(events), opts) == 0
+     out = capsys.readouterr().out
+     assert "zero0000\t0\t\t" in out
+diff --git a/tests/test_grep_caps.py b/tests/test_grep_caps.py
+new file mode 100644
+index 0000000..2926241
+--- /dev/null
++++ b/tests/test_grep_caps.py
+@@ -0,0 +1,265 @@
++"""grep's three caps are independent, and `--all` means what it means on prompts.
++
++`-n` capped results *and* silently lifted the character budget, while per-match
++flattening applied no matter what, so there was no spelling for "every match, whole".
++Now: `-n` caps results, `--budget` stops output by characters, `--line-limit`
++flattens each row, `--full` lifts the two character caps, and `--all` lifts all
++three. `--all` is exactly `--full -n 0`, asserted byte-for-byte below rather than
++described, so the two spellings cannot drift apart.
++
++`--all` used to mean "keep zero-match rows in `-c`" and nothing else. That job is
++now `--include-zero`, which mirrors how `prompts` moved its selection-widening to
++`--include-context` when D-01 made `--all` mean completeness. Both commands now use
++`--all` for the same thing and an `--include-*` flag for the other thing.
++"""
++
++import json
++
++import pytest
++from typer.testing import CliRunner
++
++from sxr.cli import app
++
++runner = CliRunner()
++
++NEEDLE = "resonance"
++ABSENT = "quernstone"
++LONG = " ".join(f"w{i:04d}aaaaaaaaaaaaaa" for i in range(40))
++
++
++def _text(n):
++    return f"{NEEDLE} hit {n} {LONG} ENDOFHIT{n}"
++
++
++def _claude(root):
++    project = root / "projects" / "-w"
++    project.mkdir(parents=True)
++    for index, ident in enumerate(("aaaa0107", "bbbb0107", "cccc0107")):
++        records = [
++            dict(
++                type="user",
++                timestamp=f"2026-09-1{index}T07:00:00Z",
++                cwd="/w",
++                message=dict(role="user", content=f"open caps {index}"),
++            )
++        ]
++        for n in range(6):
++            body = _text(n) if index < 2 else f"unrelated {n}"
++            records.append(
++                dict(
++                    type="assistant",
++                    timestamp=f"2026-09-1{index}T07:0{n + 1}:00Z",
++                    cwd="/w",
++                    message=dict(role="assistant", content=[dict(type="text", text=body)]),
++                )
++            )
++        path = project / f"{ident}-0000-4000-8000-00000000000{index}.jsonl"
++        path.write_text("\n".join(json.dumps(r) for r in records) + "\n")
++    return "CLAUDE_CONFIG_DIR", []
++
++
++def _codex(root):
++    for index, tag in enumerate("abc"):
++        directory = root / "sessions" / "2026" / "09" / f"1{index}"
++        directory.mkdir(parents=True)
++        ident = f"0199910{index}-{tag * 4}-7000-8000-00000000000{index}"
++        records = [
++            dict(
++                timestamp=f"2026-09-1{index}T07:00:00Z",
++                type="session_meta",
++                payload=dict(id=ident, cwd="/w", timestamp=f"2026-09-1{index}T07:00:00Z"),
++            ),
++            dict(
++                timestamp=f"2026-09-1{index}T07:00:00Z",
++                type="event_msg",
++                payload=dict(type="user_message", message=f"open caps {index}"),
++            ),
++        ]
++        for n in range(6):
++            body = _text(n) if index < 2 else f"unrelated {n}"
++            records.append(
++                dict(
++                    timestamp=f"2026-09-1{index}T07:0{n + 1}:00Z",
++                    type="response_item",
++                    payload=dict(
++                        type="message",
++                        role="assistant",
++                        content=[dict(type="output_text", text=body)],
++                    ),
++                )
++            )
++        path = directory / f"rollout-2026-09-1{index}T07-00-00-{ident}.jsonl"
++        path.write_text("\n".join(json.dumps(r) for r in records) + "\n")
++    return "CODEX_HOME", ["--codex"]
++
++
++@pytest.fixture(params=["claude", "codex"])
++def corpus(request, tmp_path, monkeypatch):
++    """Three sessions on one provider: two matching, one not."""
++    root = tmp_path / request.param
++    root.mkdir()
++    variable, flags = {"claude": _claude, "codex": _codex}[request.param](root)
++    monkeypatch.setenv(variable, str(root))
++    monkeypatch.delenv("SXR_BUDGET", raising=False)
++    monkeypatch.delenv("SXR_LINE_LIMIT", raising=False)
++    return flags
++
++
++def run(corpus, *args):
++    """Invoke sxr scoped to the fixture's project."""
++    return runner.invoke(app, [*corpus, *args, "--path", "/w"])
++
++
++def data_rows(text):
++    """Printed rows that are output rather than footers."""
++    return [line for line in text.splitlines() if line and not line.startswith("#")]
++
++
++def test_limit_caps_results_and_leaves_the_budget_alone(corpus):
++    """-n 0 used to discard an explicit --budget. It was named for rows.
++
++    This is the migration's centre: `grep -n 0 --budget 400` printed everything
++    before and stops at the budget now.
++    """
++    capped = run(corpus, "grep", NEEDLE, "--budget", "400")
++    lifted = run(corpus, "grep", NEEDLE, "--budget", "400", "-n", "0")
++    assert capped.exit_code == 0 and lifted.exit_code == 0
++    assert len(data_rows(lifted.stdout)) == len(data_rows(capped.stdout))
++    assert "-n 0 lifts the result cap only now" in lifted.stderr
++
++
++def test_limit_zero_still_lifts_the_result_cap(corpus):
++    """The half of -n 0 that was never in question keeps working."""
++    few = run(corpus, "grep", NEEDLE, "-n", "2")
++    every = run(corpus, "grep", NEEDLE, "-n", "0")
++    assert len(data_rows(few.stdout)) == 2
++    assert len(data_rows(every.stdout)) == 12
++
++
++def test_full_prints_complete_text_under_the_row_cap(corpus):
++    """--full answers the character caps; -n keeps deciding how many results."""
++    result = run(corpus, "grep", NEEDLE, "--full", "-n", "5")
++    assert result.exit_code == 0
++    rows = data_rows(result.stdout)
++    assert len(rows) == 5
++    assert all("ENDOFHIT" in row for row in rows)
++    assert "chars]" not in result.stdout
++
++
++def test_full_bypasses_the_character_budget(corpus):
++    """As `show --full` does (SXR-AUD-008): complete means complete."""
++    result = run(corpus, "grep", NEEDLE, "--full", "--budget", "400")
++    assert result.exit_code == 0
++    assert len(data_rows(result.stdout)) == 12
++    assert all("ENDOFHIT" in row for row in data_rows(result.stdout))
++
++
++def test_all_is_exactly_full_with_no_row_cap(corpus):
++    """One spelling, asserted byte-for-byte so the two cannot drift apart."""
++    every = run(corpus, "grep", NEEDLE, "--all")
++    spelled_out = run(corpus, "grep", NEEDLE, "--full", "-n", "0")
++    assert every.exit_code == 0 and spelled_out.exit_code == 0
++    assert every.stdout == spelled_out.stdout
++
++
++def test_all_overrides_an_explicit_row_cap_like_prompts(corpus):
++    """D-01 gave `prompts --all` this precedence; grep's --all must not differ."""
++    result = run(corpus, "grep", NEEDLE, "--all", "-n", "2")
++    assert result.exit_code == 0
++    assert len(data_rows(result.stdout)) == 12
++
++
++def test_all_overrides_an_explicit_budget_like_prompts(corpus):
++    """The other half of D-01's precedence: --all beats an explicit character cap."""
++    result = run(corpus, "grep", NEEDLE, "--all", "--budget", "400")
++    assert result.exit_code == 0
++    assert len(data_rows(result.stdout)) == 12
++    assert "chars]" not in result.stdout
++
++
++def test_include_zero_keeps_zero_match_sessions(corpus):
++    """The job --all used to do, under the name that says what it does."""
++    pruned = run(corpus, "grep", NEEDLE, "-c")
++    kept = run(corpus, "grep", NEEDLE, "-c", "--include-zero")
++    assert len(data_rows(pruned.stdout)) == 2
++    assert len(data_rows(kept.stdout)) == 3
++    assert "\t0\t" in kept.stdout
++
++
++def test_all_no_longer_keeps_zero_rows(corpus):
++    """The breaking half of the rename, asserted so it cannot regress quietly."""
++    result = run(corpus, "grep", NEEDLE, "-c", "--all")
++    assert result.exit_code == 0
++    assert len(data_rows(result.stdout)) == 2
++
++
++def test_an_all_zero_table_prints_and_still_exits_one(corpus):
++    """Reporting zero rows as data does not make a zero-match scope a hit."""
++    result = run(corpus, "grep", ABSENT, "-c", "--include-zero")
++    assert result.exit_code == 1
++    rows = data_rows(result.stdout)
++    assert len(rows) == 3
++    assert all("\t0\t" in row for row in rows)
++    assert "0 of 3 sessions match" in result.stdout
++
++
++def test_a_zero_match_scope_without_include_zero_is_unchanged(corpus):
++    """The existing empty path keeps its diagnostics and its exit 1."""
++    result = run(corpus, "grep", ABSENT, "-c")
++    assert result.exit_code == 1
++    assert not data_rows(result.stdout)
++    assert f"no matches for '{ABSENT}'" in result.stderr
++
++
++def test_omitted_results_are_reported_under_json_too(corpus):
++    """Before this, `grep -n 2 --json` printed 2 of 12 and said nothing anywhere."""
++    result = run(corpus, "grep", NEEDLE, "-n", "2", "--json")
++    assert result.exit_code == 0
++    lines = [line for line in result.stdout.splitlines() if line]
++    assert len(lines) == 2
++    for line in lines:
++        json.loads(line)  # stdout stays a record contract (D-09).
++    assert "showing first 2" in result.stderr
++
++
++def test_the_count_footer_names_the_flag_that_exists(corpus):
++    """A footer advertising the old flag would be a migration trap."""
++    result = run(corpus, "grep", NEEDLE, "-c")
++    assert "keep zero-match rows: --include-zero" in result.stdout
++    assert "rows: --all" not in result.stdout
++
++
++def test_flags_that_describe_another_shape_are_refused(corpus):
++    """-c prints no text to complete, and --include-zero has no table without -c."""
++    no_text = run(corpus, "grep", NEEDLE, "-c", "--full")
++    assert no_text.exit_code == 2
++    assert "--full" in no_text.stderr and "--all" in no_text.stderr
++    no_table = run(corpus, "grep", NEEDLE, "--include-zero")
++    assert no_table.exit_code == 2
++    assert "--include-zero" in no_table.stderr
++
++
++def test_counts_are_independent_of_display_caps(corpus):
++    """A cap on what is printed must never change what was counted."""
++    plain = run(corpus, "grep", NEEDLE, "-c")
++    capped = run(corpus, "grep", NEEDLE, "-c", "-n", "1")
++    assert "2 of 3 sessions match" in plain.stdout
++    assert "2 of 3 sessions match" in capped.stdout
++    # A capped view reports the true total, not the number it managed to print.
++    for flags in (["-n", "2"], ["--budget", "400"]):
++        result = run(corpus, "grep", NEEDLE, *flags)
++        assert "12 matches, showing first" in result.stdout
++    assert len(data_rows(run(corpus, "grep", NEEDLE).stdout)) == 12
++
++
++def test_raw_json_records_survive_every_new_flag(corpus):
++    """D-09 and D-12: raw records stay raw, and --ids stays a projection."""
++    whole = run(corpus, "grep", NEEDLE, "--all", "--json")
++    assert whole.exit_code == 0
++    records = [json.loads(line) for line in whole.stdout.splitlines() if line]
++    assert len(records) == 12
++    assert all("type" in record or "payload" in record for record in records)
++    ids = run(corpus, "grep", NEEDLE, "--ids", "--json")
++    projections = [json.loads(line) for line in ids.stdout.splitlines() if line]
++    assert [p["type"] for p in projections] == ["grep_session"] * 2
++    assert all("matches" not in p for p in projections)

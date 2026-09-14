@@ -120,7 +120,9 @@ in two audit scripts, and the approved annotation of
 `docs/session-search-hints-research.md`. Neither touches `src/` or `tests/`.
 | SXR-CLI-08 | one timestamp parser for every sort, filter and format | defect | **delivered 2026-09-12, accepted 2026-09-13** by the originating reviewer, who re-verified the single-parser claim in source (D-13 resolved with it); committed as `f0ce7ad` | [review-slice-08.md](review-slice-08.md), [slice-08.patch](slice-08.patch), `baseline-08/`, `evidence-slice-08/` |
 | SXR-CLI-21 | validate and document the compact-display flags | defect | **delivered 2026-09-13**; closes the cap clause SXR-CLI-03 and SXR-CLI-04 both deferred | [review-slice-21.md](review-slice-21.md), [slice-21.patch](slice-21.patch), `baseline-21/`, `evidence-slice-21/` |
-| SXR-CLI-07, 22 … 24 | see [tasks.md](tasks.md) | mixed | proposed | — |
+| SXR-CLI-07 | grep: result cap separated from character caps | intentional-behavior-change | **delivered 2026-09-13**; changes the documented meanings of `-n 0` and `--all`, and recovers an omission-reporting clause `tasks.md` had dropped from `PAR-grep-typer-budget` | [review-slice-07.md](review-slice-07.md), [slice-07.patch](slice-07.patch), `evidence-slice-07/` |
+| SXR-CLI-22 … 24 | see [tasks.md](tasks.md) | mixed | proposed | — |
+| SXR-DOCS-02 | one primer refresh for every flag-changing slice | record keeping, no behavior | queued by D-14; runs after the flag-changing slices, not per slice, so the version moves once | — |
 
 **Date correction, 2026-09-13.** `f0ce7ad` recorded slice 21's spec correction as
 "2026-09-12" and the slice itself as delivered that day, but the commit was authored
@@ -139,18 +141,60 @@ Established against evidence, not memory: artifact mtimes against `git log --for
 | `tasks.md` SXR-CLI-21 heading and spec note | 2026-09-12 | **2026-09-13** | `slice-21.patch` and `review-slice-21.md` mtimes, both 09-13 13:49 |
 | SXR-CLI-08 row | accepted 2026-09-12 | **delivered 2026-09-12, accepted 2026-09-13** | delivered on the 12th (`review-slice-08.md` 14:33); the acceptance arrived on the 13th. The earlier wording also overwrote a correct delivery date. |
 | SXR-CLI-21 row | delivered 2026-09-12 | **delivered 2026-09-13** | as above |
-| D-13 attribution and open-item 9 | 2026-09-12 | **2026-09-13** | the decision arrived with the slice-21 assignment on the 13th |
+| D-13 attribution and open-item 9 | 2026-09-12 | *reverted to 2026-09-12 by the reviewer* | the slice-21 assignment was **sent** 2026-09-12; only its execution slipped to the 13th, so the dictated date was right and this "correction" was the error. A decision is dated when the decider decided, not when the scribe wrote it down. |
 
-One of those is a change to the reviewer's own instruction, stated rather than made
-quietly: the message resolving open decision 9 said to record D-13 as "originating
-reviewer, 2026-09-12", but it arrived on the 13th, so the reviewer's own note
-carries the same off-by-one. Corrected to 2026-09-13 on that evidence; say so if you
-want the dictated date restored.
+**The fourth row was my error, and it is the useful one.** I changed a date the
+reviewer had dictated for D-13, reasoning that the message resolving open decision 9
+"arrived on the 13th" because that is when I read and executed it. It was sent on the
+12th; the run stalled overnight, so only the execution slipped. The dictated date was
+right.
+
+The mistake was using the wrong evidence for the question. Artifact mtimes and commit
+timestamps record when *this agent* did something, and they are the correct evidence
+for the three rows above, all of which are my own work. They say nothing about when a
+decision was made, because a decision is dated when the decider decided, not when the
+scribe wrote it down. Nothing in the tree could have told me when that message was
+sent, which is the tell: when the only available evidence cannot answer the question,
+the answer is to ask rather than to infer. Flagging the change instead of making it
+quietly is what let the reviewer catch it in one reading, and that is the part to
+keep.
 
 Every other date in this file and in `tasks.md` was checked the same way and is
 correct: slices 1 to 5 on 2026-09-11, the reconciliation, `SXR-HAZ-01`, D-08 to
 D-12, `SXR-DOCS-01`, slice 6 and slice 8's delivery on 2026-09-12, all matching
 their artifacts' mtimes and the commit dates of `d2021d9`, `b70f3ac` and `f42b1ad`.
+
+**Derived-row qualifier audit, 2026-09-13.** The reviewer asked whether a cheap
+audit of the other derived rows for dropped qualifiers was feasible, and to say so
+rather than do it silently if it would expand a slice. It was cheap: one script,
+[audit_qualifiers.py](audit_qualifiers.py), roughly an hour inside SXR-CLI-07 rather
+than a slice of its own, and it needed no judgment about prose because the CSV says
+which command owns each row and each flag.
+
+Three mechanical checks over all 24 tasks and their 408 rows. Check 2 is the
+slice-21 shape exactly -- an unscoped normative rule about a flag that several
+commands own, inside a task whose rows all name one command -- and it is validated
+against slice 21's own preserved original wording by `--selftest`, which reports
+`--budget is also owned by grep, prompts, and no command is named`. A check for a
+defect that cannot be shown to catch that defect is not evidence.
+
+| check | findings | verdict |
+| --- | --- | --- |
+| prose speaks normatively for a command no row is scoped to | **0** | the slice-21 defect is not repeated anywhere |
+| unscoped rule about a flag several commands own, one-command task | **10** | 9 benign, 1 real and fixed |
+| proposal words the prose never repeats | 131 | all in undelivered tasks 19, 20 and 22 to 24, whose prose is a one-line summary by design; **zero in any delivered task** |
+
+The one real finding, now fixed: `tasks.md`'s SXR-CLI-01 line recorded D-01 and D-02
+as *"`--all` keeps overriding an explicit `-n`/`--budget`; negative
+`--budget`/`--line-limit` keep meaning 'no trimming'"* with no command named, though
+both decisions are scoped to `prompts` and `--budget` belongs to `show` and `grep`
+too. That is the identical shape, on the identical subject, as the sentence that
+manufactured the D-05 conflict -- a later slice reading it as a global rule would
+have re-broken exactly what D-05 protects. Both clauses now name their command and
+point at D-05 and SXR-CLI-21.
+
+The other nine are `before`/`after` cells describing a flag under a heading that
+names the command, and were left alone rather than churned.
 
 **Two status drifts found by the same pass**, and the reason to distrust derived
 documents generally: `tasks.md` still headed SXR-CLI-04 "DELIVERED, awaiting review"
@@ -209,7 +253,8 @@ recorded here so a later slice cannot silently reopen them.
 | D-08 | Is `prompts` a read command or a discovery command? (open decision 6) | **A read command.** A bare `sxr prompts` prints complete human prompts, as slice 1 implemented and D-01/D-02 pinned. Upstream's session filtering, `--latest` and navigation notices are adopted; its default-to-listing is not. The recorded complaint was about reading, and a conversation catalog duplicates `sxr list`. The published 0.13.0 default is therefore deliberately reversed, and the migration is stated in `README.md`, in `prompts --help` and in the primer. | originating reviewer, 2026-09-12 |
 | D-09 | Does upstream's synthesized `prompt_session` object become the default `prompts --json` output? | **No. Raw source records remain the `--json` contract.** A catalog projection, if it is ever worth keeping, needs its own flag or command and must be documented as a distinct schema, never replacing raw records. | originating reviewer, 2026-09-12 |
 | D-11 | Commit the reconciliation as a rebase onto `8f93114` or as a merge? (open decision 7) | **A merge, so history records that 0.12.3, 0.12.4 and 0.13.0 happened and were reconciled rather than burying them.** Done 2026-09-12: `f806ede` carries the five slices and the hazard fix, and `d2021d9` merges `8f93114` into it with this tree's content as the resolution. The merge tree is byte-identical to `f806ede`'s, so the merge changed no file. Nothing is pushed. | originating reviewer, 2026-09-12 |
-| D-13 | Is `--since @N` selecting a different set an acceptable consequence of SXR-CLI-08's corrected ordering? | **Accept it.** `@N` is documented as temporary and recomputed per invocation, `CMD-list-typer`'s own compatibility cell sanctions renumbering, and the alternative — resolving `@N` against the old string order for window bounds only — would let one handle name two different sessions in a single command line. A *literal* bound keeps exactly the sessions it always kept; only an `@N` bound moves. Recorded in `contracts.md` so a later slice does not "restore" the old numbering as a bug fix. | originating reviewer, 2026-09-13 |
+| D-14 | Should `PRIMER_BODY` carry grep's new caps, at the cost of a reissue? (open decision 10) | **Leave the primer as it is.** Nothing in it is false, the version question is separately held, and a v0.14.0-stamped block whose content differs from what this tree generates is exactly the drift `write_hazard` exists to catch. Primer content for the flag-changing slices is deliberately deferred to a single refresh once those slices are done, so the version moves once rather than per slice. That refresh is queued as `SXR-DOCS-02` so it stays visible instead of becoming an implicit obligation. | originating reviewer, 2026-09-13 |
+| D-13 | Is `--since @N` selecting a different set an acceptable consequence of SXR-CLI-08's corrected ordering? | **Accept it.** `@N` is documented as temporary and recomputed per invocation, `CMD-list-typer`'s own compatibility cell sanctions renumbering, and the alternative — resolving `@N` against the old string order for window bounds only — would let one handle name two different sessions in a single command line. A *literal* bound keeps exactly the sessions it always kept; only an `@N` bound moves. Recorded in `contracts.md` so a later slice does not "restore" the old numbering as a bug fix. | originating reviewer, 2026-09-12 |
 | D-12 | Is `grep -l --json`'s `grep_session` object a projection D-09 permits, or an invented schema? | **Accept it as implemented.** It sits within D-09 rather than against it: the flag already existed, the schema is documented in `README.md` and `grep --help`, and it exposes nothing a caller could not already get from `list`. Recorded in `contracts.md` so a later slice neither "corrects" it back to raw records nor adds a match count, which would make `-l` and `-c` indistinguishable. | originating reviewer, 2026-09-12 |
 | D-10 | Does the `init --write` primer hazard wait for the reconciliation slice? | **No, it goes first and on its own.** It can corrupt other repositories while it sits there. Delivered as SXR-HAZ-01 with its own patch and evidence, separate from the rebase. | originating reviewer, 2026-09-12 |
 
@@ -274,7 +319,37 @@ recorded here so a later slice cannot silently reopen them.
    `grep_session` projection stands as implemented, and `contracts.md` records
    its shape so a later slice does not undo it.
 
-9. *Answered 2026-09-13 as D-13 and moved to the resolved table above.* The
+10. *Answered 2026-09-13 as D-14 and moved to the resolved table above.* The primer
+    stays as it is, and the deferred refresh is queued as `SXR-DOCS-02`. The question
+    and its evidence are kept below.
+
+    **Should `PRIMER_BODY` carry grep's new caps, at the cost of a reissue?**
+    Raised by SXR-CLI-07, whose review clause asks for the migration note "in help,
+    README and primer". The first two are done. The primer is the third, and it is
+    the one place where adding text is not free.
+
+    Checked line by line rather than assumed: `PRIMER_BODY` never mentions `grep
+    --all`, `grep -n 0`, or zero-count rows, so this slice makes no statement in it
+    false. Its one adjacent sentence, "Zoom (`--around`, `--range`, `--type`) or
+    `--full` prints whole text", becomes *more* accurate now that `--full` exists on
+    `grep` as well. The `--help` epilog, which is also agent-facing and is not
+    version-stamped, carries the full caps paragraph instead.
+
+    The cost of adding it: `primer(version)` stamps the block `<!-- sxr:primer
+    v{version} -->` and `write_hazard` compares installed content independently of
+    that stamp, so changing `PRIMER_BODY` without a version bump leaves every
+    v0.14.0-stamped block in the world differing from what this tree's v0.14.0
+    generates -- the drift the D-10 hazard fix exists to catch. This repo's own
+    `CLAUDE.md` block currently matches `PRIMER_BODY` exactly, and was left matching.
+
+    Not implemented either way, because the honest options are "spend ~25 tokens and
+    bump the version" or "leave it, nothing is false". Slice 5's primer reissue and
+    version bump were explicitly approved; this one was not, and a version change is
+    not a decision to take unilaterally. Wording ready if you want it, on the
+    grep-patterns bullet: *"--full/--all print matches whole; -c --include-zero keeps
+    zero-count rows."*
+
+9. *Answered 2026-09-12 as D-13 and moved to the resolved table above.* The
    `--since @N` scope change stands; `contracts.md` keeps the literal-versus-`@N`
    distinction explicit so a later slice does not undo the numbering as a fix.
    The evidence and reasoning that produced the question are kept below.

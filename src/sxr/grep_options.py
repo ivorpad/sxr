@@ -25,7 +25,9 @@ class GrepOpts:
     context: int = 0
     ignore_case: bool = False
     ids_only: bool = False
-    include_all: bool = False
+    uncapped: bool = False
+    full: bool = False
+    include_zero: bool = False
     sort: str | None = None
     json_out: bool = False
     limit: int | None = None
@@ -42,6 +44,20 @@ class GrepOpts:
     def order(self) -> str:
         """The -c ordering, with the default spelled rather than assumed."""
         return self.sort or SORTS[0]
+
+    @property
+    def complete_text(self) -> bool:
+        """Print each match whole? --full asks for it, --all includes it."""
+        return self.full or self.uncapped
+
+    @property
+    def rows_uncapped(self) -> bool:
+        """Print every result? --all asks for it, and so does an explicit -n 0.
+
+        These are two spellings of one intent, which is why --all is documented as
+        --full -n 0 rather than as a fourth independent switch.
+        """
+        return self.uncapped or self.limit == 0
 
     def check(self) -> None:
         """Reject flag pairs that describe two different output shapes.
@@ -61,3 +77,10 @@ class GrepOpts:
             fail("-c ranks matching sessions and -l lists them; pick one")
         if self.count and self.context:
             fail("-c prints one row per session, so -C has no events to surround; drop one")
+        if self.count and self.full:
+            fail(
+                "-c counts matches and prints none of their text, so --full has "
+                "nothing to complete; use --all to lift -n"
+            )
+        if self.include_zero and not self.count:
+            fail("--include-zero keeps zero-match rows in the -c table; add -c, or drop it")

@@ -8,6 +8,7 @@ and the shared diagnostics live in grep_counts.
 
 import json
 import re
+import sys
 from dataclasses import dataclass
 
 from sxr.grep_counts import count_view, counts, empty, warnings
@@ -151,7 +152,7 @@ def _emit(ref: SessionRef, events: list[Event], hits: list[Event], opts: GrepOpt
     if opts.ids_only:
         sink.write([ref.short_id])
         return
-    cap = line_limit(None)
+    cap = 0 if opts.complete_text else line_limit(None)
     if opts.context > 0:
         index = {id(event): i for i, event in enumerate(events)}
         for hit in hits:
@@ -159,6 +160,32 @@ def _emit(ref: SessionRef, events: list[Event], hits: list[Event], opts: GrepOpt
         return
     for event in hits:
         sink.write([_row(ref, event, cap)])
+
+
+def _omitted(total: int, sessions: int, shown: int, opts: GrepOpts) -> None:
+    """Say what a cap held back, and name the escape the caller has not used yet.
+
+    Under --json this goes to stderr, because stdout is a record contract (D-09)
+    and an omission nobody is told about is the worse of the two problems: before
+    this, `grep -n 2 --json` printed 2 of 14 records and said nothing anywhere.
+    """
+    found = f"{sessions} sessions" if opts.ids_only else f"{total} matches"
+    hint = (
+        "--all for all of it whole, or --budget 0 to lift the character stop"
+        if opts.rows_uncapped
+        else "narrow the pattern, scope to <id>, -n 0 for every result, "
+        "or --all for all of it whole"
+    )
+    stream = sys.stderr if opts.json_out else sys.stdout
+    print(f"# {found}, showing first {shown}; {hint}", file=stream)
+    if opts.limit == 0 and not opts.uncapped:
+        # -n 0 used to lift the character budget as well. It stopped here instead,
+        # so the caller needs to hear that the flag they used no longer does that.
+        print(
+            "# -n 0 lifts the result cap only now; the character budget still "
+            "applies (--all, or --budget 0)",
+            file=sys.stderr,
+        )
 
 
 def _hits_view(
@@ -170,10 +197,12 @@ def _hits_view(
     warn: list[str],
 ) -> int:
     """Match rows, id list, or -C windows, all under the printing caps."""
-    unlimited = opts.limit == 0
     sink = _Sink(
-        row_cap=None if unlimited or not opts.limit else opts.limit,
-        budget=0 if unlimited or opts.json_out else scan_budget(opts.budget),
+        row_cap=None if opts.rows_uncapped or not opts.limit else opts.limit,
+        # -n used to lift this too, which meant an explicit --budget could be
+        # discarded by a flag that reads as a row count. Only the character flags
+        # decide the character stop now.
+        budget=0 if opts.complete_text or opts.json_out else scan_budget(opts.budget),
     )
     total = 0
     sessions = 0
@@ -189,14 +218,10 @@ def _hits_view(
             _emit(ref, events, hits, opts, sink)
     if total == 0:
         return empty(pattern, len(refs), warn)
+    if sink.capped:
+        _omitted(total, sessions, sink.shown, opts)
     if opts.json_out:
         return 0
-    if sink.capped:
-        found = f"{sessions} sessions" if opts.ids_only else f"{total} matches"
-        print(
-            f"# {found}, showing first {sink.shown}; narrow the pattern, "
-            f"scope to <id>, or -n 0 for all"
-        )
     if not opts.ids_only and opts.context == 0 and first_hit:
         ref, seq = first_hit
         print(f"# context inline: -C 3; zoom: {command(ref, 'show', '--around', str(seq))}")

@@ -182,7 +182,9 @@ def grep(
     ignore_case: flags.IgnoreCaseF = False,
     ids_only: flags.IdsOnlyF = False,
     expr: flags.ExprF = None,
-    include_all: flags.AllRowsF = False,
+    uncapped: flags.GrepAllF = False,
+    full: flags.GrepFullF = False,
+    include_zero: flags.IncludeZeroF = False,
     sort: flags.SortF = None,
     after_ctx: flags.AfterCtxF = None,
     before_ctx: flags.BeforeCtxF = None,
@@ -197,7 +199,11 @@ def grep(
 ) -> None:
     """Search event text across all sessions in scope; -c ranks matches.
 
-    --since/--before narrow the sessions; -n 0 lifts row and budget limits.
+    --since/--before narrow the sessions. Three caps act independently: -n caps
+    results, --budget stops output by characters, and each match row is flattened
+    to --line-limit chars. --full lifts the character caps and keeps -n; --all
+    lifts all three and is exactly --full -n 0. -n 0 lifts the row cap only and
+    says so, where it used to silently discard an explicit --budget too.
 
     Every mode emits JSON under --json: matching source records one per physical
     line, `grep_count` objects under -c, `grep_session` identities under --ids.
@@ -215,7 +221,9 @@ def grep(
         context=context,
         ignore_case=ignore_case,
         ids_only=ids_only,
-        include_all=include_all,
+        uncapped=uncapped,
+        full=full,
+        include_zero=include_zero,
         sort=sort,
         json_out=json_out,
         limit=limit,

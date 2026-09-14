@@ -51,7 +51,7 @@ def title(ref: SessionRef, mark: bool = False) -> str:
 
 def _order(rows: list[tuple], opts: GrepOpts) -> list[tuple]:
     """Count rows sorted by match density, or oldest first for --sort started."""
-    kept = rows if opts.include_all else [row for row in rows if row[1]]
+    kept = rows if opts.include_zero else [row for row in rows if row[1]]
     if opts.order == SORTS[1]:
         return sorted(kept, key=lambda row: order_key(row[0].started))
     return sorted(kept, key=lambda row: -row[1])
@@ -76,10 +76,10 @@ def count_view(pattern: str, rows: list[tuple], opts: GrepOpts, warn: list[str])
             file=sys.stderr,
         )
     matched = sum(1 for row in rows if row[1])
-    if not matched:
+    if not matched and not opts.include_zero:
         return empty(pattern, len(rows), warn)
     kept = _order(rows, opts)
-    shown = kept if not opts.limit else kept[: opts.limit]
+    shown = kept if opts.rows_uncapped or not opts.limit else kept[: opts.limit]
     for ref, _, _ in shown:
         ref.summarize()
     if opts.json_out:
@@ -102,16 +102,20 @@ def count_view(pattern: str, rows: list[tuple], opts: GrepOpts, warn: list[str])
     print(tab_row("# session", "matches", "first", "started", "title"))
     for ref, count, first in shown:
         print(tab_row(ref.short_id, count, first or "", date_of(ref.started), title(ref, True)))
-    top = shown[0]
-    print(
-        f"# {matched} of {len(rows)} sessions match; "
-        f"zoom: {command(top[0], 'show', '--around', str(top[2]))}"
-    )
+    zoom = next((row for row in shown if row[1]), None)
+    if zoom is None:
+        print(f"# 0 of {len(rows)} sessions match")
+    else:
+        print(
+            f"# {matched} of {len(rows)} sessions match; "
+            f"zoom: {command(zoom[0], 'show', '--around', str(zoom[2]))}"
+        )
     if len(kept) > len(shown):
         print(f"# +{len(kept) - len(shown)} matching sessions hidden (raise -n)")
     if any(is_live(ref.ended) for ref, _count, _first in shown):
         print(LIVE_NOTE)
-    print("# oldest first: --sort started; keep zero-match rows: --all")
+    print("# oldest first: --sort started; keep zero-match rows: --include-zero")
     for line in warn:
         print(line)
-    return 0
+    # Reporting zero rows as data does not make a zero-match scope a hit.
+    return 0 if matched else 1

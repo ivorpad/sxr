@@ -26,7 +26,9 @@ budgets: show prints whole text whenever it fits --budget chars (default
 (default 200; env SXR_LINE_LIMIT) and says so. --budget 0 disables trimming;
 negative values are a usage error. prompts has no default budget: it prints
 complete human input, and only --budget/--line-limit ask for compact text.
---all lifts every limit.
+grep flattens each match row and stops at --budget chars; --full prints matches
+whole under -n, and zero-count -c rows are --include-zero. --all lifts every
+limit on any command.
 \b
 show selection: one order, so no flag discards another -- window (--around
 +/- --context, or --range A:B, never both), then kind (--type, else the

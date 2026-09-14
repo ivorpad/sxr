@@ -113,6 +113,39 @@ explicitly and names the migration note. Everything else here is a regression.
   converted instant. `find --json`'s `started` is deliberately still the source
   string: it never appended `Z`, so it never claimed to be UTC.
 
+## grep's three caps (SXR-CLI-07)
+
+- **Each cap answers to one flag, and no flag moves another.** `-n` caps how many
+  results print. `--budget`/`SXR_BUDGET` stops output by total characters.
+  `--line-limit`/`SXR_LINE_LIMIT` flattens each row. Before this slice `-n 0` also
+  lifted the budget, so an explicit `--budget 400` could be discarded by a flag
+  named for rows. A later slice must not re-entangle them: if `-n` ever changes the
+  character stop again, that is this defect returning.
+- **`--full` lifts the two character caps and leaves `-n` alone. `--all` lifts all
+  three and is defined as exactly `--full -n 0`,** asserted byte-for-byte in
+  `tests/test_grep_caps.py` on both providers. `--all` is not a fourth independent
+  switch, and the view reads two derived properties (`rows_uncapped`,
+  `complete_text`) rather than the flags, so neither can grow a private meaning.
+- **`grep --all` and `prompts --all` mean the same thing, and that is deliberate.**
+  D-01 gave `prompts --all` completeness with precedence over an explicit
+  `-n`/`--budget`, and moved selection-widening to `--include-context`. `grep --all`
+  has the same meaning, the same precedence, and moved its selection-widening to
+  `--include-zero`. A later slice must not give one command's `--all` a meaning the
+  other does not have; if the two must diverge, that needs a recorded decision.
+- **`--include-zero` widens `-c` selection and changes no exit code.** It keeps
+  zero-match sessions in the table, including when every session has zero, and a
+  scope with no matches still exits 1 whether or not its rows printed. Reporting
+  zero rows as data is not a hit. The old spelling for this was `--all`; the `-c`
+  footer advertises the current one.
+- **An omission is reported in every mode.** A view that held results back says so:
+  on stdout in text mode, on stderr under `--json`, where stdout is a record
+  contract (D-09). `grep -n 2 --json` used to print 2 of 14 records silently. The
+  notice must not migrate onto `--json` stdout to become "structured metadata".
+- **`-c --full` and a bare `--include-zero` are usage errors,** because `-c` prints
+  no text to complete and `--include-zero` has no table without `-c`. This is the
+  existing `GrepOpts.check` policy -- refuse a flag that describes another output
+  shape rather than accept and ignore it.
+
 ## Selection
 
 - Provider defaults are unchanged by this refactor: `find` searches both

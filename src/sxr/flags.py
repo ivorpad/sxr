@@ -91,7 +91,16 @@ IdsOnlyF = Annotated[
 ExprF = Annotated[
     str | None, typer.Option("--regexp", "-e", help="Pattern (allows a leading dash)")
 ]
-AllRowsF = Annotated[bool, typer.Option("--all", help="-c: keep zero-match rows")]
+GrepAllF = Annotated[
+    bool,
+    typer.Option("--all", help="Complete match text, no row or char cap (= --full -n 0)"),
+]
+GrepFullF = Annotated[
+    bool, typer.Option("--full", help="Complete match text; -n still caps results")
+]
+IncludeZeroF = Annotated[
+    bool, typer.Option("--include-zero", help="-c: keep sessions with zero matches")
+]
 SortF = Annotated[
     str | None,
     typer.Option("--sort", help="-c only; matches (default) or started (oldest first)"),

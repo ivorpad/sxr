@@ -31,7 +31,7 @@ def test_limit_caps_match_rows_and_reports_the_total(capsys) -> None:
     out = capsys.readouterr().out
     assert out.count("needle") == 3
     assert "# 20 matches, showing first 3" in out
-    assert "-n 0 for all" in out
+    assert "-n 0 for every result, or --all for all of it whole" in out
 
 
 def test_limit_zero_prints_everything(capsys) -> None:
@@ -104,11 +104,11 @@ def test_count_sort_started_puts_the_oldest_first(capsys) -> None:
     assert "zoom: sxr show old00000 --around 1" in lines[3]
 
 
-def test_count_all_restores_zero_rows(capsys) -> None:
+def test_count_include_zero_restores_zero_rows(capsys) -> None:
     hit = _ref("hit00000")
     zero = _ref("zero0000")
     events = {hit.path: _events("needle"), zero.path: _events("nope")}
-    opts = GrepOpts(count=True, include_all=True)
+    opts = GrepOpts(count=True, include_zero=True)
     assert grep_view("needle", [hit, zero], _parse(events), opts) == 0
     out = capsys.readouterr().out
     assert "zero0000\t0\t\t" in out
