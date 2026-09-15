@@ -37,8 +37,9 @@ def build(version, directory):
         name = f"sxr-{version}-{target}.tar.gz"
         if hashlib.sha256((directory / name).read_bytes()).hexdigest() != checksums[name]:
             raise SystemExit(f"Checksum mismatch: {name}")
-    call("brew", "tap", "ivorpad/tap")
+    # Tapping now evaluates formulae, so trust this formula before cloning the tap.
     call("brew", "trust", "--formula", "ivorpad/tap/sxr")
+    call("brew", "tap", "ivorpad/tap")
     tap = Path(call("brew", "--repository", "ivorpad/tap").strip())
     path = tap / "Formula/sxr.rb"
     tests = path.read_text().split("  test do", 1)[1]
