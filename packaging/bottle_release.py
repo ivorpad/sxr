@@ -7,7 +7,7 @@ import re
 import tempfile
 from pathlib import Path
 
-from publish import call
+from publish import call, cleanup_tests
 
 
 def collect(version, directory):
@@ -65,7 +65,9 @@ def attach(version, run, tap, directory):
     original = path.read_text()
     assert f'  version "{version}"' in original
     assert "  bottle do" not in original, "Formula already has bottles"
-    updated = original.replace("\n  def install", block + "\n  def install", 1)
+    prefix, tests = original.split("  test do", 1)
+    cleaned = prefix + "  test do" + cleanup_tests(tests)
+    updated = cleaned.replace("\n  def install", block + "\n  def install", 1)
     assert updated != original
     checksums = directory / "BOTTLE_SHA256SUMS"
     checksums.write_text(

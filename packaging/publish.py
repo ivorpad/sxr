@@ -25,14 +25,20 @@ def call(*arguments, **kwargs):
         raise
 
 
-def formula(version, assets, tests):
-    """Install bundles directly, preserving the tap's existing functional tests."""
+def cleanup_tests(tests):
+    """Keep the test worker from retaining an executable that Homebrew must modify."""
     if '"serve", "stop"' not in tests:
         ending = "  end\nend\n"
         assert tests.endswith(ending), "Unexpected Homebrew test block ending"
         tests = tests.removesuffix(ending) + (
             '  ensure\n    system bin/"sxr", "serve", "stop"\n' + ending
         )
+    return tests
+
+
+def formula(version, assets, tests):
+    """Install bundles directly, preserving the tap's existing functional tests."""
+    tests = cleanup_tests(tests)
     lines = [
         "class Sxr < Formula",
         '  desc "Session x-ray: read Claude Code and Codex sessions from the terminal"',
