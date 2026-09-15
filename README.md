@@ -300,8 +300,10 @@ session in scope. Until 0.14.0 a nonempty `--grep` with no selector silently
 widened the scope to the whole project, so `sxr cmds --grep "git push"` searched
 history while `sxr cmds @1 --grep "git push"` searched one session; that is the
 behavior `--all-sessions` now names. A filtered view that searched fewer sessions
-than the scope holds says so and names the flag, in the empty case on stderr and
-otherwise as a `#` note.
+than the scope holds says so and names the flag, as a `#` note on stdout in text
+mode and on stderr when the result is empty or `--json` was asked for. Under
+`--json` it said nothing at all before, which left an agent with a partial answer
+and no way to know the scope had been narrowed for it.
 
 `prompts` reads, it does not list. With no selector it reads the newest session
 that has human prompts, walking past newer sessions that are empty, subagent
@@ -360,7 +362,10 @@ repository's registered Git worktrees. Without explicit `--claude-root` flags,
 replace that selection. Codex uses `CODEX_HOME`, defaulting to `~/.codex`.
 `--coverage` reports searched and unavailable roots on stderr, including when
 using `--json`. Empty discovery and searches across multiple roots also report
-the roots checked.
+the roots checked. A `--path` that does not exist on this machine is labelled as
+such, but only when the scope came back empty: a mistyped path otherwise reads
+exactly like a directory nobody has worked in, while a recorded cwd that no
+longer exists locally still legitimately matches the sessions recorded there.
 
 Nested Claude sessions have IDs such as `parent-uuid/agent-a1` so reused agent
 names stay distinct. Byte-identical copies of one ID are counted once and retain
@@ -599,7 +604,9 @@ that used to destroy content silently.
 - Nothing prints unbounded. `-n` caps rows across the whole scope (not per
   session), `-n 0` lifts that cap and no other, and any view that stopped early
   says how many rows it held back -- on stderr under `--json`, where stdout
-  carries records only. Negative limits return 2. JSON read views count
+  carries records only. Every view: `list --json` and `cmds --json` used to
+  return a bounded answer and say nothing on either stream, so one session of
+  four read exactly like a scope that holds one. Negative limits return 2. JSON read views count
   physical records, keeping every field of each returned record. Tools JSON
   is one complete aggregate; stats JSON has one complete object per session.
   `--tail 0` selects no events and returns 1; negative tails return 2.

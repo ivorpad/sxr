@@ -303,6 +303,39 @@ tree's behavior, not the cell's.
 - **accept:** a follow-up copied from `list --json` reads the same file after new sessions appear; find never presents a rank as `@N`; existing `@N` semantics unchanged.
 - **review:** JSON additions are additive only; no change to handle numbering rules.
 
+## SXR-CLI-24 — results on stdout, omissions and notices on stderr  *(DELIVERED 2026-09-14, awaiting review)*
+
+- **rows verified against source before editing, and run:** `PAR-list-typer-limit`,
+  `PAR-root-typer-coverage`, `EXTRA-011`. Read from the CSV, not from the paraphrase
+  below; the paraphrase was checked against all three and carries their qualifiers.
+- **what the rows asked for that was already true:** `--json` stdout is already pure in
+  all 18 machine-readable cases measured, so `EXTRA-011`'s "no text notice breaks JSON
+  stdout" needed nothing. `_coverage` already labels provider roots `searched` or
+  `unavailable`, and already separates discovery counts from searched source counts,
+  which is most of `PAR-root-typer-coverage`. `show`, `stats`, `path`, `errors` and
+  (since SXR-CLI-07) `grep` already report omissions on stderr under `--json`.
+- **the three defects that were left, each measured before being fixed:**
+  1. `list -n 1 --json` returned 1 of 4 sessions and said nothing on either stream.
+  2. `cmds -n 1 --json` returned 1 of 3 records and said nothing on either stream.
+     `print_records` defers its notice when handed a scope-wide budget, so that one
+     omission is reported for the whole scope rather than once per session, and
+     `cmds_view` never made that deferred call.
+  3. A `--path` that does not exist reported "0 sessions" in the same words as a real
+     directory with no sessions, so a typo was indistinguishable from an empty scope.
+  Plus one found while fixing 2: the `# N of M sessions searched; all of them:
+  --all-sessions` disclosure was printed in text mode only, so a `--json` caller was
+  not told its scope had been narrowed.
+- **what this slice deliberately did not do:** move text-mode headers and footers off
+  stdout. `EXTRA-011`'s before-cell names them, but its compatibility cell says "Review
+  before implementing", and every script that reads `# +N more` or the `# read:` line
+  from `sxr list` would break at once. Left as an open decision with the evidence.
+- **also not done:** `total/shown/omitted` *fields* inside structured envelopes, which
+  `EXTRA-011`'s after-cell permits ("where structured envelopes exist"). Schema growth
+  is exactly what the three `decision-needed` rows hold, so this slice reports on
+  stderr and adds no field to any object.
+- **delivered:** stdout byte-identical in all 116 captures on both providers, exit codes
+  identical in all 116, and 16 changed captures all of which add a stderr line.
+
 ## SXR-CLI-24 — results on stdout, omissions and notices on stderr
 
 - **class:** defect

@@ -28,6 +28,12 @@ def _coverage(refs: list, roots: list[Path], cwd: str, options: dict) -> None:
     scope = "descendants" if options.get("recursive") else "exact cwd"
     if options.get("worktrees"):
         scope += " + Git worktrees"
+    if not refs and cwd and not Path(cwd).exists():
+        # A mistyped --path reported "0 sessions" in the same words as a real directory
+        # nobody has worked in, and the roots below were labelled searched because they
+        # were. Only said when the scope is empty: a recorded cwd that no longer exists
+        # locally still legitimately matches the sessions recorded there.
+        scope += "; path not present on this machine"
     print(
         f"# coverage: {cwd} ({scope}); {len(refs)} sessions, {children} agents, "
         f"{archived} archived, {copies} duplicate copies",

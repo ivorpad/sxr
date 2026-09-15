@@ -1,0 +1,894 @@
+diff --git a/README.md b/README.md
+index f756f6b..3e4356d 100644
+--- a/README.md
++++ b/README.md
+@@ -300,8 +300,10 @@ session in scope. Until 0.14.0 a nonempty `--grep` with no selector silently
+ widened the scope to the whole project, so `sxr cmds --grep "git push"` searched
+ history while `sxr cmds @1 --grep "git push"` searched one session; that is the
+ behavior `--all-sessions` now names. A filtered view that searched fewer sessions
+-than the scope holds says so and names the flag, in the empty case on stderr and
+-otherwise as a `#` note.
++than the scope holds says so and names the flag, as a `#` note on stdout in text
++mode and on stderr when the result is empty or `--json` was asked for. Under
++`--json` it said nothing at all before, which left an agent with a partial answer
++and no way to know the scope had been narrowed for it.
+ 
+ `prompts` reads, it does not list. With no selector it reads the newest session
+ that has human prompts, walking past newer sessions that are empty, subagent
+@@ -360,7 +362,10 @@ repository's registered Git worktrees. Without explicit `--claude-root` flags,
+ replace that selection. Codex uses `CODEX_HOME`, defaulting to `~/.codex`.
+ `--coverage` reports searched and unavailable roots on stderr, including when
+ using `--json`. Empty discovery and searches across multiple roots also report
+-the roots checked.
++the roots checked. A `--path` that does not exist on this machine is labelled as
++such, but only when the scope came back empty: a mistyped path otherwise reads
++exactly like a directory nobody has worked in, while a recorded cwd that no
++longer exists locally still legitimately matches the sessions recorded there.
+ 
+ Nested Claude sessions have IDs such as `parent-uuid/agent-a1` so reused agent
+ names stay distinct. Byte-identical copies of one ID are counted once and retain
+@@ -599,7 +604,9 @@ that used to destroy content silently.
+ - Nothing prints unbounded. `-n` caps rows across the whole scope (not per
+   session), `-n 0` lifts that cap and no other, and any view that stopped early
+   says how many rows it held back -- on stderr under `--json`, where stdout
+-  carries records only. Negative limits return 2. JSON read views count
++  carries records only. Every view: `list --json` and `cmds --json` used to
++  return a bounded answer and say nothing on either stream, so one session of
++  four read exactly like a scope that holds one. Negative limits return 2. JSON read views count
+   physical records, keeping every field of each returned record. Tools JSON
+   is one complete aggregate; stats JSON has one complete object per session.
+   `--tail 0` selects no events and returns 1; negative tails return 2.
+diff --git a/audit/2026-09-11/cli-refactor/capture_streams.py b/audit/2026-09-11/cli-refactor/capture_streams.py
+new file mode 100644
+index 0000000..cd02e32
+--- /dev/null
++++ b/audit/2026-09-11/cli-refactor/capture_streams.py
+@@ -0,0 +1,216 @@
++"""Capture which stream every line goes to, for SXR-CLI-24's before/after diff.
++
++The whole slice is "results on stdout, notices on stderr", so each capture records
++stdout and stderr separately and then answers the two questions that matter:
++
++* Does stdout stay parseable when the mode says it is machine-readable? A `#`
++  comment or a bare notice on `--json` stdout is the defect, so every `--json` case
++  reports whether `2>/dev/null` would leave valid JSON only.
++* Is an omission reported anywhere at all? A capped view that says nothing on either
++  stream is how an agent silently loses results.
++
++Groups: ``json`` for machine-readable stdout purity, ``text`` for where headers and
++footers go in human mode, ``notice`` for omission reporting under a row cap,
++``coverage`` for `--coverage` and discovery diagnostics, and ``keep`` for what must
++not move — raw records per D-09, the `grep_session` projection per D-12, dedup, exit
++codes and `--file` selection.
++
++    uv run python capture_streams.py --output evidence-slice-24/before --source /tmp/r24
++    uv run python capture_streams.py --output evidence-slice-24/after
++"""
++
++import argparse
++import io
++import json
++import os
++import sys
++import tempfile
++from contextlib import redirect_stderr, redirect_stdout
++from pathlib import Path
++
++import fixture_streams
++
++N = fixture_streams.NEEDLE
++
++JSON_CASES = [
++    ("list", ["list", "--json"]),
++    ("list-limit-1", ["list", "-n", "1", "--json"]),
++    ("list-limit-0", ["list", "-n", "0", "--json"]),
++    ("grep-limit-1", ["grep", N, "-n", "1", "--json"]),
++    ("grep-ids", ["grep", N, "--ids", "--json"]),
++    ("grep-count", ["grep", N, "-c", "--json"]),
++    ("cmds-limit-1", ["cmds", "-n", "1", "--json"]),
++    ("cmds-all-sessions", ["cmds", "--all-sessions", "-n", "2", "--json"]),
++    ("show-limit-1", ["show", "@1", "-n", "1", "--json"]),
++    ("prompts-limit-1", ["prompts", "@1", "-n", "1", "--json"]),
++    ("errors-limit-1", ["errors", "@1", "-n", "1", "--json"]),
++    ("tools", ["tools", "@1", "--json"]),
++    ("tools-limit-1", ["tools", "@1", "-n", "1", "--json"]),
++    ("stats-limit-1", ["stats", "@1:@2", "-n", "1", "--json"]),
++    ("path", ["path", "@1", "--json"]),
++    ("show-range", ["show", "@1:@2", "--json"]),
++    ("tools-range", ["tools", "@1:@2", "--json"]),
++    ("stats-range", ["stats", "@1:@2", "--json"]),
++]
++
++TEXT_CASES = [
++    ("list", ["list"]),
++    ("list-limit-1", ["list", "-n", "1"]),
++    ("grep-limit-1", ["grep", N, "-n", "1"]),
++    ("cmds-limit-1", ["cmds", "-n", "1"]),
++    ("errors-limit-1", ["errors", "@1", "-n", "1"]),
++    ("errors-compact", ["errors", "@1", "--compact"]),
++    ("tools", ["tools", "@1"]),
++    ("tools-limit-1", ["tools", "@1", "-n", "1"]),
++    ("stats", ["stats", "@1"]),
++    ("show-limit-1", ["show", "@1", "-n", "1"]),
++    ("prompts-limit-1", ["prompts", "@1", "-n", "1"]),
++    ("show-range", ["show", "@1:@2"]),
++]
++
++NOTICE_CASES = [
++    ("list-limit-1", ["list", "-n", "1"]),
++    ("list-limit-1-json", ["list", "-n", "1", "--json"]),
++    ("tools-limit-1", ["tools", "@1", "-n", "1"]),
++    ("tools-limit-1-json", ["tools", "@1", "-n", "1", "--json"]),
++    ("stats-limit-1-json", ["stats", "@1:@2", "-n", "1", "--json"]),
++    ("cmds-limit-1-json", ["cmds", "-n", "1", "--json"]),
++    ("grep-limit-1-json", ["grep", N, "-n", "1", "--json"]),
++    ("show-limit-1-json", ["show", "@1", "-n", "1", "--json"]),
++    ("prompts-limit-1-json", ["prompts", "@1", "-n", "1", "--json"]),
++    ("errors-limit-1-json", ["errors", "@1", "-n", "1", "--json"]),
++    # A filtered cmds view that fell back to the default scope: the sessions it did
++    # not read are a completeness fact, not a display detail.
++    ("cmds-grep", ["cmds", "--grep", "git"]),
++    ("cmds-grep-json", ["cmds", "--grep", "git", "--json"]),
++]
++
++COVERAGE_CASES = [
++    ("list", ["list", "--coverage"]),
++    ("list-json", ["list", "--coverage", "--json"]),
++    ("grep-json", ["grep", N, "--coverage", "--json"]),
++    ("missing-root", ["list", "--coverage", "--path", "/w/nowhere"]),
++    ("missing-root-json", ["list", "--coverage", "--json", "--path", "/w/nowhere"]),
++    ("recursive", ["list", "--coverage", "--recursive"]),
++]
++
++KEEP_CASES = [
++    ("grep-json-dedup", ["grep", N, "--json"]),
++    ("grep-all", ["grep", N, "--all"]),
++    ("grep-include-zero", ["grep", N, "-c", "--include-zero"]),
++    ("show-json", ["show", "@1", "--json"]),
++    ("cmds-json", ["cmds", "--json"]),
++    ("errors-json", ["errors", "@1", "--json"]),
++    ("list-plain", ["list"]),
++    ("no-matches", ["grep", "quernstone"]),
++    ("limit-negative", ["list", "-n", "-1"]),
++    ("help", ["--help"]),
++]
++
++GROUPS = [
++    ("json", JSON_CASES),
++    ("text", TEXT_CASES),
++    ("notice", NOTICE_CASES),
++    ("coverage", COVERAGE_CASES),
++    ("keep", KEEP_CASES),
++]
++
++
++def _stdout_health(body: str, json_mode: bool) -> str:
++    """Whether stdout is what its mode promises: pure JSON, or plain rows."""
++    lines = [line for line in body.splitlines() if line]
++    if not json_mode:
++        comments = sum(1 for line in lines if line.startswith("#"))
++        return f"{len(lines)} stdout lines, {comments} start with '#'"
++    bad = []
++    for index, line in enumerate(lines, start=1):
++        try:
++            json.loads(line)
++        except ValueError:
++            bad.append(f"line {index}: {line[:40]!r}")
++    if bad:
++        return f"NOT PURE: {len(bad)} of {len(lines)} stdout lines are not JSON; " + "; ".join(
++            bad[:2]
++        )
++    return f"pure: all {len(lines)} stdout lines parse as JSON"
++
++
++def _omission(body: str, err: str) -> str:
++    """Where an omission was reported, if anywhere at all."""
++    words = ("more", "omitted", "hidden", "showing first", "of 4", "raise -n")
++    on_out = any(w in line for line in body.splitlines() for w in words if line.startswith("#"))
++    on_err = any(w in err for w in words)
++    if on_out and on_err:
++        return "reported on both streams"
++    if on_out:
++        return "reported on stdout only"
++    if on_err:
++        return "reported on stderr only"
++    return "NOT REPORTED on either stream"
++
++
++def _run(provider: str, root: Path, args: list) -> str:
++    """Invoke one case in a fresh cache root and return its recorded transcript."""
++    from typer.testing import CliRunner
++
++    from sxr import util
++    from sxr.cli import app
++
++    getattr(util, "reset_env_notices", lambda: None)()
++    scoped = args + (
++        [] if "--help" in args or "--path" in args else ["--path", fixture_streams.CWD]
++    )
++    argv = [*(["--codex"] if provider == "codex" else []), *scoped]
++    with tempfile.TemporaryDirectory(prefix="sxr-streams-cache-") as cache:
++        saved = dict(os.environ)
++        os.environ["SXR_CACHE_DIR"] = cache
++        for name in ("SXR_NO_CACHE", "SXR_BUDGET", "SXR_LINE_LIMIT"):
++            os.environ.pop(name, None)
++        os.environ["CLAUDE_CONFIG_DIR" if provider == "claude" else "CODEX_HOME"] = str(root)
++        out, err = io.StringIO(), io.StringIO()
++        try:
++            with redirect_stdout(out), redirect_stderr(err):
++                result = CliRunner().invoke(app, argv)
++        finally:
++            os.environ.clear()
++            os.environ.update(saved)
++    body = result.stdout
++    trailing = result.stderr if result.stderr_bytes is not None else err.getvalue()
++    for noisy in (str(root), tempfile.gettempdir()):
++        body = body.replace(noisy, "<fixture>")
++        trailing = trailing.replace(noisy, "<fixture>")
++    lines = [
++        f"$ sxr {' '.join(argv)}",
++        f"exit={result.exit_code}",
++        f"stdout: {_stdout_health(body, '--json' in args)}",
++        f"omission: {_omission(body, trailing)}",
++        f"stderr lines: {len([x for x in trailing.splitlines() if x])}",
++    ]
++    return "\n".join(lines) + f"\n--- stdout\n{body}--- stderr\n{trailing}"
++
++
++def main() -> None:
++    """Write one file per group, provider and case under --output."""
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument("--output", type=Path, required=True, help="Directory to fill (required)")
++    parser.add_argument("--source", type=Path, help="Checkout to import sxr from (default: this)")
++    args = parser.parse_args()
++    if args.source:
++        sys.path.insert(0, str(args.source / "src"))
++    args.output.mkdir(parents=True, exist_ok=True)
++    written = 0
++    for provider in ("claude", "codex"):
++        with tempfile.TemporaryDirectory(prefix=f"sxr-streams-{provider}-") as directory:
++            root = Path(directory)
++            getattr(fixture_streams, provider)(root)
++            for group, cases in GROUPS:
++                for name, case in cases:
++                    (args.output / f"{group}-{provider}-{name}.txt").write_text(
++                        _run(provider, root, case)
++                    )
++                    written += 1
++    print(f"wrote {written} captures to {args.output}")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/audit/2026-09-11/cli-refactor/contracts.md b/audit/2026-09-11/cli-refactor/contracts.md
+index bf77b72..7bad798 100644
+--- a/audit/2026-09-11/cli-refactor/contracts.md
++++ b/audit/2026-09-11/cli-refactor/contracts.md
+@@ -146,6 +146,32 @@ explicitly and names the migration note. Everything else here is a regression.
+   existing `GrepOpts.check` policy -- refuse a flag that describes another output
+   shape rather than accept and ignore it.
+ 
++## Which stream carries what (SXR-CLI-24)
++
++- **stdout is the answer; stderr is everything said *about* the answer.** Under
++  `--json` this is load-bearing: `2>/dev/null` must leave valid JSON and nothing else,
++  which is what makes D-09's raw records usable. Verified as a property rather than
++  per command: all 116 slice-24 captures have byte-identical stdout before and after.
++- **A cap that held something back says so, in every mode, in every view.** Text mode
++  prints it on stdout as a `#` note; `--json` prints it on stderr. A view that returns
++  a bounded answer silently is the defect, not a tidy default — `list --json` and
++  `cmds --json` each did that, and `grep --json` did until SXR-CLI-07.
++- **Which sessions were *not* read is part of the answer, not decoration.** A filtered
++  `cmds` view that fell back to the default scope discloses the sessions it skipped and
++  names `--all-sessions`, on stdout in text and on stderr under `--json`. Before, an
++  agent reading JSON was given a narrowed scope and no way to learn that.
++- **Human-mode headers and footers stay on stdout.** `EXTRA-011` names them as
++  candidates to move; SXR-CLI-24 did not, because scripts read `# +N more` and the
++  `# read:` guidance line, and the row's own compatibility cell says "Review before
++  implementing". A later slice may move them, but only as a stated migration.
++- **No omission metadata is added inside any object.** `EXTRA-011` permits
++  `total/shown/omitted` fields "where structured envelopes exist", but schema growth is
++  what the three `decision-needed` rows hold, so the counts live on stderr instead.
++- **An unavailable scope is labelled, and only when it explains an empty result.**
++  A `--path` that does not exist reports so on the coverage line when nothing was
++  found. It is deliberately silent when sessions *were* found, because a recorded cwd
++  that no longer exists locally still legitimately matches them.
++
+ ## Selection
+ 
+ - Provider defaults are unchanged by this refactor: `find` searches both
+@@ -192,9 +218,14 @@ explicitly and names the migration note. Everything else here is a regression.
+ - **The primer is a distributed artifact and its version stamp is the package
+   version.** `onboard.primer()` stamps `sxr.__version__`, so any change to
+   `PRIMER_BODY` requires bumping `src/sxr/__init__.py`, `pyproject.toml` and the
+-  `sxr` entry in `uv.lock` together — `init --check` compares the stamp only,
+-  never the body, so a reissued primer under an unchanged stamp is reported "up
+-  to date". Editing the version files in the working tree is not a release;
++    `sxr` entry in `uv.lock` together. *Corrected 2026-09-14: this bullet said
++    `init --check` "compares the stamp only, never the body, so a reissued primer
++    under an unchanged stamp is reported up to date". That stopped being true in
++    `f806ede`, the upstream merge: `check_primer` compares the body against
++    `PRIMER_BODY` and reports "stamped this version but its body differs". Verified
++    by editing one character inside a current-version block, which exits 1. The
++    stale claim mattered because `SXR-DOCS-02` and `SXR-CLI-19` both rest on what
++    `--check` can detect.* Editing the version files in the working tree is not a release;
+   `just release` is the reviewer's to run.
+ - Before choosing a version number, check what is already published. This
+   checkout's `pyproject.toml` has been behind origin's tags (`0.12.2` locally
+diff --git a/audit/2026-09-11/cli-refactor/fixture_streams.py b/audit/2026-09-11/cli-refactor/fixture_streams.py
+new file mode 100644
+index 0000000..0fa633a
+--- /dev/null
++++ b/audit/2026-09-11/cli-refactor/fixture_streams.py
+@@ -0,0 +1,210 @@
++"""Corpora for SXR-CLI-24: enough of everything to make a stream split visible.
++
++The slice is about which stream each line goes to, so the fixture has to make every
++kind of line appear at once:
++
++* Four sessions, so `-n 1` omits three and any command with a row allowance has
++  something to report. Four is also enough for `list`'s `+N more` footer.
++* Tool calls, one of them failing, so `tools` and `errors` have rows and `cmds`
++  has an outcome to record.
++* A `Skill` call with an input, because that footer is uncapped today.
++* Long text, so trim notices fire and can be checked for their stream.
++* One Claude physical line with two content blocks, so dedup stays checkable while
++  records move between streams.
++"""
++
++import json
++from pathlib import Path
++
++CWD = "/w"
++NEEDLE = "cadence"
++LONG = " ".join(f"t{i:04d}bbbbbbbbbbbb" for i in range(40))
++
++
++def _claude_records(index: int) -> list:
++    """One session's records: prompts, tools, a failure, a Skill, long text."""
++    stamp = f"2026-09-1{index}T08:%02d:00Z"
++    records = [
++        dict(
++            type="user",
++            timestamp=stamp % 0,
++            cwd=CWD,
++            message=dict(role="user", content=f"please {NEEDLE} step {index}"),
++        ),
++        dict(
++            type="assistant",
++            timestamp=stamp % 1,
++            cwd=CWD,
++            message=dict(
++                role="assistant",
++                content=[
++                    dict(
++                        type="tool_use",
++                        id=f"t{index}a",
++                        name="Bash",
++                        input=dict(command=f"git status --short {index}"),
++                    )
++                ],
++            ),
++        ),
++        dict(
++            type="user",
++            timestamp=stamp % 2,
++            cwd=CWD,
++            message=dict(
++                role="user",
++                content=[dict(type="tool_result", tool_use_id=f"t{index}a", content="clean")],
++            ),
++        ),
++        dict(
++            type="assistant",
++            timestamp=stamp % 3,
++            cwd=CWD,
++            message=dict(
++                role="assistant",
++                content=[
++                    dict(
++                        type="tool_use",
++                        id=f"t{index}b",
++                        name="Read",
++                        input=dict(file_path=f"/w/missing{index}.txt"),
++                    )
++                ],
++            ),
++        ),
++        dict(
++            type="user",
++            timestamp=stamp % 4,
++            cwd=CWD,
++            message=dict(
++                role="user",
++                content=[
++                    dict(
++                        type="tool_result",
++                        tool_use_id=f"t{index}b",
++                        is_error=True,
++                        content=f"ENOENT: no such file /w/missing{index}.txt {LONG}",
++                    )
++                ],
++            ),
++        ),
++        dict(
++            type="assistant",
++            timestamp=stamp % 5,
++            cwd=CWD,
++            message=dict(
++                role="assistant",
++                content=[
++                    dict(
++                        type="tool_use",
++                        id=f"t{index}c",
++                        name="Skill",
++                        input=dict(skill=f"skill-{index}"),
++                    )
++                ],
++            ),
++        ),
++        # One physical line, two blocks: dedup must keep it a single record.
++        dict(
++            type="assistant",
++            timestamp=stamp % 6,
++            cwd=CWD,
++            message=dict(
++                role="assistant",
++                content=[
++                    dict(type="text", text=f"{NEEDLE} first block {LONG}"),
++                    dict(type="text", text=f"{NEEDLE} second block {LONG}"),
++                ],
++            ),
++        ),
++    ]
++    return records
++
++
++def claude(root: Path) -> list[Path]:
++    """Four Claude sessions in one project directory."""
++    project = root / "projects" / "-w"
++    project.mkdir(parents=True, exist_ok=True)
++    paths = []
++    for index in range(4):
++        ident = f"{'abcd'[index] * 4}0024-0000-4000-8000-00000000000{index}"
++        path = project / f"{ident}.jsonl"
++        path.write_text("\n".join(json.dumps(r) for r in _claude_records(index)) + "\n")
++        paths.append(path)
++    return paths
++
++
++def codex(root: Path) -> list[Path]:
++    """The same four shapes on Codex, where one record is always one event."""
++    paths = []
++    for index in range(4):
++        directory = root / "sessions" / "2026" / "09" / f"1{index}"
++        directory.mkdir(parents=True, exist_ok=True)
++        tag = "abcd"[index] * 4
++        ident = f"0199240{index}-{tag}-7000-8000-00000000000{index}"
++        stamp = f"2026-09-1{index}T08:%02d:00Z"
++        records = [
++            dict(
++                timestamp=stamp % 0,
++                type="session_meta",
++                payload=dict(id=ident, cwd=CWD, timestamp=stamp % 0),
++            ),
++            dict(
++                timestamp=stamp % 0,
++                type="event_msg",
++                payload=dict(type="user_message", message=f"please {NEEDLE} step {index}"),
++            ),
++            dict(
++                timestamp=stamp % 1,
++                type="response_item",
++                payload=dict(
++                    type="function_call",
++                    name="shell",
++                    call_id=f"c{index}a",
++                    arguments=json.dumps(dict(command=["bash", "-lc", f"git status {index}"])),
++                ),
++            ),
++            dict(
++                timestamp=stamp % 2,
++                type="response_item",
++                payload=dict(
++                    type="function_call_output",
++                    call_id=f"c{index}a",
++                    output=json.dumps(dict(output="clean", metadata=dict(exit_code=0))),
++                ),
++            ),
++            dict(
++                timestamp=stamp % 3,
++                type="response_item",
++                payload=dict(
++                    type="function_call",
++                    name="shell",
++                    call_id=f"c{index}b",
++                    arguments=json.dumps(dict(command=["bash", "-lc", f"cat missing{index}"])),
++                ),
++            ),
++            dict(
++                timestamp=stamp % 4,
++                type="response_item",
++                payload=dict(
++                    type="function_call_output",
++                    call_id=f"c{index}b",
++                    output=json.dumps(
++                        dict(output=f"ENOENT missing{index} {LONG}", metadata=dict(exit_code=1))
++                    ),
++                ),
++            ),
++            dict(
++                timestamp=stamp % 5,
++                type="response_item",
++                payload=dict(
++                    type="message",
++                    role="assistant",
++                    content=[dict(type="output_text", text=f"{NEEDLE} first block {LONG}")],
++                ),
++            ),
++        ]
++        path = directory / f"rollout-2026-09-1{index}T08-00-00-{ident}.jsonl"
++        path.write_text("\n".join(json.dumps(r) for r in records) + "\n")
++        paths.append(path)
++    return paths
+diff --git a/audit/2026-09-11/cli-refactor/ledger.md b/audit/2026-09-11/cli-refactor/ledger.md
+index 3e9c409..afadd73 100644
+--- a/audit/2026-09-11/cli-refactor/ledger.md
++++ b/audit/2026-09-11/cli-refactor/ledger.md
+@@ -120,8 +120,9 @@ in two audit scripts, and the approved annotation of
+ `docs/session-search-hints-research.md`. Neither touches `src/` or `tests/`.
+ | SXR-CLI-08 | one timestamp parser for every sort, filter and format | defect | **delivered 2026-09-12, accepted 2026-09-13** by the originating reviewer, who re-verified the single-parser claim in source (D-13 resolved with it); committed as `f0ce7ad` | [review-slice-08.md](review-slice-08.md), [slice-08.patch](slice-08.patch), `baseline-08/`, `evidence-slice-08/` |
+ | SXR-CLI-21 | validate and document the compact-display flags | defect | **delivered 2026-09-13**; closes the cap clause SXR-CLI-03 and SXR-CLI-04 both deferred | [review-slice-21.md](review-slice-21.md), [slice-21.patch](slice-21.patch), `baseline-21/`, `evidence-slice-21/` |
+-| SXR-CLI-07 | grep: result cap separated from character caps | intentional-behavior-change | **delivered 2026-09-13**; changes the documented meanings of `-n 0` and `--all`, and recovers an omission-reporting clause `tasks.md` had dropped from `PAR-grep-typer-budget` | [review-slice-07.md](review-slice-07.md), [slice-07.patch](slice-07.patch), `evidence-slice-07/` |
+-| SXR-CLI-22 … 24 | see [tasks.md](tasks.md) | mixed | proposed | — |
++| SXR-CLI-07 | grep: result cap separated from character caps | intentional-behavior-change | **accepted 2026-09-13** as `55ad925` (committed 09-14), delivered 2026-09-13; changes the documented meanings of `-n 0` and `--all`, and recovers an omission-reporting clause `tasks.md` had dropped from `PAR-grep-typer-budget` | [review-slice-07.md](review-slice-07.md), [slice-07.patch](slice-07.patch), `evidence-slice-07/` |
++| SXR-CLI-24 | results on stdout, omissions and notices on stderr | defect | **delivered 2026-09-14**: `list --json` and `cmds --json` reported nothing when `-n` dropped results; the unsearched-scope disclosure was text-only; a nonexistent `--path` read as an empty one. stdout and exit codes byte-identical in all 116 captures | — |
++| SXR-CLI-22, 23 | see [tasks.md](tasks.md) | mixed | proposed | — |
+ | SXR-DOCS-02 | one primer refresh for every flag-changing slice | record keeping, no behavior | queued by D-14; runs after the flag-changing slices, not per slice, so the version moves once | — |
+ 
+ **Date correction, 2026-09-13.** `f0ce7ad` recorded slice 21's spec correction as
+@@ -164,6 +165,15 @@ correct: slices 1 to 5 on 2026-09-11, the reconciliation, `SXR-HAZ-01`, D-08 to
+ D-12, `SXR-DOCS-01`, slice 6 and slice 8's delivery on 2026-09-12, all matching
+ their artifacts' mtimes and the commit dates of `d2021d9`, `b70f3ac` and `f42b1ad`.
+ 
++**A clock disagreement, stated rather than settled.** The message accepting SXR-CLI-07
++dates D-14 "2026-09-13 — that is today and I am deciding it now". This machine's clock
++read 2026-09-14 while that message was being executed, and `55ad925` is authored on the
++14th. Both are recorded as they stand: the reviewer's decisions carry the dates the
++reviewer gave them, and my artifacts carry the dates their commits and mtimes show. I am
++not adjusting either, because the last time I reconciled a reviewer's date against my own
++evidence the reviewer's date was the correct one. If the two should be made to agree, the
++reviewer's is the one that governs.
++
+ **Derived-row qualifier audit, 2026-09-13.** The reviewer asked whether a cheap
+ audit of the other derived rows for dropped qualifiers was feasible, and to say so
+ rather than do it silently if it would expand a slice. It was cheap: one script,
+diff --git a/audit/2026-09-11/cli-refactor/tasks.md b/audit/2026-09-11/cli-refactor/tasks.md
+index 19a5828..f403869 100644
+--- a/audit/2026-09-11/cli-refactor/tasks.md
++++ b/audit/2026-09-11/cli-refactor/tasks.md
+@@ -303,6 +303,39 @@ tree's behavior, not the cell's.
+ - **accept:** a follow-up copied from `list --json` reads the same file after new sessions appear; find never presents a rank as `@N`; existing `@N` semantics unchanged.
+ - **review:** JSON additions are additive only; no change to handle numbering rules.
+ 
++## SXR-CLI-24 — results on stdout, omissions and notices on stderr  *(DELIVERED 2026-09-14, awaiting review)*
++
++- **rows verified against source before editing, and run:** `PAR-list-typer-limit`,
++  `PAR-root-typer-coverage`, `EXTRA-011`. Read from the CSV, not from the paraphrase
++  below; the paraphrase was checked against all three and carries their qualifiers.
++- **what the rows asked for that was already true:** `--json` stdout is already pure in
++  all 18 machine-readable cases measured, so `EXTRA-011`'s "no text notice breaks JSON
++  stdout" needed nothing. `_coverage` already labels provider roots `searched` or
++  `unavailable`, and already separates discovery counts from searched source counts,
++  which is most of `PAR-root-typer-coverage`. `show`, `stats`, `path`, `errors` and
++  (since SXR-CLI-07) `grep` already report omissions on stderr under `--json`.
++- **the three defects that were left, each measured before being fixed:**
++  1. `list -n 1 --json` returned 1 of 4 sessions and said nothing on either stream.
++  2. `cmds -n 1 --json` returned 1 of 3 records and said nothing on either stream.
++     `print_records` defers its notice when handed a scope-wide budget, so that one
++     omission is reported for the whole scope rather than once per session, and
++     `cmds_view` never made that deferred call.
++  3. A `--path` that does not exist reported "0 sessions" in the same words as a real
++     directory with no sessions, so a typo was indistinguishable from an empty scope.
++  Plus one found while fixing 2: the `# N of M sessions searched; all of them:
++  --all-sessions` disclosure was printed in text mode only, so a `--json` caller was
++  not told its scope had been narrowed.
++- **what this slice deliberately did not do:** move text-mode headers and footers off
++  stdout. `EXTRA-011`'s before-cell names them, but its compatibility cell says "Review
++  before implementing", and every script that reads `# +N more` or the `# read:` line
++  from `sxr list` would break at once. Left as an open decision with the evidence.
++- **also not done:** `total/shown/omitted` *fields* inside structured envelopes, which
++  `EXTRA-011`'s after-cell permits ("where structured envelopes exist"). Schema growth
++  is exactly what the three `decision-needed` rows hold, so this slice reports on
++  stderr and adds no field to any object.
++- **delivered:** stdout byte-identical in all 116 captures on both providers, exit codes
++  identical in all 116, and 16 changed captures all of which add a stderr line.
++
+ ## SXR-CLI-24 — results on stdout, omissions and notices on stderr
+ 
+ - **class:** defect
+diff --git a/src/sxr/discovery_scope.py b/src/sxr/discovery_scope.py
+index f450bb4..fac4c7b 100644
+--- a/src/sxr/discovery_scope.py
++++ b/src/sxr/discovery_scope.py
+@@ -28,6 +28,12 @@ def _coverage(refs: list, roots: list[Path], cwd: str, options: dict) -> None:
+     scope = "descendants" if options.get("recursive") else "exact cwd"
+     if options.get("worktrees"):
+         scope += " + Git worktrees"
++    if not refs and cwd and not Path(cwd).exists():
++        # A mistyped --path reported "0 sessions" in the same words as a real directory
++        # nobody has worked in, and the roots below were labelled searched because they
++        # were. Only said when the scope is empty: a recorded cwd that no longer exists
++        # locally still legitimately matches the sessions recorded there.
++        scope += "; path not present on this machine"
+     print(
+         f"# coverage: {cwd} ({scope}); {len(refs)} sessions, {children} agents, "
+         f"{archived} archived, {copies} duplicate copies",
+diff --git a/src/sxr/views_info.py b/src/sxr/views_info.py
+index d565ce6..3f1f447 100644
+--- a/src/sxr/views_info.py
++++ b/src/sxr/views_info.py
+@@ -51,8 +51,14 @@ def list_view(refs: list[SessionRef], json_out: bool, limit: int | None, cwd: st
+     for ref in shown:
+         ref.summarize()
+     if json_out:
+-        for ref in shown:
++        # The text view has said "+N more" on stdout for as long as it has existed.
++        # JSON said it nowhere, so `list -n 1 --json` handed back one session of four
++        # and read exactly like a scope that holds one. stdout is data (D-09), so the
++        # count goes to stderr, which is where every other view's omission goes.
++        budget = RowBudget(limit)
++        for ref in budget.take(refs):
+             print(json.dumps(_session_json(ref), ensure_ascii=False))
++        budget.notice("sessions", stderr=True)
+         return 0
+     codex = bool(refs and refs[0].provider == "codex")
+     provider = "codex" if codex else "claude code"
+@@ -267,13 +273,22 @@ def cmds_view(
+         rest = f"; --all-sessions searches the other {unsearched} in scope" if unsearched else ""
+         print(f"{what} in {scope}{rest}", file=sys.stderr)
+         return 1
+-    if not json_out:
+-        if total > shown:
+-            print(f"# {total} commands, showing first {shown} (raise -n, or -n 0 for all)")
+-        if unsearched:
+-            print(f"# {len(refs)} of {scope_size} sessions searched; all of them: --all-sessions")
+-        if first_call:
+-            ref, seq = first_call
+-            zoom = command(ref, "show", "--around", str(seq))
+-            print(f"# recorded outcomes; ? = unknown; zoom: {zoom}")
++    if json_out:
++        # print_records defers the notice when it is handed a scope-wide budget, so
++        # that one omission is reported for the scope instead of once per session.
++        # Nothing then reported it, and `cmds -n 1 --json` dropped records in silence.
++        records.notice("records", stderr=True)
++    elif total > shown:
++        print(f"# {total} commands, showing first {shown} (raise -n, or -n 0 for all)")
++    if unsearched:
++        # Which sessions were not read is not a display detail: a caller told nothing
++        # will believe the whole scope was searched. Said in both modes now.
++        print(
++            f"# {len(refs)} of {scope_size} sessions searched; all of them: --all-sessions",
++            file=sys.stderr if json_out else sys.stdout,
++        )
++    if first_call and not json_out:
++        ref, seq = first_call
++        zoom = command(ref, "show", "--around", str(seq))
++        print(f"# recorded outcomes; ? = unknown; zoom: {zoom}")
+     return 0
+diff --git a/tests/test_streams.py b/tests/test_streams.py
+new file mode 100644
+index 0000000..2d3bc88
+--- /dev/null
++++ b/tests/test_streams.py
+@@ -0,0 +1,210 @@
++"""Results on stdout, omissions and notices on stderr (SXR-CLI-24).
++
++The point of every test here is which stream a line arrived on, so each one reads
++stdout and stderr separately and asserts about both: that a cap reported itself
++somewhere, and that the report did not land in machine-readable output.
++"""
++
++import json
++
++import pytest
++from typer.testing import CliRunner
++
++from sxr.cli import app
++from sxr.providers import claude_code
++
++runner = CliRunner()
++LONG = " ".join(f"w{i:03d}aaaa" for i in range(60))
++
++
++def _session(project, tag: str, index: int) -> None:
++    """One session with two prompts, two tool calls and a two-block line."""
++    stamp = f"2026-09-0{index + 1}T08:%02d:00Z"
++    records = [
++        {
++            "type": "user",
++            "cwd": "/w",
++            "timestamp": stamp % 0,
++            "message": {"role": "user", "content": f"cadence one {index}"},
++        },
++        {
++            "type": "assistant",
++            "timestamp": stamp % 1,
++            "message": {
++                "role": "assistant",
++                "content": [
++                    {
++                        "type": "tool_use",
++                        "id": f"{tag}a",
++                        "name": "Bash",
++                        "input": {"command": f"git status {index}"},
++                    }
++                ],
++            },
++        },
++        {
++            "type": "user",
++            "timestamp": stamp % 2,
++            "message": {
++                "role": "user",
++                "content": [{"type": "tool_result", "tool_use_id": f"{tag}a", "content": "clean"}],
++            },
++        },
++        # Two tool calls on one physical line: one record under a --json cap.
++        {
++            "type": "assistant",
++            "timestamp": stamp % 3,
++            "message": {
++                "role": "assistant",
++                "content": [
++                    {
++                        "type": "tool_use",
++                        "id": f"{tag}b",
++                        "name": "Read",
++                        "input": {"file_path": f"/w/one{index}.txt"},
++                    },
++                    {
++                        "type": "tool_use",
++                        "id": f"{tag}c",
++                        "name": "Read",
++                        "input": {"file_path": f"/w/two{index}.txt"},
++                    },
++                ],
++            },
++        },
++        {
++            "type": "assistant",
++            "timestamp": stamp % 4,
++            "message": {
++                "role": "assistant",
++                "content": [{"type": "text", "text": f"cadence {LONG}"}],
++            },
++        },
++    ]
++    path = project / f"{tag * 4}0024-0000-4000-8000-00000000000{index}.jsonl"
++    path.write_text("\n".join(json.dumps(r) for r in records) + "\n")
++
++
++@pytest.fixture
++def four(tmp_path, monkeypatch):
++    """Four Claude sessions in one project, so -n 1 omits three."""
++    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / ".claude"))
++    monkeypatch.setenv("SXR_CACHE_DIR", str(tmp_path / "cache"))
++    project = tmp_path / ".claude" / "projects" / claude_code.flatten_cwd("/w")
++    project.mkdir(parents=True)
++    for index, tag in enumerate("abcd"):
++        _session(project, tag, index)
++    return project
++
++
++def _run(args):
++    """Invoke sxr in the /w scope, returning the result with streams apart."""
++    return runner.invoke(app, [*args, "--path", "/w"])
++
++
++def _lines(text):
++    return [line for line in text.splitlines() if line]
++
++
++def test_json_stdout_stays_parseable_when_a_cap_reports_itself(four) -> None:
++    result = _run(["list", "-n", "1", "--json"])
++    assert result.exit_code == 0
++    # 2>/dev/null must leave valid JSON only: this is the whole contract.
++    assert [json.loads(line) for line in _lines(result.stdout)]
++    assert len(_lines(result.stdout)) == 1
++    assert "# +3 more sessions" in result.stderr
++    assert "#" not in result.stdout
++
++
++def test_list_json_said_nothing_about_three_dropped_sessions(four) -> None:
++    capped = _run(["list", "-n", "1", "--json"])
++    every = _run(["list", "-n", "0", "--json"])
++    assert len(_lines(every.stdout)) == 4
++    assert len(_lines(capped.stdout)) == 1
++    # The count is the fact that used to be missing, not just any notice.
++    assert "shown 1 of 4" in capped.stderr
++
++
++def test_an_uncapped_list_reports_no_omission(four) -> None:
++    for args in (["list", "--json"], ["list", "-n", "0", "--json"]):
++        result = _run(args)
++        assert len(_lines(result.stdout)) == 4
++        assert "more sessions" not in result.stderr
++
++
++def test_the_text_footer_stays_where_scripts_read_it(four) -> None:
++    result = _run(["list", "-n", "1"])
++    # Human mode is unchanged by this slice: the footer is still on stdout.
++    assert "+3 more" in result.stdout
++    assert "more" not in result.stderr
++
++
++def test_cmds_json_reports_the_records_it_held_back(four) -> None:
++    result = _run(["cmds", "-n", "1", "--json"])
++    assert result.exit_code == 0
++    assert len(_lines(result.stdout)) == 1
++    assert [json.loads(line) for line in _lines(result.stdout)]
++    assert "more records" in result.stderr
++    assert "shown 1 of" in result.stderr
++
++
++def test_one_line_of_two_tool_calls_counts_as_one_record(four) -> None:
++    result = _run(["cmds", "@1", "-n", "2", "--json"])
++    records = [json.loads(line) for line in _lines(result.stdout)]
++    assert len(records) == 2
++    # The second selected record is the line holding two calls, printed once.
++    assert sum(1 for r in records if len(r["message"]["content"]) == 2) == 1
++    assert "more records" not in result.stderr
++
++
++def test_an_unsearched_scope_is_disclosed_in_both_modes(four) -> None:
++    text = _run(["cmds", "--grep", "git"])
++    assert "of 4 sessions searched" in text.stdout
++    structured = _run(["cmds", "--grep", "git", "--json"])
++    # An agent told nothing here believes it searched every session in scope.
++    assert "of 4 sessions searched" in structured.stderr
++    assert "--all-sessions" in structured.stderr
++    assert [json.loads(line) for line in _lines(structured.stdout)]
++
++
++def test_coverage_says_when_the_named_path_is_not_here(four) -> None:
++    missing = runner.invoke(app, ["list", "--coverage", "--path", "/w/nowhere"])
++    assert "path not present on this machine" in missing.stderr
++    present = _run(["list", "--coverage"])
++    # A real directory with sessions must not be labelled: the note explains an
++    # empty result, and saying it otherwise would be false.
++    assert "path not present" not in present.stderr
++
++
++def test_a_real_but_empty_scope_is_not_called_missing(four, tmp_path) -> None:
++    empty = tmp_path / "empty-dir"
++    empty.mkdir()
++    result = runner.invoke(app, ["list", "--coverage", "--path", str(empty)])
++    assert "0 sessions" in result.stderr
++    assert "path not present" not in result.stderr
++
++
++def test_raw_records_are_unchanged_by_the_new_notices(four) -> None:
++    """D-09: --json stdout stays the original provider records, whole."""
++    result = _run(["cmds", "-n", "1", "--json"])
++    record = json.loads(_lines(result.stdout)[0])
++    assert record["type"] == "assistant"
++    assert record["message"]["content"][0]["name"] == "Bash"
++    assert "shown" not in record and "omitted" not in record
++
++
++def test_the_grep_session_projection_is_untouched(four) -> None:
++    """D-12: -l --json keeps its documented shape, and no count appears in it."""
++    result = _run(["grep", "cadence", "-l", "--json"])
++    records = [json.loads(line) for line in _lines(result.stdout)]
++    assert records and all(r["type"] == "grep_session" for r in records)
++    assert all("matches" not in r for r in records)
++
++
++def test_exit_codes_and_negative_limits_are_unchanged(four) -> None:
++    assert _run(["list", "--json"]).exit_code == 0
++    assert _run(["grep", "quernstone", "--json"]).exit_code == 1
++    assert _run(["list", "-n", "-1"]).exit_code == 2
++    empty = _run(["cmds", "--grep", "quernstone", "--json"])
++    assert empty.exit_code == 1
++    assert not _lines(empty.stdout)

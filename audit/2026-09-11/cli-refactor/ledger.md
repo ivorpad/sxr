@@ -120,8 +120,9 @@ in two audit scripts, and the approved annotation of
 `docs/session-search-hints-research.md`. Neither touches `src/` or `tests/`.
 | SXR-CLI-08 | one timestamp parser for every sort, filter and format | defect | **delivered 2026-09-12, accepted 2026-09-13** by the originating reviewer, who re-verified the single-parser claim in source (D-13 resolved with it); committed as `f0ce7ad` | [review-slice-08.md](review-slice-08.md), [slice-08.patch](slice-08.patch), `baseline-08/`, `evidence-slice-08/` |
 | SXR-CLI-21 | validate and document the compact-display flags | defect | **delivered 2026-09-13**; closes the cap clause SXR-CLI-03 and SXR-CLI-04 both deferred | [review-slice-21.md](review-slice-21.md), [slice-21.patch](slice-21.patch), `baseline-21/`, `evidence-slice-21/` |
-| SXR-CLI-07 | grep: result cap separated from character caps | intentional-behavior-change | **delivered 2026-09-13**; changes the documented meanings of `-n 0` and `--all`, and recovers an omission-reporting clause `tasks.md` had dropped from `PAR-grep-typer-budget` | [review-slice-07.md](review-slice-07.md), [slice-07.patch](slice-07.patch), `evidence-slice-07/` |
-| SXR-CLI-22 … 24 | see [tasks.md](tasks.md) | mixed | proposed | — |
+| SXR-CLI-07 | grep: result cap separated from character caps | intentional-behavior-change | **accepted 2026-09-13** as `55ad925` (committed 09-14), delivered 2026-09-13; changes the documented meanings of `-n 0` and `--all`, and recovers an omission-reporting clause `tasks.md` had dropped from `PAR-grep-typer-budget` | [review-slice-07.md](review-slice-07.md), [slice-07.patch](slice-07.patch), `evidence-slice-07/` |
+| SXR-CLI-24 | results on stdout, omissions and notices on stderr | defect | **delivered 2026-09-14**: `list --json` and `cmds --json` reported nothing when `-n` dropped results; the unsearched-scope disclosure was text-only; a nonexistent `--path` read as an empty one. stdout and exit codes byte-identical in all 116 captures | — |
+| SXR-CLI-22, 23 | see [tasks.md](tasks.md) | mixed | proposed | — |
 | SXR-DOCS-02 | one primer refresh for every flag-changing slice | record keeping, no behavior | queued by D-14; runs after the flag-changing slices, not per slice, so the version moves once | — |
 
 **Date correction, 2026-09-13.** `f0ce7ad` recorded slice 21's spec correction as
@@ -163,6 +164,15 @@ Every other date in this file and in `tasks.md` was checked the same way and is
 correct: slices 1 to 5 on 2026-09-11, the reconciliation, `SXR-HAZ-01`, D-08 to
 D-12, `SXR-DOCS-01`, slice 6 and slice 8's delivery on 2026-09-12, all matching
 their artifacts' mtimes and the commit dates of `d2021d9`, `b70f3ac` and `f42b1ad`.
+
+**A clock disagreement, stated rather than settled.** The message accepting SXR-CLI-07
+dates D-14 "2026-09-13 — that is today and I am deciding it now". This machine's clock
+read 2026-09-14 while that message was being executed, and `55ad925` is authored on the
+14th. Both are recorded as they stand: the reviewer's decisions carry the dates the
+reviewer gave them, and my artifacts carry the dates their commits and mtimes show. I am
+not adjusting either, because the last time I reconciled a reviewer's date against my own
+evidence the reviewer's date was the correct one. If the two should be made to agree, the
+reviewer's is the one that governs.
 
 **Derived-row qualifier audit, 2026-09-13.** The reviewer asked whether a cheap
 audit of the other derived rows for dropped qualifiers was feasible, and to say so

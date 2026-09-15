@@ -51,8 +51,14 @@ def list_view(refs: list[SessionRef], json_out: bool, limit: int | None, cwd: st
     for ref in shown:
         ref.summarize()
     if json_out:
-        for ref in shown:
+        # The text view has said "+N more" on stdout for as long as it has existed.
+        # JSON said it nowhere, so `list -n 1 --json` handed back one session of four
+        # and read exactly like a scope that holds one. stdout is data (D-09), so the
+        # count goes to stderr, which is where every other view's omission goes.
+        budget = RowBudget(limit)
+        for ref in budget.take(refs):
             print(json.dumps(_session_json(ref), ensure_ascii=False))
+        budget.notice("sessions", stderr=True)
         return 0
     codex = bool(refs and refs[0].provider == "codex")
     provider = "codex" if codex else "claude code"
@@ -267,13 +273,22 @@ def cmds_view(
         rest = f"; --all-sessions searches the other {unsearched} in scope" if unsearched else ""
         print(f"{what} in {scope}{rest}", file=sys.stderr)
         return 1
-    if not json_out:
-        if total > shown:
-            print(f"# {total} commands, showing first {shown} (raise -n, or -n 0 for all)")
-        if unsearched:
-            print(f"# {len(refs)} of {scope_size} sessions searched; all of them: --all-sessions")
-        if first_call:
-            ref, seq = first_call
-            zoom = command(ref, "show", "--around", str(seq))
-            print(f"# recorded outcomes; ? = unknown; zoom: {zoom}")
+    if json_out:
+        # print_records defers the notice when it is handed a scope-wide budget, so
+        # that one omission is reported for the scope instead of once per session.
+        # Nothing then reported it, and `cmds -n 1 --json` dropped records in silence.
+        records.notice("records", stderr=True)
+    elif total > shown:
+        print(f"# {total} commands, showing first {shown} (raise -n, or -n 0 for all)")
+    if unsearched:
+        # Which sessions were not read is not a display detail: a caller told nothing
+        # will believe the whole scope was searched. Said in both modes now.
+        print(
+            f"# {len(refs)} of {scope_size} sessions searched; all of them: --all-sessions",
+            file=sys.stderr if json_out else sys.stdout,
+        )
+    if first_call and not json_out:
+        ref, seq = first_call
+        zoom = command(ref, "show", "--around", str(seq))
+        print(f"# recorded outcomes; ? = unknown; zoom: {zoom}")
     return 0

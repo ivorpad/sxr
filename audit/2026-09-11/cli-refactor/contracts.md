@@ -146,6 +146,32 @@ explicitly and names the migration note. Everything else here is a regression.
   existing `GrepOpts.check` policy -- refuse a flag that describes another output
   shape rather than accept and ignore it.
 
+## Which stream carries what (SXR-CLI-24)
+
+- **stdout is the answer; stderr is everything said *about* the answer.** Under
+  `--json` this is load-bearing: `2>/dev/null` must leave valid JSON and nothing else,
+  which is what makes D-09's raw records usable. Verified as a property rather than
+  per command: all 116 slice-24 captures have byte-identical stdout before and after.
+- **A cap that held something back says so, in every mode, in every view.** Text mode
+  prints it on stdout as a `#` note; `--json` prints it on stderr. A view that returns
+  a bounded answer silently is the defect, not a tidy default — `list --json` and
+  `cmds --json` each did that, and `grep --json` did until SXR-CLI-07.
+- **Which sessions were *not* read is part of the answer, not decoration.** A filtered
+  `cmds` view that fell back to the default scope discloses the sessions it skipped and
+  names `--all-sessions`, on stdout in text and on stderr under `--json`. Before, an
+  agent reading JSON was given a narrowed scope and no way to learn that.
+- **Human-mode headers and footers stay on stdout.** `EXTRA-011` names them as
+  candidates to move; SXR-CLI-24 did not, because scripts read `# +N more` and the
+  `# read:` guidance line, and the row's own compatibility cell says "Review before
+  implementing". A later slice may move them, but only as a stated migration.
+- **No omission metadata is added inside any object.** `EXTRA-011` permits
+  `total/shown/omitted` fields "where structured envelopes exist", but schema growth is
+  what the three `decision-needed` rows hold, so the counts live on stderr instead.
+- **An unavailable scope is labelled, and only when it explains an empty result.**
+  A `--path` that does not exist reports so on the coverage line when nothing was
+  found. It is deliberately silent when sessions *were* found, because a recorded cwd
+  that no longer exists locally still legitimately matches them.
+
 ## Selection
 
 - Provider defaults are unchanged by this refactor: `find` searches both
@@ -192,9 +218,14 @@ explicitly and names the migration note. Everything else here is a regression.
 - **The primer is a distributed artifact and its version stamp is the package
   version.** `onboard.primer()` stamps `sxr.__version__`, so any change to
   `PRIMER_BODY` requires bumping `src/sxr/__init__.py`, `pyproject.toml` and the
-  `sxr` entry in `uv.lock` together — `init --check` compares the stamp only,
-  never the body, so a reissued primer under an unchanged stamp is reported "up
-  to date". Editing the version files in the working tree is not a release;
+    `sxr` entry in `uv.lock` together. *Corrected 2026-09-14: this bullet said
+    `init --check` "compares the stamp only, never the body, so a reissued primer
+    under an unchanged stamp is reported up to date". That stopped being true in
+    `f806ede`, the upstream merge: `check_primer` compares the body against
+    `PRIMER_BODY` and reports "stamped this version but its body differs". Verified
+    by editing one character inside a current-version block, which exits 1. The
+    stale claim mattered because `SXR-DOCS-02` and `SXR-CLI-19` both rest on what
+    `--check` can detect.* Editing the version files in the working tree is not a release;
   `just release` is the reviewer's to run.
 - Before choosing a version number, check what is already published. This
   checkout's `pyproject.toml` has been behind origin's tags (`0.12.2` locally
