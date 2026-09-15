@@ -11,6 +11,7 @@ credential is the real remediation.
 """
 
 import contextlib
+import hashlib
 import json
 import os
 import sqlite3
@@ -52,6 +53,13 @@ def _copy_prefix(source, target, length):
         length -= len(chunk)
 
 
+def _verify_content(path, digest):
+    """Reject edits even when size and filesystem timestamps remain unchanged."""
+    with path.open("rb") as current:
+        if hashlib.file_digest(current, "sha256").digest() != digest.digest():
+            raise OSError("changed while cleaning; skipped")
+
+
 def _clean_file(path: Path, apply: bool, expected=None) -> FileResult:
     """Scan one file; with apply, rewrite via a validated atomic replace."""
     result = FileResult(path.name)
@@ -66,7 +74,9 @@ def _clean_file(path: Path, apply: bool, expected=None) -> FileResult:
                 raise OSError("changed before cleaning; skipped")
             tmp = None
             offset = 0
+            digest = hashlib.sha256()
             for raw in source:
+                digest.update(raw)
                 new, count, kinds = _clean_line(raw)
                 if count:
                     result.lines += 1
@@ -92,6 +102,7 @@ def _clean_file(path: Path, apply: bool, expected=None) -> FileResult:
         if signature(path.stat()) != stamp:
             raise OSError("changed while cleaning; skipped")
         if tmp_name:
+            _verify_content(path, digest)
             os.replace(tmp_name, path)
     except (OSError, ValueError, UnicodeError, RecursionError) as exc:
         # Scanner exceptions can contain input text; only filesystem messages are safe.

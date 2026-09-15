@@ -84,10 +84,15 @@ def test_failed_temporary_cleanup_is_reported_without_a_traceback(tmp_path, monk
             unlink(remaining)
 
 
-def test_same_size_change_with_restored_mtime_is_rejected(tmp_path, monkeypatch):
+@pytest.mark.parametrize("frozen_stamp", [False, True])
+def test_same_size_change_with_restored_mtime_is_rejected(tmp_path, monkeypatch, frozen_stamp):
     path = _write(tmp_path / "dirty.jsonl")
     stamp = path.stat()
     original = clean._clean_line
+    if frozen_stamp:
+        # Filesystems can report the same timestamps for rapid same-size writes.
+        signature = clean.signature(stamp)
+        monkeypatch.setattr(clean, "signature", lambda stat: signature)
 
     def change(raw):
         result = original(raw)
