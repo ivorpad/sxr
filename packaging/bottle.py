@@ -63,6 +63,8 @@ def build(version, directory):
     (details,) = entry["bottle"]["tags"].values()
     bottle = directory / details["local_filename"]
     call("brew", "uninstall", "ivorpad/tap/sxr")
+    # Uninstall removes formula-level trust; restore it for this local bottle test.
+    call("brew", "trust", "--formula", "ivorpad/tap/sxr")
     # Homebrew's documented developer mode permits testing a local bottle file.
     call("brew", "install", str(bottle), env=dict(os.environ, HOMEBREW_DEVELOPER="1"))
     prefix = Path(call("brew", "--prefix", "sxr").strip())
