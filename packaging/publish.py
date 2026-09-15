@@ -15,7 +15,14 @@ TARGETS = ("macos-arm64", "macos-x86_64", "linux-arm64", "linux-x86_64")
 
 def call(*arguments, **kwargs):
     """Run commands without shell interpolation, stopping at the first failed operation."""
-    return subprocess.run(arguments, check=True, text=True, capture_output=True, **kwargs).stdout
+    try:
+        return subprocess.run(
+            arguments, check=True, text=True, capture_output=True, **kwargs
+        ).stdout
+    except subprocess.CalledProcessError as exc:
+        print(exc.stdout, end="", flush=True)
+        print(exc.stderr, end="", flush=True)
+        raise
 
 
 def formula(version, assets, tests):
@@ -99,6 +106,8 @@ def prepare(version, head, directory):
 
 def publish(version, notes, head, assets, tap):
     """Publish immutable assets before updating Homebrew to use their checksums."""
+    from bottle_release import build_and_attach
+
     tag = f"v{version}"
     formula_path = tap / "Formula/sxr.rb"
     tests = formula_path.read_text().split("  test do", 1)[1]
@@ -121,6 +130,7 @@ def publish(version, notes, head, assets, tap):
         *(str(p) for p in sorted(assets.iterdir())),
     )
     formula_path.write_text(updated)
+    build_and_attach(version, head, tap)
     call("brew", "style", "--fix", "ivorpad/tap/sxr")
     call("git", "-C", str(tap), "add", "Formula/sxr.rb")
     call("git", "-C", str(tap), "commit", "-m", f"sxr {version}: install portable runtimes")

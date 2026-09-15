@@ -19,9 +19,12 @@ brew install ivorpad/tap/sxr
 
 To update an existing installation, run `brew upgrade sxr`.
 
-Homebrew installs a prebuilt bundle containing Python, SQLite, and the other
+Homebrew installs a relocatable bottle containing Python, SQLite, and the other
 runtime libraries. It does not depend on Homebrew's Python or OpenSSL, so a
 custom Homebrew prefix does not trigger compilation of that dependency chain.
+On Apple Silicon, bottle installation also avoids Homebrew's Command Line Tools
+requirement for source builds. Intel Macs still need developer tools for
+Homebrew's own code-signing checks.
 
 Without Homebrew, download the matching macOS or Linux archive from
 [Releases](https://github.com/ivorpad/sxr/releases), unpack it into a directory
