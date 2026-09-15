@@ -42,11 +42,12 @@ def write_bottle(root, tag, version="0.14.0", cellar="any_skip_relocation"):
     return archive
 
 
-def test_four_platform_bottles_use_homebrew_url_names(release, tmp_path):
+@pytest.mark.parametrize("cellar", ["any", "any_skip_relocation"])
+def test_four_platform_bottles_use_homebrew_url_names(release, tmp_path, cellar):
     for tag in ("arm64_sonoma", "sequoia", "arm64_linux", "x86_64_linux"):
-        write_bottle(tmp_path, tag)
+        write_bottle(tmp_path, tag, cellar=cellar)
     block, files = release.collect("0.14.0", tmp_path)
-    assert block.count("cellar: :any_skip_relocation") == 4
+    assert block.count(f"cellar: :{cellar},") == 4
     assert len(files) == 4 and all(path.exists() for path in files)
     assert all(path.name.startswith("sxr-0.14.0.") for path in files)
 

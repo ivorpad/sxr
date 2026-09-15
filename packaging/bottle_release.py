@@ -20,7 +20,7 @@ def collect(version, directory):
         assert entry["formula"]["pkg_version"] == version
         bottle = entry["bottle"]
         assert bottle["root_url"] == root_url and bottle["rebuild"] == 0
-        assert bottle["cellar"] == "any_skip_relocation"
+        assert bottle["cellar"] in {"any", "any_skip_relocation"}
         (tag,) = bottle["tags"]
         assert re.fullmatch(r"[a-z0-9_]+", tag) and tag not in tags
         details = bottle["tags"][tag]
@@ -40,7 +40,7 @@ def collect(version, directory):
         if source != destination:
             source.rename(destination)
         files.append(destination)
-        tags[tag] = digest
+        tags[tag] = (digest, bottle["cellar"])
     assert families == {
         ("macos", "arm64"),
         ("macos", "x86_64"),
@@ -49,8 +49,8 @@ def collect(version, directory):
     }, "Require one bottle for every supported platform"
     lines = ["", "  bottle do", f'    root_url "{root_url}"']
     lines += [
-        f'    sha256 cellar: :any_skip_relocation, {tag}: "{digest}"'
-        for tag, digest in sorted(tags.items())
+        f'    sha256 cellar: :{cellar}, {tag}: "{digest}"'
+        for tag, (digest, cellar) in sorted(tags.items())
     ]
     return "\n".join([*lines, "  end", ""]), files
 

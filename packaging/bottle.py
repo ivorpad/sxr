@@ -57,8 +57,8 @@ def build(version, directory):
     )
     (metadata,) = directory.glob("*.bottle.json")
     (entry,) = json.loads(metadata.read_text()).values()
-    if entry["bottle"]["cellar"] != "any_skip_relocation":
-        raise SystemExit("Portable bottle unexpectedly requires relocation")
+    if entry["bottle"]["cellar"] not in {"any", "any_skip_relocation"}:
+        raise SystemExit(f"Bottle requires a fixed Cellar: {entry['bottle']['cellar']}")
     (details,) = entry["bottle"]["tags"].values()
     bottle = directory / details["local_filename"]
     call("brew", "uninstall", "ivorpad/tap/sxr")

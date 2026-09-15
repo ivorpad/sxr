@@ -31,9 +31,10 @@ jobs:
       - name: Build, pour and test bottle
         run: uv run --no-project --python 3.13.15 python packaging/bottle.py "$SXR_RELEASE_VERSION"
       - uses: actions/upload-artifact@v7.0.1
+        if: always()
         with:
           name: bottle-${{ matrix.runner }}
           path: |
             bottles/*.bottle.tar.gz
             bottles/*.bottle.json
-          if-no-files-found: error
+          if-no-files-found: warn
