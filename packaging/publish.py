@@ -27,6 +27,12 @@ def call(*arguments, **kwargs):
 
 def formula(version, assets, tests):
     """Install bundles directly, preserving the tap's existing functional tests."""
+    if '"serve", "stop"' not in tests:
+        ending = "  end\nend\n"
+        assert tests.endswith(ending), "Unexpected Homebrew test block ending"
+        tests = tests.removesuffix(ending) + (
+            '  ensure\n    system bin/"sxr", "serve", "stop"\n' + ending
+        )
     lines = [
         "class Sxr < Formula",
         '  desc "Session x-ray: read Claude Code and Codex sessions from the terminal"',

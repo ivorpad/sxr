@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 
@@ -62,7 +63,8 @@ def build(version, directory):
     (details,) = entry["bottle"]["tags"].values()
     bottle = directory / details["local_filename"]
     call("brew", "uninstall", "ivorpad/tap/sxr")
-    call("brew", "install", str(bottle))
+    # Homebrew's documented developer mode permits testing a local bottle file.
+    call("brew", "install", str(bottle), env=dict(os.environ, HOMEBREW_DEVELOPER="1"))
     prefix = Path(call("brew", "--prefix", "sxr").strip())
     receipt = json.loads((prefix / "INSTALL_RECEIPT.json").read_text())
     assert receipt["poured_from_bottle"], "Homebrew fell back to a source install"

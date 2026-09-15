@@ -72,3 +72,14 @@ def test_wrong_version_or_fixed_cellar_prevents_publication(release, tmp_path, v
     write_bottle(tmp_path, "arm64_sonoma", version, cellar)
     with pytest.raises(AssertionError):
         release.collect("0.14.0", tmp_path)
+
+
+def test_formula_stops_test_worker_even_when_assertions_fail(release, tmp_path):
+    publish = importlib.import_module("publish")
+    for target in publish.TARGETS:
+        (tmp_path / f"sxr-0.14.0-{target}.tar.gz").write_bytes(b"fixture")
+    tests = '\n    assert_match "0.14.0", shell_output("#{bin}/sxr --version")\n  end\nend\n'
+    first = publish.formula("0.14.0", tmp_path, tests)
+    assert '  ensure\n    system bin/"sxr", "serve", "stop"' in first
+    second = publish.formula("0.14.0", tmp_path, first.split("  test do", 1)[1])
+    assert first == second
